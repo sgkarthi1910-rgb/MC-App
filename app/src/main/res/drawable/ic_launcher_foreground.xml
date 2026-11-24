@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Emerald Obsidian Shield Outer Frame -->
+    <path
+        android:fillColor="#20E58A"
+        android:pathData="M54,22 L78,32 L78,56 C78,70 67,80 54,86 C41,80 30,70 30,56 L30,32 Z" />
+    <!-- Obsidian Inner Crest -->
+    <path
+        android:fillColor="#0E1512"
+        android:pathData="M54,26 L74,34.5 L74,55.5 C74,67 64.5,75.8 54,81 C43.5,75.8 34,67 34,55.5 L34,34.5 Z" />
+    <!-- Faceted Voxel Lifesteal Heart -->
+    <path
+        android:fillColor="#E54848"
+        android:pathData="M42,42 L49,42 L49,46 L59,46 L59,42 L66,42 L66,46 L70,46 L70,56 L66,56 L66,61 L61,61 L61,66 L56,66 L56,71 L52,71 L52,66 L47,66 L47,61 L42,61 L42,56 L38,56 L38,46 L42,46 Z" />
+    <!-- Pixel Heart Highlight (Gold/White glint) -->
+    <path
+        android:fillColor="#FF8A8A"
+        android:pathData="M43,46 L47,46 L47,50 L43,50 Z" />
+    <!-- Gold Crown Accent on Shield Peak -->
+    <path
+        android:fillColor="#E5B94F"
+        android:pathData="M49,31 L59,31 L59,35 L49,35 Z" />
+</vector>
