@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MilitaryTech
+import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material3.CircularProgressIndicator
@@ -93,6 +94,7 @@ import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.LiveStatusScreen
 import com.example.ui.screens.PlayersScreen
 import com.example.ui.screens.RanksScreen
+import com.example.ui.screens.CoinsScreen
 import com.example.ui.screens.StoreScreen
 import com.example.ui.theme.DeepCharcoal
 import com.example.ui.theme.EmeraldGreen
@@ -121,6 +123,7 @@ enum class TgzDestination(
     PLAYERS("players", "Players", "Players", Icons.Default.Groups),
     FEATURES("features", "Server Features", "Features", Icons.Default.AutoAwesome),
     RANKS("ranks", "Ranks", "Ranks", Icons.Default.MilitaryTech),
+    COINS("coins", "Coins", "Coins", Icons.Default.MonetizationOn),
     STORE("store", "Store", "Store", Icons.Default.ShoppingBag),
     COMMUNITY("community", "Community", "Discord", Icons.Default.Forum),
     FAQ("faq", "FAQ", "FAQ", Icons.AutoMirrored.Filled.HelpOutline)
@@ -240,7 +243,7 @@ fun TgzLifestealApp(
                         }
                         Column {
                             Text(
-                                text = "TGZ LIFESTEAL",
+                                text = "TGZ LIFESTYLE",
                                 style = MaterialTheme.typography.titleSmall,
                                 color = TextPrimary
                             )
@@ -302,8 +305,8 @@ fun TgzLifestealApp(
             val isExpandedWidth = maxWidth >= 700.dp
             val primaryTabs = listOf(
                 TgzDestination.HOME,
-                TgzDestination.LIVE_STATUS,
-                TgzDestination.PLAYERS,
+                TgzDestination.RANKS,
+                TgzDestination.COINS,
                 TgzDestination.STORE
             )
 
@@ -344,7 +347,7 @@ fun TgzLifestealApp(
                             ) {
                                 VoxelHeartIcon(tint = NetherRed, iconSize = 18.dp)
                                 Text(
-                                    text = "TGZ LIFESTEAL",
+                                    text = "TGZ LIFESTYLE",
                                     style = MaterialTheme.typography.titleSmall,
                                     color = TextPrimary,
                                     maxLines = 1,
@@ -434,13 +437,8 @@ fun TgzLifestealApp(
                                 )
                             }
 
-                            // 5th tab opens full drawer for Ranks, Features, Community, FAQ
-                            val isSecondaryRoute = currentRoute in setOf(
-                                TgzDestination.FEATURES.route,
-                                TgzDestination.RANKS.route,
-                                TgzDestination.COMMUNITY.route,
-                                TgzDestination.FAQ.route
-                            )
+                            // 5th tab opens full drawer for other sections
+                            val isSecondaryRoute = primaryTabs.none { it.route == currentRoute }
                             NavigationBarItem(
                                 selected = isSecondaryRoute,
                                 onClick = { scope.launch { drawerState.open() } },
@@ -561,6 +559,14 @@ fun TgzLifestealApp(
                         composable(TgzDestination.RANKS.route) {
                             RanksScreen(
                                 onBuyOnDiscord = { rankName -> openDiscordInvite(rankName) }
+                            )
+                        }
+
+                        composable(TgzDestination.COINS.route) {
+                            CoinsScreen(
+                                onBuyCoins = { amount, price ->
+                                    openDiscordInvite("Coins Purchase: $amount Coins ($price)")
+                                }
                             )
                         }
 

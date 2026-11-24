@@ -101,12 +101,13 @@ data class ServerFeature(
 data class ServerRank(
     val id: String,
     val name: String,
-    val tag: String,
-    val priceDisplay: String,
-    val tagline: String,
-    val accentColor: Color,
-    val isFeatured: Boolean,
-    val perks: List<String>
+    val price: String = "",
+    val tag: String = "",
+    val priceDisplay: String = "",
+    val tagline: String = "",
+    val accentColor: Color = EmeraldGreen,
+    val isFeatured: Boolean = false,
+    val perks: List<String> = emptyList()
 )
 
 enum class StoreCategory(val label: String) {
@@ -218,66 +219,34 @@ object TgzCatalogData {
 
     val ranks: List<ServerRank> = listOf(
         ServerRank(
-            id = "rank_vanguard",
-            name = "VANGUARD",
-            tag = "[VANGUARD]",
-            priceDisplay = "Discord Ticket",
-            tagline = "Essential survival edge for rising Lifesteal fighters.",
-            accentColor = EmeraldGreen,
-            isFeatured = false,
-            perks = listOf(
-                "Emerald [VANGUARD] chat & tab prefix",
-                "3 /sethome slots + /craft portable bench",
-                "+2,500 bonus Land Claim blocks",
-                "Weekly Vanguard Supply Kit"
-            )
+            id = "rank_titan",
+            name = "Titan",
+            price = "49",
+            accentColor = Color(0xFF9CA3AF)
         ),
         ServerRank(
-            id = "rank_warlord",
-            name = "WARLORD",
-            tag = "[WARLORD]",
-            priceDisplay = "Discord Ticket",
-            tagline = "Built for aggressive clan raiders and PvP hunters.",
-            accentColor = MinecraftGold,
-            isFeatured = false,
-            perks = listOf(
-                "Gold [WARLORD] prefix & colored chat",
-                "6 /sethome slots + /enderchest anywhere",
-                "+6,000 bonus Land Claim blocks",
-                "5 Auction House slots + Warlord PvP Kit"
-            )
+            id = "rank_wizard",
+            name = "Wizard",
+            price = "59",
+            accentColor = Color(0xFFA855F7)
         ),
         ServerRank(
-            id = "rank_overlord",
-            name = "OVERLORD",
-            tag = "[OVERLORD]",
-            priceDisplay = "Discord Ticket",
-            tagline = "Most popular tier for empire leaders and top contenders.",
-            accentColor = NetherRed,
-            isFeatured = true,
-            perks = listOf(
-                "Crimson [OVERLORD] gradient tag",
-                "10 /sethome slots + /anvil & /enderchest",
-                "+15,000 Land Claim blocks & /nick access",
-                "8 Auction House slots + Priority Server Queue",
-                "Weekly Overlord Kit + 2 Monthly Crate Keys"
-            )
+            id = "rank_king",
+            name = "King",
+            price = "79",
+            accentColor = MinecraftGold
         ),
         ServerRank(
-            id = "rank_immortal",
-            name = "IMMORTAL",
-            tag = "[IMMORTAL]",
-            priceDisplay = "Discord Ticket",
-            tagline = "Ultimate TGZ prestige with maximum claim & clan perks.",
-            accentColor = MinecraftGold,
-            isFeatured = false,
-            perks = listOf(
-                "Custom Gold/Emerald [IMMORTAL] crown tag",
-                "20 /sethome slots + full utility suite",
-                "+35,000 Land Claim blocks & /playerwarp",
-                "15 Auction House slots + Exclusive Kill Effects",
-                "Priority Discord Support + 5 Monthly Crate Keys"
-            )
+            id = "rank_static_plus",
+            name = "Static+",
+            price = "89",
+            accentColor = Color(0xFF38BDF8)
+        ),
+        ServerRank(
+            id = "rank_chaos",
+            name = "Chaos",
+            price = "149",
+            accentColor = NetherRed
         )
     )
 
