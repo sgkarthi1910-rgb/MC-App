@@ -13,11 +13,12 @@ import com.example.ui.viewmodel.TgzViewModel
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        NetworkModule.init(applicationContext)
         enableEdgeToEdge()
         setContent {
             TgzLifestealTheme {
                 val viewModel: TgzViewModel = viewModel(
-                    factory = NetworkModule.viewModelFactory
+                    factory = NetworkModule.getViewModelFactory(applicationContext)
                 )
                 TgzLifestealApp(viewModel = viewModel)
             }

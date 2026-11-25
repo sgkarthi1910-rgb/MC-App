@@ -23,19 +23,28 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.Dns
+import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Leaderboard
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MilitaryTech
 import androidx.compose.material.icons.filled.MonetizationOn
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
@@ -59,6 +68,7 @@ import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -78,6 +88,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -87,15 +98,27 @@ import androidx.navigation.compose.rememberNavController
 import com.example.ui.components.JoinServerModalSheet
 import com.example.ui.components.PulsingStatusDot
 import com.example.ui.components.VoxelHeartIcon
+import com.example.ui.screens.AdminDashboardScreen
+import com.example.ui.screens.AnnouncementsScreen
+import com.example.ui.screens.CoinsScreen
 import com.example.ui.screens.CommunityScreen
 import com.example.ui.screens.FaqScreen
 import com.example.ui.screens.FeaturesScreen
+import com.example.ui.screens.ForcedChangePasswordDialog
 import com.example.ui.screens.HomeScreen
+import com.example.ui.screens.LeaderboardScreen
 import com.example.ui.screens.LiveStatusScreen
+import com.example.ui.screens.LoginScreen
+import com.example.ui.screens.MemberDashboardScreen
+import com.example.ui.screens.MessagingScreen
+import com.example.ui.screens.ModeratorDashboardScreen
 import com.example.ui.screens.PlayersScreen
+import com.example.ui.screens.PlaytimeRewardsScreen
 import com.example.ui.screens.RanksScreen
-import com.example.ui.screens.CoinsScreen
+import com.example.ui.screens.SettingsScreen
+import com.example.ui.screens.SignupScreen
 import com.example.ui.screens.StoreScreen
+import com.example.ui.screens.TeamsScreen
 import com.example.ui.theme.DeepCharcoal
 import com.example.ui.theme.EmeraldGreen
 import com.example.ui.theme.JetBrainsMonoFontFamily
@@ -105,6 +128,8 @@ import com.example.ui.theme.ObsidianBlack
 import com.example.ui.theme.ObsidianBorder
 import com.example.ui.theme.ObsidianBorderSubtle
 import com.example.ui.theme.ObsidianElevated
+import com.example.ui.theme.OnEmeraldDark
+import com.example.ui.theme.SilkscreenFontFamily
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
@@ -119,6 +144,13 @@ enum class TgzDestination(
     val icon: ImageVector
 ) {
     HOME("home", "Home", "Home", Icons.Default.Home),
+    DASHBOARD("dashboard", "Dashboard", "Dash", Icons.Default.Home),
+    REWARDS("rewards", "Playtime Rewards", "Crates", Icons.Default.CardGiftcard),
+    LEADERBOARD("leaderboard", "Leaderboard", "Rank", Icons.Default.Leaderboard),
+    ANNOUNCEMENTS("announcements", "Announcements", "News", Icons.Default.Notifications),
+    MESSAGES("messages", "Messages", "Chat", Icons.Default.Forum),
+    TEAMS("teams", "Clan Teams", "Clans", Icons.Default.Groups),
+    SETTINGS("settings", "Settings", "Settings", Icons.Default.Settings),
     LIVE_STATUS("status", "Live Status", "Status", Icons.Default.Dns),
     PLAYERS("players", "Players", "Players", Icons.Default.Groups),
     FEATURES("features", "Server Features", "Features", Icons.Default.AutoAwesome),
@@ -126,7 +158,9 @@ enum class TgzDestination(
     COINS("coins", "Coins", "Coins", Icons.Default.MonetizationOn),
     STORE("store", "Store", "Store", Icons.Default.ShoppingBag),
     COMMUNITY("community", "Community", "Discord", Icons.Default.Forum),
-    FAQ("faq", "FAQ", "FAQ", Icons.AutoMirrored.Filled.HelpOutline)
+    FAQ("faq", "FAQ", "FAQ", Icons.AutoMirrored.Filled.HelpOutline),
+    LOGIN("login", "Sign In", "Sign In", Icons.Default.Person),
+    SIGNUP("signup", "Register", "Join", Icons.Default.PersonAdd)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -140,9 +174,11 @@ fun TgzLifestealApp(
     val currentRoute = backStackEntry?.destination?.route ?: TgzDestination.HOME.route
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val authState by viewModel.authState.collectAsStateWithLifecycle()
     val playerSearchQuery by viewModel.playerSearchQuery.collectAsStateWithLifecycle()
     val selectedStoreCategory by viewModel.selectedStoreCategory.collectAsStateWithLifecycle()
     val expandedFaqIds by viewModel.expandedFaqIds.collectAsStateWithLifecycle()
+    val unreadMessagesCount by viewModel.unreadMessagesCount.collectAsStateWithLifecycle()
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val snackbarHostState = remember { SnackbarHostState() }
@@ -210,6 +246,11 @@ fun TgzLifestealApp(
         }
     }
 
+    // Forced admin password change prompt
+    if (authState.mustChangePassword && authState.role == "ADMIN") {
+        ForcedChangePasswordDialog(viewModel = viewModel, authState = authState)
+    }
+
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
@@ -243,7 +284,8 @@ fun TgzLifestealApp(
                         }
                         Column {
                             Text(
-                                text = "TGZ LIFESTYLE",
+                                text = "TGZ LIFESTEAL",
+                                fontFamily = SilkscreenFontFamily,
                                 style = MaterialTheme.typography.titleSmall,
                                 color = TextPrimary
                             )
@@ -259,19 +301,137 @@ fun TgzLifestealApp(
                         }
                     }
 
+                    // User Identity Card in Drawer
+                    if (authState.isLoggedIn && authState.user != null) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 6.dp)
+                                .background(ObsidianBlack, RoundedCornerShape(8.dp))
+                                .border(1.dp, ObsidianBorder, RoundedCornerShape(8.dp))
+                                .padding(12.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        Icons.Default.Person,
+                                        contentDescription = null,
+                                        tint = EmeraldGreen,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Column {
+                                        Text(
+                                            text = authState.user!!.displayName,
+                                            fontFamily = SilkscreenFontFamily,
+                                            fontSize = 13.sp,
+                                            color = TextPrimary
+                                        )
+                                        Text(
+                                            text = "@${authState.user!!.id}",
+                                            fontFamily = JetBrainsMonoFontFamily,
+                                            fontSize = 10.sp,
+                                            color = EmeraldGreen
+                                        )
+                                    }
+                                }
+
+                                Surface(
+                                    shape = RoundedCornerShape(4.dp),
+                                    color = when (authState.role) {
+                                        "ADMIN" -> NetherRed
+                                        "MODERATOR" -> MinecraftGold
+                                        else -> EmeraldGreen
+                                    }.copy(alpha = 0.2f),
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        1.dp,
+                                        when (authState.role) {
+                                            "ADMIN" -> NetherRed
+                                            "MODERATOR" -> MinecraftGold
+                                            else -> EmeraldGreen
+                                        }
+                                    )
+                                ) {
+                                    Text(
+                                        text = authState.role,
+                                        fontFamily = SilkscreenFontFamily,
+                                        fontSize = 9.sp,
+                                        color = when (authState.role) {
+                                            "ADMIN" -> NetherRed
+                                            "MODERATOR" -> MinecraftGold
+                                            else -> EmeraldGreen
+                                        },
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(8.dp))
                     HorizontalDivider(color = ObsidianBorderSubtle)
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // All 8 Navigation Destinations
-                    TgzDestination.entries.forEach { destination ->
+                    // Tailored Navigation Drawer Items
+                    val drawerDestinations = if (authState.isLoggedIn) {
+                        listOf(
+                            TgzDestination.DASHBOARD,
+                            TgzDestination.REWARDS,
+                            TgzDestination.LEADERBOARD,
+                            TgzDestination.ANNOUNCEMENTS,
+                            TgzDestination.MESSAGES,
+                            TgzDestination.TEAMS,
+                            TgzDestination.STORE,
+                            TgzDestination.RANKS,
+                            TgzDestination.COINS,
+                            TgzDestination.LIVE_STATUS,
+                            TgzDestination.SETTINGS
+                        )
+                    } else {
+                        listOf(
+                            TgzDestination.HOME,
+                            TgzDestination.LIVE_STATUS,
+                            TgzDestination.PLAYERS,
+                            TgzDestination.RANKS,
+                            TgzDestination.COINS,
+                            TgzDestination.STORE,
+                            TgzDestination.REWARDS,
+                            TgzDestination.LEADERBOARD,
+                            TgzDestination.COMMUNITY,
+                            TgzDestination.FAQ,
+                            TgzDestination.LOGIN
+                        )
+                    }
+
+                    drawerDestinations.forEach { destination ->
                         val selected = currentRoute == destination.route
                         NavigationDrawerItem(
                             label = {
-                                Text(
-                                    text = destination.label,
-                                    style = MaterialTheme.typography.titleMedium
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        text = destination.label,
+                                        style = MaterialTheme.typography.titleMedium
+                                    )
+                                    if (destination == TgzDestination.MESSAGES && unreadMessagesCount > 0) {
+                                        Surface(shape = CircleShape, color = NetherRed) {
+                                            Text(
+                                                text = "$unreadMessagesCount",
+                                                color = Color.White,
+                                                fontSize = 9.sp,
+                                                fontFamily = JetBrainsMonoFontFamily,
+                                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                                            )
+                                        }
+                                    }
+                                }
                             },
                             selected = selected,
                             onClick = {
@@ -297,18 +457,49 @@ fun TgzLifestealApp(
                                 .testTag("drawer_nav_${destination.route}")
                         )
                     }
+
+                    // Logout in Drawer if Logged In
+                    if (authState.isLoggedIn) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        NavigationDrawerItem(
+                            label = { Text("Logout", color = NetherRed) },
+                            selected = false,
+                            onClick = {
+                                scope.launch { drawerState.close() }
+                                viewModel.logout { navigateTo(TgzDestination.HOME.route) }
+                            },
+                            icon = { Icon(Icons.Default.ExitToApp, contentDescription = "Logout", tint = NetherRed) },
+                            colors = NavigationDrawerItemDefaults.colors(
+                                unselectedContainerColor = Color.Transparent,
+                                unselectedIconColor = NetherRed,
+                                unselectedTextColor = NetherRed
+                            ),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
+                        )
+                    }
                 }
             }
         }
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             val isExpandedWidth = maxWidth >= 700.dp
-            val primaryTabs = listOf(
-                TgzDestination.HOME,
-                TgzDestination.RANKS,
-                TgzDestination.COINS,
-                TgzDestination.STORE
-            )
+            val primaryTabs = if (authState.isLoggedIn) {
+                listOf(
+                    TgzDestination.DASHBOARD,
+                    TgzDestination.REWARDS,
+                    TgzDestination.LEADERBOARD,
+                    TgzDestination.MESSAGES,
+                    TgzDestination.TEAMS
+                )
+            } else {
+                listOf(
+                    TgzDestination.HOME,
+                    TgzDestination.REWARDS,
+                    TgzDestination.LEADERBOARD,
+                    TgzDestination.ANNOUNCEMENTS,
+                    TgzDestination.LOGIN
+                )
+            }
 
             Scaffold(
                 containerColor = ObsidianBlack,
@@ -347,7 +538,8 @@ fun TgzLifestealApp(
                             ) {
                                 VoxelHeartIcon(tint = NetherRed, iconSize = 18.dp)
                                 Text(
-                                    text = "TGZ LIFESTYLE",
+                                    text = "TGZ LIFESTEAL",
+                                    fontFamily = SilkscreenFontFamily,
                                     style = MaterialTheme.typography.titleSmall,
                                     color = TextPrimary,
                                     maxLines = 1,
@@ -378,23 +570,25 @@ fun TgzLifestealApp(
                                     color = dotColor
                                 )
                             }
-                            IconButton(
-                                onClick = { viewModel.refreshNow() },
-                                enabled = !uiState.isRefreshing,
-                                modifier = Modifier.testTag("top_bar_refresh_button")
-                            ) {
-                                if (uiState.isRefreshing) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(18.dp),
-                                        strokeWidth = 2.dp,
-                                        color = EmeraldGreen
-                                    )
-                                } else {
-                                    Icon(
-                                        imageVector = Icons.Default.Refresh,
-                                        contentDescription = "Refresh live status",
-                                        tint = EmeraldGreen
-                                    )
+
+                            if (!authState.isLoggedIn) {
+                                androidx.compose.material3.Button(
+                                    onClick = { navigateTo(TgzDestination.LOGIN.route) },
+                                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                                        containerColor = EmeraldGreen,
+                                        contentColor = OnEmeraldDark
+                                    ),
+                                    shape = RoundedCornerShape(6.dp),
+                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                    modifier = Modifier.padding(end = 4.dp)
+                                ) {
+                                    Icon(Icons.Default.Person, contentDescription = "Sign In", modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("SIGN IN", fontFamily = SilkscreenFontFamily, fontSize = 10.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                                }
+                            } else {
+                                IconButton(onClick = { navigateTo(TgzDestination.SETTINGS.route) }) {
+                                    Icon(Icons.Default.Settings, contentDescription = "Settings", tint = TextSecondary)
                                 }
                             }
                         }
@@ -404,66 +598,36 @@ fun TgzLifestealApp(
                     if (!isExpandedWidth) {
                         NavigationBar(
                             containerColor = DeepCharcoal,
-                            tonalElevation = 0.dp,
+                            contentColor = TextPrimary,
                             windowInsets = WindowInsets.navigationBars
                         ) {
-                            primaryTabs.forEach { dest ->
-                                val selected = currentRoute == dest.route
+                            primaryTabs.forEach { destination ->
+                                val selected = currentRoute == destination.route
                                 NavigationBarItem(
-                                    selected = selected,
-                                    onClick = { navigateTo(dest.route) },
                                     icon = {
                                         Icon(
-                                            imageVector = dest.icon,
-                                            contentDescription = dest.label
+                                            imageVector = destination.icon,
+                                            contentDescription = destination.label
                                         )
                                     },
                                     label = {
                                         Text(
-                                            text = dest.shortLabel,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
+                                            text = destination.shortLabel,
+                                            style = MaterialTheme.typography.labelSmall
                                         )
                                     },
+                                    selected = selected,
+                                    onClick = { navigateTo(destination.route) },
                                     colors = NavigationBarItemDefaults.colors(
                                         selectedIconColor = EmeraldGreen,
                                         selectedTextColor = EmeraldGreen,
-                                        indicatorColor = EmeraldGreen.copy(alpha = 0.16f),
                                         unselectedIconColor = TextMuted,
-                                        unselectedTextColor = TextMuted
+                                        unselectedTextColor = TextMuted,
+                                        indicatorColor = EmeraldGreen.copy(alpha = 0.16f)
                                     ),
-                                    modifier = Modifier.testTag("bottom_nav_${dest.route}")
+                                    modifier = Modifier.testTag("nav_${destination.route}")
                                 )
                             }
-
-                            // 5th tab opens full drawer for other sections
-                            val isSecondaryRoute = primaryTabs.none { it.route == currentRoute }
-                            NavigationBarItem(
-                                selected = isSecondaryRoute,
-                                onClick = { scope.launch { drawerState.open() } },
-                                icon = {
-                                    Icon(
-                                        imageVector = Icons.Default.Menu,
-                                        contentDescription = "More sections"
-                                    )
-                                },
-                                label = {
-                                    Text(
-                                        text = "More",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        maxLines = 1
-                                    )
-                                },
-                                colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = MinecraftGold,
-                                    selectedTextColor = MinecraftGold,
-                                    indicatorColor = MinecraftGold.copy(alpha = 0.16f),
-                                    unselectedIconColor = TextMuted,
-                                    unselectedTextColor = TextMuted
-                                ),
-                                modifier = Modifier.testTag("bottom_nav_more")
-                            )
                         }
                     }
                 }
@@ -476,54 +640,53 @@ fun TgzLifestealApp(
                     if (isExpandedWidth) {
                         NavigationRail(
                             containerColor = DeepCharcoal,
-                            modifier = Modifier.fillMaxHeight()
+                            contentColor = TextPrimary,
+                            modifier = Modifier.width(84.dp)
                         ) {
                             Spacer(modifier = Modifier.height(8.dp))
-                            TgzDestination.entries.forEach { dest ->
-                                val selected = currentRoute == dest.route
+                            primaryTabs.forEach { destination ->
+                                val selected = currentRoute == destination.route
                                 NavigationRailItem(
-                                    selected = selected,
-                                    onClick = { navigateTo(dest.route) },
                                     icon = {
                                         Icon(
-                                            imageVector = dest.icon,
-                                            contentDescription = dest.label
+                                            imageVector = destination.icon,
+                                            contentDescription = destination.label
                                         )
                                     },
                                     label = {
                                         Text(
-                                            text = dest.shortLabel,
+                                            text = destination.shortLabel,
                                             style = MaterialTheme.typography.labelSmall
                                         )
                                     },
+                                    selected = selected,
+                                    onClick = { navigateTo(destination.route) },
                                     colors = NavigationRailItemDefaults.colors(
                                         selectedIconColor = EmeraldGreen,
                                         selectedTextColor = EmeraldGreen,
-                                        indicatorColor = EmeraldGreen.copy(alpha = 0.16f),
                                         unselectedIconColor = TextMuted,
-                                        unselectedTextColor = TextMuted
+                                        unselectedTextColor = TextMuted,
+                                        indicatorColor = EmeraldGreen.copy(alpha = 0.16f)
                                     ),
-                                    modifier = Modifier.testTag("rail_nav_${dest.route}")
+                                    modifier = Modifier.testTag("rail_${destination.route}")
                                 )
                             }
                         }
                     }
 
+                    // Main App NavHost
                     NavHost(
                         navController = navController,
-                        startDestination = TgzDestination.HOME.route,
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
+                        startDestination = if (authState.isLoggedIn) TgzDestination.DASHBOARD.route else TgzDestination.HOME.route,
+                        modifier = Modifier.fillMaxSize()
                     ) {
+                        // 1. HOME
                         composable(TgzDestination.HOME.route) {
                             HomeScreen(
                                 uiState = uiState,
+                                authState = authState,
                                 ipCopied = ipCopied,
-                                onJoinServer = {
-                                    copyServerIp()
-                                    showJoinSheet = true
-                                },
+                                onJoinServer = { showJoinSheet = true },
                                 onJoinDiscord = { openDiscordInvite() },
                                 onCopyIp = { copyServerIp() },
                                 onRefresh = { viewModel.refreshNow() },
@@ -531,6 +694,77 @@ fun TgzLifestealApp(
                             )
                         }
 
+                        // 2. ROLE-BASED DASHBOARD
+                        composable(TgzDestination.DASHBOARD.route) {
+                            when (authState.role) {
+                                "ADMIN" -> AdminDashboardScreen(
+                                    viewModel = viewModel,
+                                    onNavigateToRoute = { route -> navigateTo(route) }
+                                )
+                                "MODERATOR" -> ModeratorDashboardScreen(
+                                    viewModel = viewModel,
+                                    onNavigateToRoute = { route -> navigateTo(route) }
+                                )
+                                else -> MemberDashboardScreen(
+                                    viewModel = viewModel,
+                                    onNavigateToRoute = { route -> navigateTo(route) }
+                                )
+                            }
+                        }
+
+                        // 3. AUTHENTICATION
+                        composable(TgzDestination.LOGIN.route) {
+                            LoginScreen(
+                                viewModel = viewModel,
+                                authState = authState,
+                                onNavigateToSignup = { navigateTo(TgzDestination.SIGNUP.route) },
+                                onLoginSuccess = { navigateTo(TgzDestination.DASHBOARD.route) }
+                            )
+                        }
+
+                        composable(TgzDestination.SIGNUP.route) {
+                            SignupScreen(
+                                viewModel = viewModel,
+                                authState = authState,
+                                onNavigateToLogin = { navigateTo(TgzDestination.LOGIN.route) },
+                                onSignupSuccess = { navigateTo(TgzDestination.DASHBOARD.route) }
+                            )
+                        }
+
+                        // 4. ANNOUNCEMENTS
+                        composable(TgzDestination.ANNOUNCEMENTS.route) {
+                            AnnouncementsScreen(viewModel = viewModel)
+                        }
+
+                        // 5. MESSAGING
+                        composable(TgzDestination.MESSAGES.route) {
+                            MessagingScreen(viewModel = viewModel)
+                        }
+
+                        // 6. PLAYTIME REWARDS (5 CRATES ONLY)
+                        composable(TgzDestination.REWARDS.route) {
+                            PlaytimeRewardsScreen(viewModel = viewModel)
+                        }
+
+                        // 7. LEADERBOARD
+                        composable(TgzDestination.LEADERBOARD.route) {
+                            LeaderboardScreen(viewModel = viewModel)
+                        }
+
+                        // 8. TEAMS
+                        composable(TgzDestination.TEAMS.route) {
+                            TeamsScreen(viewModel = viewModel)
+                        }
+
+                        // 9. SETTINGS
+                        composable(TgzDestination.SETTINGS.route) {
+                            SettingsScreen(
+                                viewModel = viewModel,
+                                onLogoutComplete = { navigateTo(TgzDestination.HOME.route) }
+                            )
+                        }
+
+                        // 10. EXISTING PAGES (Preserved 100%)
                         composable(TgzDestination.LIVE_STATUS.route) {
                             LiveStatusScreen(
                                 uiState = uiState,

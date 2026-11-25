@@ -1,0 +1,544 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const http = require('node:http');
+const { createServer } = require('../src/server');
+
+// Helper for making test HTTP requests against server
+function makeRequest(server, options, payload) {
+  return new Promise((resolve, reject) => {
+    const address = server.address();
+    const req = http.request({
+      hostname: '127.0.0.1',
+      port: address.port,
+      path: options.path,
+      method: options.method || 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+      }
+    }, (res) => {
+      let data = '';
+      res.on('data', chunk => { data += chunk; });
+      res.on('end', () => {
+        let body = null;
+        try {
+          body = data ? JSON.parse(data) : null;
+        } catch (e) {
+          body = data;
+        }
+        resolve({
+          statusCode: res.statusCode,
+          headers: res.headers,
+          body
+        });
+      });
+    });
+
+    req.on('error', reject);
+    if (payload) {
+      req.write(typeof payload === 'string' ? payload : JSON.stringify(payload));
+    }
+    req.end();
+  });
+}
+
+test('TGZ Lifesteal Complete Backend Test Suite', async (t) => {
+  process.env.ADMIN_BOOTSTRAP_PASSWORD = 'TestBootstrapAdmin2026!';
+  process.env.MINECRAFT_PLUGIN_API_KEY = 'test_plugin_key_12345';
+
+  const { server, db } = createServer(':memory:');
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+
+  let adminToken = null;
+  let memberToken1 = null;
+  let memberToken2 = null;
+
+  t.after(() => {
+    server.close();
+  });
+
+  // 1. Initial Admin Account Provisioning & Login
+  await t.test('1. Initial admin account sg_karthi exists and requires password change on bootstrap login', async () => {
+    const res = await makeRequest(server, {
+      method: 'POST',
+      path: '/api/auth/login'
+    }, {
+      id: 'sg_karthi',
+      password: 'TestBootstrapAdmin2026!'
+    });
+
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.body.user.id, 'sg_karthi');
+    assert.equal(res.body.user.role, 'ADMIN');
+    assert.equal(res.body.user.mustChangePassword, true);
+    assert.ok(res.body.sessionToken);
+
+    adminToken = res.body.sessionToken;
+
+    // Change password to clear must_change_password
+    const changeRes = await makeRequest(server, {
+      method: 'POST',
+      path: '/api/auth/change-password',
+      headers: { Authorization: `Bearer ${adminToken}` }
+    }, {
+      currentPassword: 'TestBootstrapAdmin2026!',
+      newPassword: 'PermanentAdminPassword2026!',
+      confirmNewPassword: 'PermanentAdminPassword2026!'
+    });
+
+    assert.equal(changeRes.statusCode, 200);
+    assert.equal(changeRes.body.success, true);
+
+    // Verify mustChangePassword is now false
+    const meRes = await makeRequest(server, {
+      method: 'GET',
+      path: '/api/auth/me',
+      headers: { Authorization: `Bearer ${adminToken}` }
+    });
+    assert.equal(meRes.statusCode, 200);
+    assert.equal(meRes.body.user.mustChangePassword, false);
+  });
+
+  // 2. Member Signup & Validation
+  await t.test('2. Member signup enforces unique ID, password validation, and prevents admin creation', async () => {
+    // Signup user1
+    const res1 = await makeRequest(server, {
+      method: 'POST',
+      path: '/api/auth/signup'
+    }, {
+      id: 'player_hunter',
+      displayName: 'Hunter Champion',
+      password: 'PlayerPassword123!',
+      confirmPassword: 'PlayerPassword123!'
+    });
+
+    assert.equal(res1.statusCode, 201);
+    assert.equal(res1.body.user.id, 'player_hunter');
+    assert.equal(res1.body.user.role, 'MEMBER');
+    assert.ok(res1.body.sessionToken);
+    memberToken1 = res1.body.sessionToken;
+
+    // Duplicate ID rejection
+    const dupRes = await makeRequest(server, {
+      method: 'POST',
+      path: '/api/auth/signup'
+    }, {
+      id: 'player_hunter',
+      password: 'AnotherPassword123!',
+      confirmPassword: 'AnotherPassword123!'
+    });
+    assert.equal(dupRes.statusCode, 409);
+
+    // Reserved Admin ID rejection
+    const adminDupRes = await makeRequest(server, {
+      method: 'POST',
+      path: '/api/auth/signup'
+    }, {
+      id: 'sg_karthi',
+      password: 'Password123!',
+      confirmPassword: 'Password123!'
+    });
+    assert.equal(adminDupRes.statusCode, 409);
+
+    // Signup user2
+    const res2 = await makeRequest(server, {
+      method: 'POST',
+      path: '/api/auth/signup'
+    }, {
+      id: 'player_shield',
+      displayName: 'Shield Guardian',
+      password: 'ShieldPassword123!',
+      confirmPassword: 'ShieldPassword123!'
+    });
+    assert.equal(res2.statusCode, 201);
+    memberToken2 = res2.body.sessionToken;
+  });
+
+  // 3. Persistent Sessions & Revocation
+  await t.test('3. Persistent login sessions, session listing and revocation', async () => {
+    // List sessions for member 1
+    const sessRes = await makeRequest(server, {
+      method: 'GET',
+      path: '/api/auth/sessions',
+      headers: { Authorization: `Bearer ${memberToken1}` }
+    });
+    assert.equal(sessRes.statusCode, 200);
+    assert.equal(sessRes.body.sessions.length, 1);
+    assert.equal(sessRes.body.sessions[0].isCurrent, true);
+
+    const sessionId = sessRes.body.sessions[0].id;
+
+    // Admin can list all sessions
+    const adminSessRes = await makeRequest(server, {
+      method: 'GET',
+      path: '/api/auth/sessions?all=true',
+      headers: { Authorization: `Bearer ${adminToken}` }
+    });
+    assert.equal(adminSessRes.statusCode, 200);
+    assert.ok(adminSessRes.body.sessions.length >= 3);
+
+    // Logout member 2
+    const logoutRes = await makeRequest(server, {
+      method: 'POST',
+      path: '/api/auth/logout',
+      headers: { Authorization: `Bearer ${memberToken2}` }
+    });
+    assert.equal(logoutRes.statusCode, 200);
+
+    // Member 2 token is now invalid
+    const meRes = await makeRequest(server, {
+      method: 'GET',
+      path: '/api/auth/me',
+      headers: { Authorization: `Bearer ${memberToken2}` }
+    });
+    assert.equal(meRes.statusCode, 401);
+
+    // Re-login member 2
+    const reLogin = await makeRequest(server, {
+      method: 'POST',
+      path: '/api/auth/login'
+    }, {
+      id: 'player_shield',
+      password: 'ShieldPassword123!'
+    });
+    assert.equal(reLogin.statusCode, 200);
+    memberToken2 = reLogin.body.sessionToken;
+  });
+
+  // 4. Role-based Permissions & Promotion
+  await t.test('4. Role-based permissions: Admin promotes Member to Moderator, Member cannot access admin settings', async () => {
+    // Member tries to access admin settings -> 403
+    const forbiddenRes = await makeRequest(server, {
+      method: 'GET',
+      path: '/api/settings/admin',
+      headers: { Authorization: `Bearer ${memberToken1}` }
+    });
+    assert.equal(forbiddenRes.statusCode, 403);
+
+    // Admin promotes player_shield to MODERATOR
+    const promoteRes = await makeRequest(server, {
+      method: 'POST',
+      path: '/api/settings/admin/users/player_shield/role',
+      headers: { Authorization: `Bearer ${adminToken}` }
+    }, {
+      role: 'MODERATOR'
+    });
+    assert.equal(promoteRes.statusCode, 200);
+
+    // Check player_shield's updated role
+    const modMe = await makeRequest(server, {
+      method: 'GET',
+      path: '/api/auth/me',
+      headers: { Authorization: `Bearer ${memberToken2}` }
+    });
+    assert.equal(modMe.body.user.role, 'MODERATOR');
+  });
+
+  // 5. Announcements System
+  await t.test('5. Announcements: Staff creates, members view, unread tracking', async () => {
+    // Moderator publishes announcement
+    const createRes = await makeRequest(server, {
+      method: 'POST',
+      path: '/api/announcements',
+      headers: { Authorization: `Bearer ${memberToken2}` }
+    }, {
+      title: 'Season 4 Heart Tournament',
+      content: 'The heart tournament begins this Friday at 18:00 UTC.',
+      category: 'EVENT',
+      isPinned: true
+    });
+    assert.equal(createRes.statusCode, 201);
+    const annId = createRes.body.announcement.id;
+
+    // Member lists announcements
+    const listRes = await makeRequest(server, {
+      method: 'GET',
+      path: '/api/announcements',
+      headers: { Authorization: `Bearer ${memberToken1}` }
+    });
+    assert.equal(listRes.statusCode, 200);
+    assert.ok(listRes.body.announcements.length >= 2);
+
+    // Member reads announcement -> marks as read
+    const readRes = await makeRequest(server, {
+      method: 'GET',
+      path: `/api/announcements/${annId}`,
+      headers: { Authorization: `Bearer ${memberToken1}` }
+    });
+    assert.equal(readRes.statusCode, 200);
+
+    // Latest announcement
+    const latestRes = await makeRequest(server, {
+      method: 'GET',
+      path: '/api/announcements/latest',
+      headers: { Authorization: `Bearer ${memberToken1}` }
+    });
+    assert.equal(latestRes.statusCode, 200);
+    assert.equal(latestRes.body.announcement.id, annId);
+  });
+
+  // 6. Community Messaging
+  await t.test('6. Community messaging between members and unread count', async () => {
+    // Search users for new conversation
+    const searchRes = await makeRequest(server, {
+      method: 'GET',
+      path: '/api/messages/users/search?q=shield',
+      headers: { Authorization: `Bearer ${memberToken1}` }
+    });
+    assert.equal(searchRes.statusCode, 200);
+    assert.ok(searchRes.body.users.length >= 1);
+    assert.equal(searchRes.body.users[0].id, 'player_shield');
+
+    // player_hunter messages player_shield
+    const sendRes = await makeRequest(server, {
+      method: 'POST',
+      path: '/api/messages',
+      headers: { Authorization: `Bearer ${memberToken1}` }
+    }, {
+      recipientId: 'player_shield',
+      content: 'Hey, do you want to team up for the dragon fight?'
+    });
+    assert.equal(sendRes.statusCode, 201);
+    const sentMsgId = sendRes.body.message.id;
+
+    // player_shield checks unread count
+    const unreadRes = await makeRequest(server, {
+      method: 'GET',
+      path: '/api/messages/unread-count',
+      headers: { Authorization: `Bearer ${memberToken2}` }
+    });
+    assert.equal(unreadRes.statusCode, 200);
+    assert.equal(unreadRes.body.unreadCount, 1);
+
+    // player_shield opens conversation -> messages marked read
+    const convRes = await makeRequest(server, {
+      method: 'GET',
+      path: '/api/messages/conversations/player_hunter',
+      headers: { Authorization: `Bearer ${memberToken2}` }
+    });
+    assert.equal(convRes.statusCode, 200);
+    assert.equal(convRes.body.messages.length, 1);
+    assert.equal(convRes.body.messages[0].content, 'Hey, do you want to team up for the dragon fight?');
+
+    // Sender deletes their own message
+    const delMsgRes = await makeRequest(server, {
+      method: 'DELETE',
+      path: `/api/messages/${sentMsgId}`,
+      headers: { Authorization: `Bearer ${memberToken1}` }
+    });
+    assert.equal(delMsgRes.statusCode, 200);
+    assert.equal(delMsgRes.body.success, true);
+  });
+
+  // 7. Playtime Rewards (EXACTLY 5 Crates)
+  await t.test('7. Playtime rewards: ONLY the 5 crates exist, admin configures playtime, duplicate claim prevented', async () => {
+    // Get rewards: exactly the 5 crates
+    const rewardsRes = await makeRequest(server, {
+      method: 'GET',
+      path: '/api/rewards',
+      headers: { Authorization: `Bearer ${memberToken1}` }
+    });
+    assert.equal(rewardsRes.statusCode, 200);
+    assert.equal(rewardsRes.body.rewards.length, 5);
+    const crateIds = rewardsRes.body.rewards.map(r => r.id);
+    assert.deepEqual(crateIds, ['common_crate', 'monthly_crate', 'special_crate', 'arcane_crate', 'matrix_crate']);
+
+    // Common crate is initially unconfigured
+    assert.equal(rewardsRes.body.rewards[0].status, 'PENDING_OFFICIAL_REQUIREMENT');
+
+    // Admin configures required playtime for common_crate to 60 minutes
+    const configRes = await makeRequest(server, {
+      method: 'PUT',
+      path: '/api/rewards/admin/config',
+      headers: { Authorization: `Bearer ${adminToken}` }
+    }, {
+      rewardId: 'common_crate',
+      requiredPlaytimeMinutes: 60
+    });
+    assert.equal(configRes.statusCode, 200);
+
+    // Member attempts claim with 0 playtime -> 403 Insufficient playtime
+    const claimFail = await makeRequest(server, {
+      method: 'POST',
+      path: '/api/rewards/common_crate/claim',
+      headers: { Authorization: `Bearer ${memberToken1}` }
+    });
+    assert.equal(claimFail.statusCode, 403);
+
+    // Seed authoritative playtime via Minecraft plugin reporting: 120 minutes (7200s)
+    await makeRequest(server, {
+      method: 'POST',
+      path: '/api/minecraft/report-stats',
+      headers: { 'X-Plugin-Key': 'test_plugin_key_12345' }
+    }, {
+      players: [
+        {
+          uuid: 'uuid-hunter-1234',
+          username: 'player_hunter',
+          playtime_seconds: 7200,
+          kills: 15,
+          deaths: 2,
+          hearts: 14,
+          coins: 250
+        }
+      ]
+    });
+
+    // Now member has sufficient playtime and claims common crate
+    const claimSuccess = await makeRequest(server, {
+      method: 'POST',
+      path: '/api/rewards/common_crate/claim',
+      headers: { Authorization: `Bearer ${memberToken1}` }
+    });
+    assert.equal(claimSuccess.statusCode, 201);
+    assert.equal(claimSuccess.body.success, true);
+
+    // Duplicate claim prevention
+    const duplicateClaim = await makeRequest(server, {
+      method: 'POST',
+      path: '/api/rewards/common_crate/claim',
+      headers: { Authorization: `Bearer ${memberToken1}` }
+    });
+    assert.equal(duplicateClaim.statusCode, 409);
+  });
+
+  // 8. Minecraft Leaderboard & Plugin Telemetry
+  await t.test('8. Minecraft leaderboard returns real reported player stats and server status', async () => {
+    const lbRes = await makeRequest(server, {
+      method: 'GET',
+      path: '/api/leaderboard'
+    });
+    assert.equal(lbRes.statusCode, 200);
+    assert.equal(lbRes.body.hasRealData, true);
+    assert.equal(lbRes.body.leaderboard[0].username, 'player_hunter');
+    assert.equal(lbRes.body.leaderboard[0].kills, 15);
+    assert.equal(lbRes.body.leaderboard[0].playtimeSeconds, 7200);
+  });
+
+  // 9. Team Management
+  await t.test('9. Team creation, invitation by unique ID, acceptance and roster management', async () => {
+    // player_hunter creates team 'ApexLifesteal'
+    const createTeam = await makeRequest(server, {
+      method: 'POST',
+      path: '/api/teams',
+      headers: { Authorization: `Bearer ${memberToken1}` }
+    }, {
+      name: 'ApexLifesteal',
+      description: 'The premier hunting clan'
+    });
+    assert.equal(createTeam.statusCode, 201);
+
+    // player_hunter invites player_shield by unique ID
+    const inviteRes = await makeRequest(server, {
+      method: 'POST',
+      path: '/api/teams/invite',
+      headers: { Authorization: `Bearer ${memberToken1}` }
+    }, {
+      inviteeId: 'player_shield'
+    });
+    assert.equal(inviteRes.statusCode, 201);
+    const inviteId = inviteRes.body.inviteId;
+
+    // player_shield checks invitations
+    const myInvites = await makeRequest(server, {
+      method: 'GET',
+      path: '/api/teams/invitations',
+      headers: { Authorization: `Bearer ${memberToken2}` }
+    });
+    assert.equal(myInvites.statusCode, 200);
+    assert.equal(myInvites.body.invitations.length, 1);
+    assert.equal(myInvites.body.invitations[0].team_name, 'ApexLifesteal');
+
+    // player_shield accepts invitation
+    const acceptRes = await makeRequest(server, {
+      method: 'POST',
+      path: `/api/teams/invitations/${inviteId}/respond`,
+      headers: { Authorization: `Bearer ${memberToken2}` }
+    }, {
+      action: 'ACCEPT'
+    });
+    assert.equal(acceptRes.statusCode, 200);
+
+    // player_shield checks my-team
+    const teamRes = await makeRequest(server, {
+      method: 'GET',
+      path: '/api/teams/my-team',
+      headers: { Authorization: `Bearer ${memberToken2}` }
+    });
+    assert.equal(teamRes.statusCode, 200);
+    assert.equal(teamRes.body.inTeam, true);
+    assert.equal(teamRes.body.team.name, 'ApexLifesteal');
+    assert.equal(teamRes.body.team.members.length, 2);
+    const teamId = teamRes.body.team.id;
+
+    // Browse all teams
+    const allTeamsRes = await makeRequest(server, {
+      method: 'GET',
+      path: '/api/teams'
+    });
+    assert.equal(allTeamsRes.statusCode, 200);
+    assert.ok(allTeamsRes.body.teams.length >= 1);
+    assert.equal(allTeamsRes.body.teams[0].name, 'ApexLifesteal');
+    assert.equal(allTeamsRes.body.teams[0].memberCount, 2);
+
+    // Get specific team details
+    const detailsRes = await makeRequest(server, {
+      method: 'GET',
+      path: `/api/teams/details/${teamId}`,
+      headers: { Authorization: `Bearer ${memberToken1}` }
+    });
+    assert.equal(detailsRes.statusCode, 200);
+    assert.equal(detailsRes.body.team.name, 'ApexLifesteal');
+    assert.equal(detailsRes.body.team.members.length, 2);
+    assert.equal(detailsRes.body.team.isCurrentUserOwner, true);
+
+    // Search members to invite
+    const searchMembersRes = await makeRequest(server, {
+      method: 'GET',
+      path: '/api/teams/search-members?q=karthi',
+      headers: { Authorization: `Bearer ${memberToken1}` }
+    });
+    assert.equal(searchMembersRes.statusCode, 200);
+    assert.ok(searchMembersRes.body.users.length >= 1);
+    assert.equal(searchMembersRes.body.users[0].id, 'sg_karthi');
+
+    // Owner edits team details
+    const editRes = await makeRequest(server, {
+      method: 'PUT',
+      path: '/api/teams/my-team',
+      headers: { Authorization: `Bearer ${memberToken1}` }
+    }, {
+      description: 'Updated top tier clan',
+      logo: 'crown',
+      status: 'RECRUITING'
+    });
+    assert.equal(editRes.statusCode, 200);
+    assert.equal(editRes.body.team.description, 'Updated top tier clan');
+    assert.equal(editRes.body.team.logo, 'crown');
+    assert.equal(editRes.body.team.status, 'RECRUITING');
+  });
+
+  // 10. Role-tailored Dashboard Summaries
+  await t.test('10. Role-tailored dashboard summaries for Admin, Moderator, and Member', async () => {
+    // Admin summary
+    const adminDash = await makeRequest(server, {
+      method: 'GET',
+      path: '/api/dashboard/summary',
+      headers: { Authorization: `Bearer ${adminToken}` }
+    });
+    assert.equal(adminDash.statusCode, 200);
+    assert.equal(adminDash.body.role, 'ADMIN');
+    assert.ok(adminDash.body.adminStats.totalMembers >= 1);
+
+    // Member summary
+    const memberDash = await makeRequest(server, {
+      method: 'GET',
+      path: '/api/dashboard/summary',
+      headers: { Authorization: `Bearer ${memberToken1}` }
+    });
+    assert.equal(memberDash.statusCode, 200);
+    assert.equal(memberDash.body.role, 'MEMBER');
+    assert.equal(memberDash.body.playtime.minutes, 120);
+    assert.equal(memberDash.body.rewardProgress.length, 5);
+  });
+});

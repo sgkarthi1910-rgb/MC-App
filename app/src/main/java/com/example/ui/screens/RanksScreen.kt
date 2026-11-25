@@ -9,6 +9,7 @@ fun RanksScreen(
     modifier: Modifier = Modifier
 ) {
     StoreScreen(
+        showServerRanks = true,
         onBuyOnDiscord = onBuyOnDiscord,
         modifier = modifier
     )

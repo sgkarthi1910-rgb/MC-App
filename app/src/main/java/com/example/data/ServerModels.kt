@@ -111,10 +111,12 @@ data class ServerRank(
 )
 
 enum class StoreCategory(val label: String) {
-    ALL("All Packs"),
-    HEARTS("Heart Packs"),
-    CRATES("Crate Keys"),
-    BUNDLES("Revival & Bundles")
+    ALL("All Ranks"),
+    TITAN("Titan"),
+    WIZARD("Wizard"),
+    KING("King"),
+    STATIC_PLUS("Static+"),
+    CHAOS("Chaos")
 }
 
 data class StorePack(
@@ -252,88 +254,83 @@ object TgzCatalogData {
 
     val storePacks: List<StorePack> = listOf(
         StorePack(
-            id = "pack_heart_3",
-            name = "3x Lifesteal Hearts",
-            category = StoreCategory.HEARTS,
-            priceDisplay = "Order via Discord",
+            id = "rank_titan",
+            name = "Titan Rank Pack",
+            category = StoreCategory.TITAN,
+            priceDisplay = "₹49",
+            badge = "TIER 1",
+            description = "Starter VIP rank pack with essential survivor commands and claim protection.",
+            contents = listOf(
+                "Permanent [Titan] in-game & Discord prefix",
+                "+2,500 Land Claim Protection blocks",
+                "Access to /hat and /near commands",
+                "Priority queue connection on server restart"
+            ),
+            accentColor = Color(0xFF9CA3AF)
+        ),
+        StorePack(
+            id = "rank_wizard",
+            name = "Wizard Rank Pack",
+            category = StoreCategory.WIZARD,
+            priceDisplay = "₹59",
+            badge = "TIER 2",
+            description = "Enchanted VIP rank pack featuring magical utility commands and portable workstations.",
+            contents = listOf(
+                "Permanent [Wizard] in-game & Discord prefix",
+                "+5,000 Land Claim Protection blocks",
+                "Access to /craft, /enderchest & /workbench anywhere",
+                "Weekly Wizard potion & supply care package"
+            ),
+            accentColor = Color(0xFFA855F7)
+        ),
+        StorePack(
+            id = "rank_king",
+            name = "King Rank Pack",
+            category = StoreCategory.KING,
+            priceDisplay = "₹79",
             badge = "POPULAR",
-            description = "Replenish your vitality after intense clan wars or stock your vault with tradeable Heart Crystals.",
+            description = "Royal VIP rank pack with territory flight, enhanced vault storage, and mystery vouchers.",
             contents = listOf(
-                "3x Physical Lifesteal Heart items",
-                "Instant in-game delivery after ticket approval",
-                "Safe to store, consume, or trade"
-            ),
-            accentColor = NetherRed
-        ),
-        StorePack(
-            id = "pack_heart_5",
-            name = "5x Crimson Heart Bundle",
-            category = StoreCategory.HEARTS,
-            priceDisplay = "Order via Discord",
-            badge = "BEST VALUE",
-            description = "A full five-heart reinforcement pack designed for frontline PvP champions.",
-            contents = listOf(
-                "5x Physical Lifesteal Heart items",
-                "1x Bonus Obsidian Crate Key",
-                "Priority staff fulfillment on Discord"
-            ),
-            accentColor = NetherRed
-        ),
-        StorePack(
-            id = "pack_crate_emerald",
-            name = "5x Emerald Crate Keys",
-            category = StoreCategory.CRATES,
-            priceDisplay = "Order via Discord",
-            badge = null,
-            description = "Unlock rare enchanted tools, claim blocks, totems, and seasonal cosmetics at Spawn.",
-            contents = listOf(
-                "5x Emerald Crate Keys",
-                "Chance for Enchanted Netherite gear",
-                "Chance for Heart Fragments & Claim Scrolls"
-            ),
-            accentColor = EmeraldGreen
-        ),
-        StorePack(
-            id = "pack_crate_nether",
-            name = "3x Nether Mythic Keys",
-            category = StoreCategory.CRATES,
-            priceDisplay = "Order via Discord",
-            badge = "MYTHIC",
-            description = "High-tier Nether crates packed with endgame Lifesteal artifacts and custom weapons.",
-            contents = listOf(
-                "3x Nether Mythic Crate Keys",
-                "Guaranteed Rare+ loot roll on every key",
-                "Exclusive TGZ seasonal weapon skins"
+                "Permanent [King] in-game & Discord prefix",
+                "+10,000 Land Claim Protection blocks",
+                "Access to /fly inside owned claim territory",
+                "2x Vault storage pages (/pv 1-2)",
+                "1x Monthly King Bonus Key voucher"
             ),
             accentColor = MinecraftGold
         ),
         StorePack(
-            id = "pack_revival",
-            name = "Revival Beacon Pack",
-            category = StoreCategory.BUNDLES,
-            priceDisplay = "Order via Discord",
-            badge = "CLAN SAVER",
-            description = "Bring an eliminated teammate back into the TGZ Lifesteal realm immediately.",
+            id = "rank_static_plus",
+            name = "Static+ Rank Pack",
+            category = StoreCategory.STATIC_PLUS,
+            priceDisplay = "₹89",
+            badge = "ELITE",
+            description = "High-voltage elite rank with death heart retention and supreme combat utility.",
             contents = listOf(
-                "1x Official Revival Beacon",
-                "2x Starter Recovery Hearts",
-                "Fulfilled directly via TGZ Discord ticket"
+                "Permanent [Static+] in-game & Discord prefix",
+                "+15,000 Land Claim Protection blocks",
+                "1x Guaranteed Heart Retention on PvP death",
+                "3x Vault storage pages (/pv 1-3)",
+                "Access to /feed and /condense commands"
             ),
-            accentColor = EmeraldGreen
+            accentColor = Color(0xFF38BDF8)
         ),
         StorePack(
-            id = "pack_empire_starter",
-            name = "Empire Starter Bundle",
-            category = StoreCategory.BUNDLES,
-            priceDisplay = "Order via Discord",
-            badge = "STARTER",
-            description = "Everything a new survivor needs to establish a fortified base and start hunting.",
+            id = "rank_chaos",
+            name = "Chaos Rank Pack",
+            category = StoreCategory.CHAOS,
+            priceDisplay = "₹149",
+            badge = "SUPREME",
+            description = "The ultimate apex rank pack in TGZ Lifesteal. Maximum claim limits, 2x heart recovery, and VIP status.",
             contents = listOf(
-                "+5,000 Land Claim Blocks",
-                "3x Emerald Crate Keys",
-                "2x Lifesteal Hearts + Clan Banner Token"
+                "Permanent [Chaos] in-game & Discord prefix",
+                "+25,000 Land Claim Protection blocks",
+                "2x Guaranteed Heart Retention on PvP death",
+                "5x Vault storage pages (/pv 1-5)",
+                "All VIP commands + priority Discord support",
+                "Exclusive monthly Chaos Champion Mystery crate"
             ),
-            accentColor = MinecraftGold
+            accentColor = NetherRed
         )
     )
 

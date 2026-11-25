@@ -22,10 +22,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Forum
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Leaderboard
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MilitaryTech
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.filled.SportsEsports
@@ -48,6 +54,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.data.DashboardUiState
 import com.example.ui.components.HeroLifestealCanvas
@@ -58,6 +65,7 @@ import com.example.ui.components.ObsidianCard
 import com.example.ui.components.PulsingStatusDot
 import com.example.ui.components.SectionHeading
 import com.example.ui.components.VoxelHeartIcon
+import com.example.ui.theme.DeepCharcoal
 import com.example.ui.theme.DiscordBlurple
 import com.example.ui.theme.EmeraldDim
 import com.example.ui.theme.EmeraldGreen
@@ -67,13 +75,16 @@ import com.example.ui.theme.NetherRed
 import com.example.ui.theme.ObsidianBlack
 import com.example.ui.theme.ObsidianBorder
 import com.example.ui.theme.OnEmeraldDark
+import com.example.ui.theme.SilkscreenFontFamily
 import com.example.ui.theme.TextMuted
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
+import com.example.ui.viewmodel.AuthUiState
 
 @Composable
 fun HomeScreen(
     uiState: DashboardUiState,
+    authState: AuthUiState? = null,
     ipCopied: Boolean,
     onJoinServer: () -> Unit,
     onJoinDiscord: () -> Unit,
@@ -102,6 +113,178 @@ fun HomeScreen(
                     onJoinDiscord = onJoinDiscord,
                     onCopyIp = onCopyIp
                 )
+            }
+
+            // 2. AUTH & REWARDS PORTAL BANNER
+            item {
+                if (authState?.isLoggedIn == true) {
+                    ObsidianCard(
+                        borderColor = when (authState.role) {
+                            "ADMIN" -> NetherRed
+                            "MODERATOR" -> MinecraftGold
+                            else -> EmeraldGreen
+                        },
+                        accentGlow = EmeraldGreen,
+                        contentPadding = PaddingValues(16.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = when (authState.role) {
+                                        "ADMIN" -> NetherRed
+                                        "MODERATOR" -> MinecraftGold
+                                        else -> EmeraldGreen
+                                    }.copy(alpha = 0.2f),
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            Icons.Default.Person,
+                                            contentDescription = null,
+                                            tint = when (authState.role) {
+                                                "ADMIN" -> NetherRed
+                                                "MODERATOR" -> MinecraftGold
+                                                else -> EmeraldGreen
+                                            },
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = "LOGGED IN AS @${authState.user?.id?.uppercase() ?: "MEMBER"}",
+                                        fontFamily = SilkscreenFontFamily,
+                                        fontSize = 13.sp,
+                                        color = TextPrimary
+                                    )
+                                    Text(
+                                        text = "Role: ${authState.role} • Status: ${authState.user?.status ?: "ACTIVE"}",
+                                        fontFamily = JetBrainsMonoFontFamily,
+                                        fontSize = 11.sp,
+                                        color = EmeraldGreen
+                                    )
+                                }
+                            }
+
+                            Button(
+                                onClick = { onNavigateToRoute("dashboard") },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = EmeraldGreen,
+                                    contentColor = OnEmeraldDark
+                                ),
+                                shape = RoundedCornerShape(6.dp),
+                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                            ) {
+                                Text("MY DASHBOARD", fontFamily = SilkscreenFontFamily, fontSize = 11.sp)
+                            }
+                        }
+                    }
+                } else {
+                    ObsidianCard(
+                        borderColor = EmeraldGreen.copy(alpha = 0.6f),
+                        accentGlow = EmeraldGreen,
+                        contentPadding = PaddingValues(16.dp)
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        Icons.Default.Lock,
+                                        contentDescription = null,
+                                        tint = EmeraldGreen,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "TGZ MEMBER & STAFF PORTAL",
+                                        fontFamily = SilkscreenFontFamily,
+                                        fontSize = 14.sp,
+                                        color = EmeraldGreen,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+
+                                Button(
+                                    onClick = { onNavigateToRoute("login") },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = EmeraldGreen,
+                                        contentColor = OnEmeraldDark
+                                    ),
+                                    shape = RoundedCornerShape(6.dp),
+                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                                ) {
+                                    Text("SIGN IN", fontFamily = SilkscreenFontFamily, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+
+                            Text(
+                                text = "Sign in to access your role dashboard, claim 5 official playtime crate rewards, manage clan teams, and join community chat.",
+                                fontSize = 12.sp,
+                                color = TextSecondary
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Button(
+                                    onClick = { onNavigateToRoute("rewards") },
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = DeepCharcoal,
+                                        contentColor = MinecraftGold
+                                    ),
+                                    shape = RoundedCornerShape(6.dp),
+                                    contentPadding = PaddingValues(vertical = 8.dp)
+                                ) {
+                                    Icon(Icons.Default.CardGiftcard, contentDescription = null, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("5 CRATES", fontFamily = SilkscreenFontFamily, fontSize = 10.sp)
+                                }
+
+                                Button(
+                                    onClick = { onNavigateToRoute("leaderboard") },
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = DeepCharcoal,
+                                        contentColor = EmeraldGreen
+                                    ),
+                                    shape = RoundedCornerShape(6.dp),
+                                    contentPadding = PaddingValues(vertical = 8.dp)
+                                ) {
+                                    Icon(Icons.Default.Leaderboard, contentDescription = null, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("LEADERBOARD", fontFamily = SilkscreenFontFamily, fontSize = 10.sp)
+                                }
+
+                                Button(
+                                    onClick = { onNavigateToRoute("announcements") },
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = DeepCharcoal,
+                                        contentColor = TextPrimary
+                                    ),
+                                    shape = RoundedCornerShape(6.dp),
+                                    contentPadding = PaddingValues(vertical = 8.dp)
+                                ) {
+                                    Icon(Icons.Default.Notifications, contentDescription = null, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("NEWS", fontFamily = SilkscreenFontFamily, fontSize = 10.sp)
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             // 2. LIVE SERVER STATISTICS

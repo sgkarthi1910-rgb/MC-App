@@ -1,0 +1,15 @@
+{
+  "name": "tgz-lifesteal-backend",
+  "version": "1.0.0",
+  "description": "Production-grade backend for TGZ Lifesteal app authentication, community, rewards, teams, and Minecraft server telemetry",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test test/backend.test.js"
+  },
+  "engines": {
+    "node": "22.x"
+  },
+  "type": "commonjs",
+  "keywords": ["lifesteal", "minecraft", "authentication", "session", "leaderboard"]
+}

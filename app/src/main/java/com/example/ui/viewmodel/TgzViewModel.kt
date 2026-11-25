@@ -2,9 +2,30 @@ package com.example.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.data.AdminClaimItemDto
+import com.example.data.AdminRewardConfigDto
+import com.example.data.AdminTeamItemDto
+import com.example.data.AnnouncementDto
+import com.example.data.ClaimHistoryItemDto
+import com.example.data.ConversationDetailResponse
+import com.example.data.ConversationDto
+import com.example.data.DashboardSummaryResponse
 import com.example.data.DashboardUiState
+import com.example.data.LeaderboardPlayerDto
+import com.example.data.MemberSettingsDto
+import com.example.data.PlaytimeRewardDto
 import com.example.data.ServerRepository
+import com.example.data.SessionItemDto
+import com.example.data.SessionManager
 import com.example.data.StoreCategory
+import com.example.data.StoredUser
+import com.example.data.TeamDetailsDto
+import com.example.data.TeamInvitationReceivedDto
+import com.example.data.TeamSearchUserDto
+import com.example.data.TeamSummaryDto
+import com.example.data.TgzBackendRepository
+import com.example.data.UserManagementItemDto
+import com.example.data.UserSearchDto
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,16 +35,24 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+
+data class AuthUiState(
+    val isLoggedIn: Boolean = false,
+    val user: StoredUser? = null,
+    val role: String = "MEMBER",
+    val mustChangePassword: Boolean = false,
+    val isLoading: Boolean = false,
+    val errorMessage: String? = null,
+    val successMessage: String? = null
+)
 
 class TgzViewModel(
-    private val repository: ServerRepository
+    private val repository: ServerRepository,
+    private val backendRepository: TgzBackendRepository? = null,
+    private val sessionManager: SessionManager? = null
 ) : ViewModel() {
 
     companion object {
-        /** Exact 2-minute (120,000 ms) automatic refresh interval per specification. */
         const val AUTO_REFRESH_INTERVAL_MS = 120_000L
         private const val AUTO_REFRESH_SECONDS = 120
     }
@@ -32,6 +61,7 @@ class TgzViewModel(
     private var autoRefreshJob: Job? = null
     private var countdownJob: Job? = null
 
+    // 1. BASELINE UI STATE (Server telemetry & Discord status)
     private val _uiState = MutableStateFlow(
         DashboardUiState(
             isInitialLoading = true,
@@ -52,13 +82,876 @@ class TgzViewModel(
     private val _expandedFaqIds = MutableStateFlow(setOf("faq_join"))
     val expandedFaqIds: StateFlow<Set<String>> = _expandedFaqIds.asStateFlow()
 
+    // 2. AUTHENTICATION STATE
+    private val _authState = MutableStateFlow(
+        AuthUiState(
+            isLoggedIn = sessionManager?.hasActiveSession() ?: false,
+            user = sessionManager?.getUser(),
+            role = sessionManager?.getUser()?.role ?: "MEMBER",
+            mustChangePassword = sessionManager?.getUser()?.mustChangePassword ?: false
+        )
+    )
+    val authState: StateFlow<AuthUiState> = _authState.asStateFlow()
+
+    private val _activeSessions = MutableStateFlow<List<SessionItemDto>>(emptyList())
+    val activeSessions: StateFlow<List<SessionItemDto>> = _activeSessions.asStateFlow()
+
+    // 3. ANNOUNCEMENTS STATE
+    private val _announcements = MutableStateFlow<List<AnnouncementDto>>(emptyList())
+    val announcements: StateFlow<List<AnnouncementDto>> = _announcements.asStateFlow()
+
+    private val _latestAnnouncement = MutableStateFlow<AnnouncementDto?>(null)
+    val latestAnnouncement: StateFlow<AnnouncementDto?> = _latestAnnouncement.asStateFlow()
+
+    private val _isAnnouncementsLoading = MutableStateFlow(false)
+    val isAnnouncementsLoading: StateFlow<Boolean> = _isAnnouncementsLoading.asStateFlow()
+
+    // 4. MESSAGING STATE
+    private val _conversations = MutableStateFlow<List<ConversationDto>>(emptyList())
+    val conversations: StateFlow<List<ConversationDto>> = _conversations.asStateFlow()
+
+    private val _currentConversation = MutableStateFlow<ConversationDetailResponse?>(null)
+    val currentConversation: StateFlow<ConversationDetailResponse?> = _currentConversation.asStateFlow()
+
+    private val _unreadMessagesCount = MutableStateFlow(0)
+    val unreadMessagesCount: StateFlow<Int> = _unreadMessagesCount.asStateFlow()
+
+    private val _userSearchResults = MutableStateFlow<List<UserSearchDto>>(emptyList())
+    val userSearchResults: StateFlow<List<UserSearchDto>> = _userSearchResults.asStateFlow()
+
+    private val _isSearchingUsers = MutableStateFlow(false)
+    val isSearchingUsers: StateFlow<Boolean> = _isSearchingUsers.asStateFlow()
+
+    private val _isMessagingLoading = MutableStateFlow(false)
+    val isMessagingLoading: StateFlow<Boolean> = _isMessagingLoading.asStateFlow()
+
+    // 5. PLAYTIME REWARDS (5 CRATES ONLY)
+    private val _rewards = MutableStateFlow<List<PlaytimeRewardDto>>(emptyList())
+    val rewards: StateFlow<List<PlaytimeRewardDto>> = _rewards.asStateFlow()
+
+    private val _userPlaytimeMinutes = MutableStateFlow(0)
+    val userPlaytimeMinutes: StateFlow<Int> = _userPlaytimeMinutes.asStateFlow()
+
+    private val _claimHistory = MutableStateFlow<List<ClaimHistoryItemDto>>(emptyList())
+    val claimHistory: StateFlow<List<ClaimHistoryItemDto>> = _claimHistory.asStateFlow()
+
+    private val _adminClaims = MutableStateFlow<List<AdminClaimItemDto>>(emptyList())
+    val adminClaims: StateFlow<List<AdminClaimItemDto>> = _adminClaims.asStateFlow()
+
+    private val _adminRewardConfigs = MutableStateFlow<List<AdminRewardConfigDto>>(emptyList())
+    val adminRewardConfigs: StateFlow<List<AdminRewardConfigDto>> = _adminRewardConfigs.asStateFlow()
+
+    private val _rewardsActionMessage = MutableStateFlow<String?>(null)
+    val rewardsActionMessage: StateFlow<String?> = _rewardsActionMessage.asStateFlow()
+
+    private val _isRewardsLoading = MutableStateFlow(false)
+    val isRewardsLoading: StateFlow<Boolean> = _isRewardsLoading.asStateFlow()
+
+    // 6. LEADERBOARD STATE
+    private val _leaderboardPlayers = MutableStateFlow<List<LeaderboardPlayerDto>>(emptyList())
+    val leaderboardPlayers: StateFlow<List<LeaderboardPlayerDto>> = _leaderboardPlayers.asStateFlow()
+
+    private val _leaderboardCategory = MutableStateFlow("playtime")
+    val leaderboardCategory: StateFlow<String> = _leaderboardCategory.asStateFlow()
+
+    private val _leaderboardSyncNote = MutableStateFlow<String?>(null)
+    val leaderboardSyncNote: StateFlow<String?> = _leaderboardSyncNote.asStateFlow()
+
+    private val _isLeaderboardLoading = MutableStateFlow(false)
+    val isLeaderboardLoading: StateFlow<Boolean> = _isLeaderboardLoading.asStateFlow()
+
+    // 7. TEAMS STATE
+    private val _myTeam = MutableStateFlow<TeamDetailsDto?>(null)
+    val myTeam: StateFlow<TeamDetailsDto?> = _myTeam.asStateFlow()
+
+    private val _inTeam = MutableStateFlow(false)
+    val inTeam: StateFlow<Boolean> = _inTeam.asStateFlow()
+
+    private val _publicTeams = MutableStateFlow<List<TeamSummaryDto>>(emptyList())
+    val publicTeams: StateFlow<List<TeamSummaryDto>> = _publicTeams.asStateFlow()
+
+    private val _selectedTeamDetails = MutableStateFlow<TeamDetailsDto?>(null)
+    val selectedTeamDetails: StateFlow<TeamDetailsDto?> = _selectedTeamDetails.asStateFlow()
+
+    private val _teamMemberSearchResults = MutableStateFlow<List<TeamSearchUserDto>>(emptyList())
+    val teamMemberSearchResults: StateFlow<List<TeamSearchUserDto>> = _teamMemberSearchResults.asStateFlow()
+
+    private val _isSearchingTeamMembers = MutableStateFlow(false)
+    val isSearchingTeamMembers: StateFlow<Boolean> = _isSearchingTeamMembers.asStateFlow()
+
+    private val _teamInvitations = MutableStateFlow<List<TeamInvitationReceivedDto>>(emptyList())
+    val teamInvitations: StateFlow<List<TeamInvitationReceivedDto>> = _teamInvitations.asStateFlow()
+
+    private val _allTeams = MutableStateFlow<List<AdminTeamItemDto>>(emptyList())
+    val allTeams: StateFlow<List<AdminTeamItemDto>> = _allTeams.asStateFlow()
+
+    private val _teamActionMessage = MutableStateFlow<String?>(null)
+    val teamActionMessage: StateFlow<String?> = _teamActionMessage.asStateFlow()
+
+    private val _isTeamLoading = MutableStateFlow(false)
+    val isTeamLoading: StateFlow<Boolean> = _isTeamLoading.asStateFlow()
+
+    // 8. SETTINGS STATE
+    private val _memberSettings = MutableStateFlow<MemberSettingsDto?>(null)
+    val memberSettings: StateFlow<MemberSettingsDto?> = _memberSettings.asStateFlow()
+
+    private val _adminSettings = MutableStateFlow<Map<String, String>>(emptyMap())
+    val adminSettings: StateFlow<Map<String, String>> = _adminSettings.asStateFlow()
+
+    private val _userManagementList = MutableStateFlow<List<UserManagementItemDto>>(emptyList())
+    val userManagementList: StateFlow<List<UserManagementItemDto>> = _userManagementList.asStateFlow()
+
+    private val _settingsActionMessage = MutableStateFlow<String?>(null)
+    val settingsActionMessage: StateFlow<String?> = _settingsActionMessage.asStateFlow()
+
+    private val _isSettingsLoading = MutableStateFlow(false)
+    val isSettingsLoading: StateFlow<Boolean> = _isSettingsLoading.asStateFlow()
+
+    // 9. DASHBOARD STATE
+    private val _dashboardSummary = MutableStateFlow<DashboardSummaryResponse?>(null)
+    val dashboardSummary: StateFlow<DashboardSummaryResponse?> = _dashboardSummary.asStateFlow()
+
+    private val _isDashboardLoading = MutableStateFlow(false)
+    val isDashboardLoading: StateFlow<Boolean> = _isDashboardLoading.asStateFlow()
+
     init {
         startAutoRefreshCycle()
+        if (sessionManager?.hasActiveSession() == true) {
+            refreshSessionUser()
+            loadDashboardSummary()
+            loadUnreadMessagesCount()
+        }
     }
+
+    fun getBackendUrl(): String = sessionManager?.getBackendUrl() ?: "http://10.0.2.2:3000/"
+
+    fun setBackendUrl(url: String) {
+        sessionManager?.setBackendUrl(url)
+    }
+
+    // ----------------- AUTHENTICATION ACTIONS -----------------
+
+    fun login(id: String, pass: String, onSuccess: () -> Unit = {}) {
+        val repo = backendRepository ?: run {
+            _authState.update { it.copy(errorMessage = "Backend repository not initialized") }
+            return
+        }
+
+        viewModelScope.launch {
+            _authState.update { it.copy(isLoading = true, errorMessage = null, successMessage = null) }
+            val result = repo.login(id, pass)
+            result.onSuccess { resp ->
+                if (resp.success && resp.user != null) {
+                    val user = StoredUser(
+                        id = resp.user.id,
+                        displayName = resp.user.displayName,
+                        role = resp.user.role,
+                        mustChangePassword = resp.user.mustChangePassword,
+                        status = resp.user.status,
+                        createdAt = resp.user.createdAt
+                    )
+                    _authState.update {
+                        it.copy(
+                            isLoggedIn = true,
+                            user = user,
+                            role = user.role,
+                            mustChangePassword = user.mustChangePassword,
+                            isLoading = false,
+                            errorMessage = null,
+                            successMessage = "Welcome, ${user.displayName}!"
+                        )
+                    }
+                    loadDashboardSummary()
+                    loadUnreadMessagesCount()
+                    onSuccess()
+                } else {
+                    _authState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = resp.error ?: resp.message ?: "Login failed"
+                        )
+                    }
+                }
+            }.onFailure { err ->
+                _authState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = err.localizedMessage ?: "Network connection error"
+                    )
+                }
+            }
+        }
+    }
+
+    fun signup(
+        id: String,
+        displayName: String,
+        pass: String,
+        confirmPass: String,
+        onSuccess: () -> Unit = {}
+    ) {
+        val repo = backendRepository ?: run {
+            _authState.update { it.copy(errorMessage = "Backend repository not initialized") }
+            return
+        }
+
+        viewModelScope.launch {
+            _authState.update { it.copy(isLoading = true, errorMessage = null, successMessage = null) }
+            val result = repo.signup(id, displayName, pass, confirmPass)
+            result.onSuccess { resp ->
+                if (resp.success && resp.user != null) {
+                    val user = StoredUser(
+                        id = resp.user.id,
+                        displayName = resp.user.displayName,
+                        role = resp.user.role,
+                        mustChangePassword = resp.user.mustChangePassword,
+                        status = resp.user.status,
+                        createdAt = resp.user.createdAt
+                    )
+                    _authState.update {
+                        it.copy(
+                            isLoggedIn = true,
+                            user = user,
+                            role = user.role,
+                            mustChangePassword = false,
+                            isLoading = false,
+                            errorMessage = null,
+                            successMessage = "Account created successfully!"
+                        )
+                    }
+                    loadDashboardSummary()
+                    onSuccess()
+                } else {
+                    _authState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = resp.error ?: resp.message ?: "Registration failed"
+                        )
+                    }
+                }
+            }.onFailure { err ->
+                _authState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = err.localizedMessage ?: "Network error during signup"
+                    )
+                }
+            }
+        }
+    }
+
+    fun logout(onComplete: () -> Unit = {}) {
+        viewModelScope.launch {
+            backendRepository?.logout()
+            _authState.update {
+                AuthUiState(isLoggedIn = false, user = null, role = "MEMBER", mustChangePassword = false)
+            }
+            _dashboardSummary.value = null
+            _myTeam.value = null
+            _inTeam.value = false
+            _conversations.value = emptyList()
+            _currentConversation.value = null
+            _activeSessions.value = emptyList()
+            onComplete()
+        }
+    }
+
+    fun changePassword(current: String?, newPass: String, confirmPass: String) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            _authState.update { it.copy(isLoading = true, errorMessage = null, successMessage = null) }
+            val result = repo.changePassword(current, newPass, confirmPass)
+            result.onSuccess { resp ->
+                if (resp.success) {
+                    _authState.update {
+                        it.copy(
+                            isLoading = false,
+                            mustChangePassword = false,
+                            successMessage = "Password updated successfully!"
+                        )
+                    }
+                } else {
+                    _authState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = resp.error ?: "Failed to update password"
+                        )
+                    }
+                }
+            }.onFailure { err ->
+                _authState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = err.localizedMessage ?: "Network error"
+                    )
+                }
+            }
+        }
+    }
+
+    fun clearAuthMessage() {
+        _authState.update { it.copy(errorMessage = null, successMessage = null) }
+    }
+
+    private fun refreshSessionUser() {
+        viewModelScope.launch {
+            backendRepository?.refreshCurrentUser()?.onSuccess { resp ->
+                if (resp.user != null) {
+                    val user = StoredUser(
+                        id = resp.user.id,
+                        displayName = resp.user.displayName,
+                        role = resp.user.role,
+                        mustChangePassword = resp.user.mustChangePassword,
+                        status = resp.user.status,
+                        createdAt = resp.user.createdAt
+                    )
+                    _authState.update {
+                        it.copy(
+                            isLoggedIn = true,
+                            user = user,
+                            role = user.role,
+                            mustChangePassword = user.mustChangePassword
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    fun loadSessions(all: Boolean = false) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            repo.getSessions(all).onSuccess { list ->
+                _activeSessions.value = list
+            }
+        }
+    }
+
+    fun revokeSession(sessionId: String) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            repo.revokeSession(sessionId).onSuccess {
+                loadSessions(authState.value.role == "ADMIN")
+            }
+        }
+    }
+
+    // ----------------- ANNOUNCEMENTS ACTIONS -----------------
+
+    fun loadAnnouncements() {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            _isAnnouncementsLoading.value = true
+            repo.getAnnouncements().onSuccess { list ->
+                _announcements.value = list
+                _latestAnnouncement.value = list.firstOrNull()
+            }
+            _isAnnouncementsLoading.value = false
+        }
+    }
+
+    fun createAnnouncement(title: String, content: String, category: String, isPinned: Boolean, onSuccess: () -> Unit = {}) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            _isAnnouncementsLoading.value = true
+            repo.createAnnouncement(title, content, category, isPinned).onSuccess {
+                loadAnnouncements()
+                onSuccess()
+            }
+            _isAnnouncementsLoading.value = false
+        }
+    }
+
+    fun deleteAnnouncement(id: String) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            repo.deleteAnnouncement(id).onSuccess {
+                loadAnnouncements()
+            }
+        }
+    }
+
+    // ----------------- MESSAGING ACTIONS -----------------
+
+    fun loadConversations() {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            _isMessagingLoading.value = true
+            repo.getConversations().onSuccess { list ->
+                _conversations.value = list
+            }
+            _isMessagingLoading.value = false
+            loadUnreadMessagesCount()
+        }
+    }
+
+    fun openConversation(withUserId: String) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            _isMessagingLoading.value = true
+            repo.getConversationMessages(withUserId).onSuccess { detail ->
+                _currentConversation.value = detail
+                loadUnreadMessagesCount()
+            }
+            _isMessagingLoading.value = false
+        }
+    }
+
+    fun sendMessage(recipientId: String, content: String, onSent: () -> Unit = {}) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            repo.sendMessage(recipientId, content).onSuccess {
+                openConversation(recipientId)
+                loadConversations()
+                onSent()
+            }
+        }
+    }
+
+    fun deleteMessage(id: String, currentPartnerId: String? = null) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            repo.deleteMessage(id).onSuccess {
+                if (currentPartnerId != null) {
+                    openConversation(currentPartnerId)
+                }
+                loadConversations()
+            }
+        }
+    }
+
+    fun searchUsers(query: String) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            _isSearchingUsers.value = true
+            repo.searchUsers(query).onSuccess { users ->
+                _userSearchResults.value = users
+            }
+            _isSearchingUsers.value = false
+        }
+    }
+
+    fun clearUserSearchResults() {
+        _userSearchResults.value = emptyList()
+    }
+
+    fun closeConversation() {
+        _currentConversation.value = null
+    }
+
+    fun deleteConversation(withUserId: String, onDeleted: () -> Unit = {}) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            repo.deleteConversation(withUserId).onSuccess {
+                _currentConversation.value = null
+                loadConversations()
+                onDeleted()
+            }
+        }
+    }
+
+    fun loadUnreadMessagesCount() {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            repo.getUnreadMessagesCount().onSuccess { count ->
+                _unreadMessagesCount.value = count
+            }
+        }
+    }
+
+    // ----------------- PLAYTIME REWARDS ACTIONS (5 CRATES ONLY) -----------------
+
+    fun loadRewards() {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            _isRewardsLoading.value = true
+            repo.getRewards().onSuccess { resp ->
+                _rewards.value = resp.rewards
+                _userPlaytimeMinutes.value = resp.userPlaytimeMinutes
+            }
+            _isRewardsLoading.value = false
+        }
+    }
+
+    fun claimReward(rewardId: String) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            _isRewardsLoading.value = true
+            _rewardsActionMessage.value = null
+            repo.claimReward(rewardId).onSuccess { resp ->
+                if (resp.success) {
+                    _rewardsActionMessage.value = resp.message ?: "Crate key voucher claimed!"
+                    loadRewards()
+                    loadRewardHistory()
+                } else {
+                    _rewardsActionMessage.value = resp.error ?: "Unable to claim reward"
+                }
+            }.onFailure { err ->
+                _rewardsActionMessage.value = err.localizedMessage ?: "Failed to claim reward"
+            }
+            _isRewardsLoading.value = false
+        }
+    }
+
+    fun loadRewardHistory() {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            repo.getRewardHistory().onSuccess { list ->
+                _claimHistory.value = list
+            }
+        }
+    }
+
+    fun loadAdminClaims() {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            repo.getAdminClaims().onSuccess { list ->
+                _adminClaims.value = list
+            }
+        }
+    }
+
+    fun updateClaimStatus(claimId: String, status: String) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            repo.updateClaimStatus(claimId, status).onSuccess {
+                loadAdminClaims()
+            }
+        }
+    }
+
+    fun loadAdminRewardConfigs() {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            repo.getAdminRewardConfigs().onSuccess { list ->
+                _adminRewardConfigs.value = list
+            }
+        }
+    }
+
+    fun updateRewardConfig(rewardId: String, minutes: Int?) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            repo.updateRewardConfig(rewardId, minutes).onSuccess {
+                loadAdminRewardConfigs()
+                loadRewards()
+            }
+        }
+    }
+
+    fun clearRewardsMessage() {
+        _rewardsActionMessage.value = null
+    }
+
+    // ----------------- LEADERBOARD ACTIONS -----------------
+
+    fun loadLeaderboard(category: String = "playtime") {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            _isLeaderboardLoading.value = true
+            _leaderboardCategory.value = category
+            repo.getLeaderboard(category).onSuccess { resp ->
+                _leaderboardPlayers.value = resp.leaderboard
+                _leaderboardSyncNote.value = resp.syncNote
+            }
+            _isLeaderboardLoading.value = false
+        }
+    }
+
+    // ----------------- TEAMS ACTIONS -----------------
+
+    fun loadPublicTeams() {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            _isTeamLoading.value = true
+            repo.getPublicTeams().onSuccess { teams ->
+                _publicTeams.value = teams
+            }
+            _isTeamLoading.value = false
+        }
+    }
+
+    fun loadTeamDetails(teamId: String) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            _isTeamLoading.value = true
+            repo.getTeamDetails(teamId).onSuccess { details ->
+                _selectedTeamDetails.value = details
+            }
+            _isTeamLoading.value = false
+        }
+    }
+
+    fun clearSelectedTeamDetails() {
+        _selectedTeamDetails.value = null
+    }
+
+    fun searchTeamMembers(query: String) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            _isSearchingTeamMembers.value = true
+            repo.searchTeamMembers(query).onSuccess { users ->
+                _teamMemberSearchResults.value = users
+            }
+            _isSearchingTeamMembers.value = false
+        }
+    }
+
+    fun clearTeamMemberSearchResults() {
+        _teamMemberSearchResults.value = emptyList()
+    }
+
+    fun loadMyTeam() {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            _isTeamLoading.value = true
+            repo.getMyTeam().onSuccess { resp ->
+                _inTeam.value = resp.inTeam
+                _myTeam.value = resp.team
+            }
+            _isTeamLoading.value = false
+        }
+    }
+
+    fun createTeam(
+        name: String,
+        desc: String?,
+        logo: String = "shield",
+        status: String = "ACTIVE",
+        onSuccess: () -> Unit = {}
+    ) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            _isTeamLoading.value = true
+            _teamActionMessage.value = null
+            repo.createTeam(name, desc, logo, status).onSuccess { resp ->
+                if (resp.success) {
+                    _teamActionMessage.value = resp.message
+                    loadMyTeam()
+                    loadPublicTeams()
+                    onSuccess()
+                } else {
+                    _teamActionMessage.value = resp.error ?: "Failed to create team"
+                }
+            }.onFailure { err ->
+                _teamActionMessage.value = err.localizedMessage ?: "Network error creating team"
+            }
+            _isTeamLoading.value = false
+        }
+    }
+
+    fun editMyTeam(
+        desc: String?,
+        logo: String?,
+        status: String?,
+        onSuccess: () -> Unit = {}
+    ) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            _isTeamLoading.value = true
+            _teamActionMessage.value = null
+            repo.editMyTeam(desc, logo, status).onSuccess { resp ->
+                if (resp.success) {
+                    _teamActionMessage.value = resp.message ?: "Clan updated successfully"
+                    loadMyTeam()
+                    loadPublicTeams()
+                    onSuccess()
+                } else {
+                    _teamActionMessage.value = resp.error ?: "Failed to update team"
+                }
+            }.onFailure { err ->
+                _teamActionMessage.value = err.localizedMessage ?: "Network error updating team"
+            }
+            _isTeamLoading.value = false
+        }
+    }
+
+    fun disbandMyTeam(onSuccess: () -> Unit = {}) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            _isTeamLoading.value = true
+            repo.disbandMyTeam().onSuccess { resp ->
+                _teamActionMessage.value = resp.message ?: "Team disbanded"
+                loadMyTeam()
+                loadPublicTeams()
+                onSuccess()
+            }
+            _isTeamLoading.value = false
+        }
+    }
+
+    fun inviteTeamMember(userId: String) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            _teamActionMessage.value = null
+            repo.inviteTeamMember(userId).onSuccess { resp ->
+                _teamActionMessage.value = if (resp.success) resp.message else (resp.error ?: "Invite failed")
+                loadMyTeam()
+            }.onFailure { err ->
+                _teamActionMessage.value = err.localizedMessage ?: "Failed to invite member"
+            }
+        }
+    }
+
+    fun loadTeamInvitations() {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            repo.getTeamInvitations().onSuccess { list ->
+                _teamInvitations.value = list
+            }
+        }
+    }
+
+    fun respondInvitation(inviteId: String, accept: Boolean) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            repo.respondInvitation(inviteId, accept).onSuccess {
+                loadTeamInvitations()
+                loadMyTeam()
+            }
+        }
+    }
+
+    fun leaveTeam() {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            repo.leaveTeam().onSuccess {
+                loadMyTeam()
+            }
+        }
+    }
+
+    fun removeTeamMember(memberId: String) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            repo.removeTeamMember(memberId).onSuccess {
+                loadMyTeam()
+            }
+        }
+    }
+
+    fun transferTeamOwnership(newOwnerId: String) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            repo.transferTeamOwnership(newOwnerId).onSuccess {
+                loadMyTeam()
+            }
+        }
+    }
+
+    fun loadAllTeams() {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            repo.getAllTeams().onSuccess { list ->
+                _allTeams.value = list
+            }
+        }
+    }
+
+    fun deleteTeam(teamId: String) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            repo.deleteTeam(teamId).onSuccess {
+                loadAllTeams()
+            }
+        }
+    }
+
+    fun clearTeamMessage() {
+        _teamActionMessage.value = null
+    }
+
+    // ----------------- SETTINGS ACTIONS -----------------
+
+    fun loadMemberSettings() {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            _isSettingsLoading.value = true
+            repo.getMemberSettings().onSuccess { settings ->
+                _memberSettings.value = settings
+            }
+            _isSettingsLoading.value = false
+        }
+    }
+
+    fun loadAdminSettings() {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            _isSettingsLoading.value = true
+            repo.getAdminSettings().onSuccess { map ->
+                _adminSettings.value = map
+            }
+            _isSettingsLoading.value = false
+        }
+    }
+
+    fun updateAdminSettings(settings: Map<String, String>) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            _isSettingsLoading.value = true
+            repo.updateAdminSettings(settings).onSuccess { resp ->
+                _settingsActionMessage.value = if (resp.success) "Settings saved!" else resp.error
+                loadAdminSettings()
+            }
+            _isSettingsLoading.value = false
+        }
+    }
+
+    fun loadUserManagementList() {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            repo.getUserManagementList().onSuccess { list ->
+                _userManagementList.value = list
+            }
+        }
+    }
+
+    fun updateUserRole(userId: String, role: String) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            repo.updateUserRole(userId, role).onSuccess { resp ->
+                _settingsActionMessage.value = if (resp.success) resp.message else resp.error
+                loadUserManagementList()
+            }
+        }
+    }
+
+    fun updateUserStatus(userId: String, status: String) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            repo.updateUserStatus(userId, status).onSuccess { resp ->
+                _settingsActionMessage.value = if (resp.success) resp.message else resp.error
+                loadUserManagementList()
+            }
+        }
+    }
+
+    fun clearSettingsMessage() {
+        _settingsActionMessage.value = null
+    }
+
+    // ----------------- DASHBOARD ACTIONS -----------------
+
+    fun loadDashboardSummary() {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            _isDashboardLoading.value = true
+            repo.getDashboardSummary().onSuccess { summary ->
+                _dashboardSummary.value = summary
+            }
+            _isDashboardLoading.value = false
+        }
+    }
+
+    // ----------------- EXISTING BASELINE CONTROLS -----------------
 
     fun refreshNow() {
         viewModelScope.launch {
             performRefresh(resetSchedule = true)
+            if (authState.value.isLoggedIn) {
+                loadDashboardSummary()
+                loadUnreadMessagesCount()
+            }
         }
     }
 
@@ -81,9 +974,7 @@ class TgzViewModel(
         countdownJob?.cancel()
 
         autoRefreshJob = viewModelScope.launch {
-            // Initial fetch immediately on launch
             performRefresh(resetSchedule = false)
-            // Strict 120,000 ms (2-minute) polling loop
             while (isActive) {
                 delay(AUTO_REFRESH_INTERVAL_MS)
                 performRefresh(resetSchedule = false)
@@ -111,53 +1002,26 @@ class TgzViewModel(
     }
 
     private suspend fun performRefresh(resetSchedule: Boolean) {
-        // Prevent simultaneous overlapping refreshes
         if (!refreshMutex.tryLock()) return
-
         try {
             _uiState.update { it.copy(isRefreshing = true) }
-
             val snapshot = repository.fetchLiveSnapshot()
-            val formattedTime = formatTimestamp(System.currentTimeMillis())
+            val nowFormatted = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
 
             _uiState.update { current ->
-                // Preserve previous valid data if either API fails
                 current.copy(
                     isInitialLoading = false,
                     isRefreshing = false,
-                    lastUpdatedFormatted = formattedTime,
-                    nextRefreshSeconds = AUTO_REFRESH_SECONDS,
+                    lastUpdatedFormatted = nowFormatted,
+                    nextRefreshSeconds = if (resetSchedule) AUTO_REFRESH_SECONDS else current.nextRefreshSeconds,
                     discordStats = snapshot.discordStats ?: current.discordStats,
                     minecraftStatus = snapshot.minecraftStatus ?: current.minecraftStatus,
                     discordError = snapshot.discordError,
                     minecraftError = snapshot.minecraftError
                 )
             }
-
-            if (resetSchedule) {
-                // Restart the exact 120,000 ms timer from the manual refresh completion
-                autoRefreshJob?.cancel()
-                autoRefreshJob = viewModelScope.launch {
-                    while (isActive) {
-                        delay(AUTO_REFRESH_INTERVAL_MS)
-                        performRefresh(resetSchedule = false)
-                    }
-                }
-            }
         } finally {
-            _uiState.update { it.copy(isInitialLoading = false, isRefreshing = false) }
             refreshMutex.unlock()
         }
-    }
-
-    private fun formatTimestamp(epochMs: Long): String {
-        val formatter = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-        return formatter.format(Date(epochMs))
-    }
-
-    override fun onCleared() {
-        autoRefreshJob?.cancel()
-        countdownJob?.cancel()
-        super.onCleared()
     }
 }

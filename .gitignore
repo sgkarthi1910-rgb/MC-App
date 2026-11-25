@@ -17,3 +17,7 @@
 local.properties
 .env
 debug.keystore
+*.db
+*.db-shm
+*.db-wal
+backend/data/*.db*

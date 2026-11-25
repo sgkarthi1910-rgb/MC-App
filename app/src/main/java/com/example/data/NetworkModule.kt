@@ -1,10 +1,12 @@
 package com.example.data
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.BuildConfig
 import com.example.ui.viewmodel.TgzViewModel
 import com.squareup.moshi.Moshi
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -14,7 +16,8 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Manual Dependency Injection container providing networking, Moshi, Retrofit ApiService,
- * native Minecraft SLP TCP client, ServerRepository, and ViewModelFactory.
+ * native Minecraft SLP TCP client, ServerRepository, SessionManager, BackendRepository,
+ * and ViewModelFactory.
  */
 object NetworkModule {
 
@@ -22,6 +25,13 @@ object NetworkModule {
     private const val DEFAULT_DISCORD_INVITE = "https://discord.gg/J5P89mxXbc"
     private const val DEFAULT_MINECRAFT_HOST = "node2.vyroxsmp.online"
     private const val DEFAULT_MINECRAFT_PORT = 10010
+    private const val DEFAULT_BACKEND_URL = "http://10.0.2.2:3000/"
+
+    private var appContext: Context? = null
+
+    fun init(context: Context) {
+        appContext = context.applicationContext
+    }
 
     val appConfig: AppServerConfig by lazy {
         val inviteUrl = BuildConfig.DISCORD_INVITE_URL
@@ -74,9 +84,33 @@ object NetworkModule {
         }
     }
 
+    private val backendHostInterceptor: Interceptor by lazy {
+        Interceptor { chain ->
+            var request = chain.request()
+            val customUrl = appContext?.let { SessionManager(it).getBackendUrl() }?.trim()
+            if (!customUrl.isNullOrBlank()) {
+                val parsed = customUrl.toHttpUrlOrNull()
+                if (parsed != null &&
+                    !request.url.host.contains("discord") &&
+                    !request.url.host.contains("mcsrvstat") &&
+                    !request.url.host.contains("mc-heads")
+                ) {
+                    val newUrl = request.url.newBuilder()
+                        .scheme(parsed.scheme)
+                        .host(parsed.host)
+                        .port(parsed.port)
+                        .build()
+                    request = request.newBuilder().url(newUrl).build()
+                }
+            }
+            chain.proceed(request)
+        }
+    }
+
     val okHttpClient: OkHttpClient by lazy {
         OkHttpClient.Builder()
             .addInterceptor(userAgentInterceptor)
+            .addInterceptor(backendHostInterceptor)
             .addInterceptor(loggingInterceptor)
             .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(12, TimeUnit.SECONDS)
@@ -101,6 +135,20 @@ object NetworkModule {
         retrofit.create(ApiService::class.java)
     }
 
+    val backendRetrofit: Retrofit by lazy {
+        val baseUrl = appConfig.customDashboardApiUrl.ifBlank { DEFAULT_BACKEND_URL }
+        val normalized = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"
+        Retrofit.Builder()
+            .baseUrl(normalized)
+            .client(okHttpClient)
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
+            .build()
+    }
+
+    val backendApiService: BackendApiService by lazy {
+        backendRetrofit.create(BackendApiService::class.java)
+    }
+
     val minecraftSlpClient: MinecraftSlpClient by lazy {
         MinecraftSlpClient(timeoutMs = 4500)
     }
@@ -113,16 +161,33 @@ object NetworkModule {
         )
     }
 
-    val viewModelFactory: ViewModelProvider.Factory by lazy {
-        object : ViewModelProvider.Factory {
+    fun getSessionManager(context: Context? = null): SessionManager? {
+        val ctx = context?.applicationContext ?: appContext
+        return ctx?.let { SessionManager(it) }
+    }
+
+    fun getBackendRepository(context: Context? = null): TgzBackendRepository? {
+        val sm = getSessionManager(context) ?: return null
+        return TgzBackendRepository(backendApiService, sm)
+    }
+
+    fun getViewModelFactory(context: Context? = null): ViewModelProvider.Factory {
+        val sm = getSessionManager(context)
+        val backendRepo = if (sm != null) TgzBackendRepository(backendApiService, sm) else null
+
+        return object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 if (modelClass.isAssignableFrom(TgzViewModel::class.java)) {
-                    return TgzViewModel(serverRepository) as T
+                    return TgzViewModel(serverRepository, backendRepo, sm) as T
                 }
                 throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
             }
         }
+    }
+
+    val viewModelFactory: ViewModelProvider.Factory by lazy {
+        getViewModelFactory(null)
     }
 
     private fun extractDiscordInviteCode(inviteUrl: String): String {
