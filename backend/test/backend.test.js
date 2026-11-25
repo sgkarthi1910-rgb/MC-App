@@ -939,4 +939,39 @@ test('TGZ Lifesteal Complete Backend Test Suite', async (t) => {
 
     testServer.server.close();
   });
+
+  // 16. Resilient password change without session (serverless cold-start fallback)
+  await t.test('16. Resilient password change with userId and bootstrap/current password without active session', async () => {
+    const testServer = createServer(':memory:');
+    await new Promise(resolve => testServer.server.listen(0, '127.0.0.1', resolve));
+
+    // Unauthenticated request without session or cookie
+    const changeRes = await makeRequest(testServer.server, {
+      method: 'POST',
+      path: '/api/auth/change-password'
+    }, {
+      userId: 'darksight',
+      currentPassword: 'TestBootstrapAdmin2026!',
+      newPassword: 'BrandNewSecurePass2026!',
+      confirmNewPassword: 'BrandNewSecurePass2026!'
+    });
+
+    assert.equal(changeRes.statusCode, 200);
+    assert.equal(changeRes.body.success, true);
+    assert.equal(changeRes.body.user.id, 'darksight');
+    assert.ok(changeRes.body.sessionToken);
+
+    // Verify login with new password succeeds
+    const loginRes = await makeRequest(testServer.server, {
+      method: 'POST',
+      path: '/api/auth/login'
+    }, {
+      id: 'darksight',
+      password: 'BrandNewSecurePass2026!'
+    });
+    assert.equal(loginRes.statusCode, 200);
+    assert.equal(loginRes.body.user.id, 'darksight');
+
+    testServer.server.close();
+  });
 });
