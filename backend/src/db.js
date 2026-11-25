@@ -7,6 +7,7 @@ try {
 const path = require('node:path');
 const fs = require('node:fs');
 const { hashPasswordSync } = require('./crypto-utils');
+const { createInMemoryDatabase } = require('./in-memory-db');
 
 let dbInstance = null;
 
@@ -46,13 +47,8 @@ function getDatabase(dbPath) {
   }
 
   if (!db) {
-    // Graceful in-memory fallback if native binary is disabled
-    try {
-      db = new DatabaseSync(':memory:');
-    } catch (e) {
-      console.error('[TGZ LIFESTEAL] Critical: SQLite engine unavailable:', e);
-      throw e;
-    }
+    console.warn('[TGZ LIFESTEAL] node:sqlite is not available on this platform. Running with zero-dependency high-speed in-memory store.');
+    db = createInMemoryDatabase();
   }
 
   initSchema(db);
