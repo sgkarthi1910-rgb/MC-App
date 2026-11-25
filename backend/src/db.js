@@ -225,10 +225,44 @@ function initSchema(db) {
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS groups (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      avatar TEXT DEFAULT 'groups',
+      owner_id TEXT NOT NULL REFERENCES users(id),
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS group_members (
+      group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      role TEXT NOT NULL DEFAULT 'MEMBER' CHECK(role IN ('OWNER', 'MEMBER')),
+      joined_at INTEGER NOT NULL,
+      PRIMARY KEY (group_id, user_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS group_messages (
+      id TEXT PRIMARY KEY,
+      group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+      sender_id TEXT NOT NULL REFERENCES users(id),
+      content TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS group_message_reads (
+      group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      last_read_at INTEGER NOT NULL,
+      PRIMARY KEY (group_id, user_id)
+    );
   `);
 
   try { db.exec("ALTER TABLE teams ADD COLUMN logo TEXT DEFAULT 'shield'"); } catch (e) {}
   try { db.exec("ALTER TABLE teams ADD COLUMN status TEXT DEFAULT 'ACTIVE'"); } catch (e) {}
+  try { db.exec("ALTER TABLE users ADD COLUMN avatar TEXT DEFAULT 'player'"); } catch (e) {}
 }
 
 const DEFAULT_ADMIN_IDS = ['sg_karthi', 'dhanush', 'lmtg', 'darksight'];
@@ -333,11 +367,12 @@ function seedInitialData(db) {
   const defaultSettings = [
     { key: 'minecraft_server_host', value: process.env.MINECRAFT_SERVER_HOST || 'node2.vyroxsmp.online' },
     { key: 'minecraft_server_port', value: process.env.MINECRAFT_SERVER_PORT || '10010' },
+    { key: 'minecraft_bedrock_port', value: process.env.MINECRAFT_BEDROCK_PORT || '10011' },
     { key: 'discord_invite_url', value: process.env.DISCORD_INVITE_URL || 'https://discord.gg/J5P89mxXbc' },
     { key: 'session_expiration_days', value: process.env.SESSION_EXPIRATION_DAYS || '30' },
     { key: 'minecraft_plugin_api_key', value: process.env.MINECRAFT_PLUGIN_API_KEY || 'tgz_plugin_sec_99a8b7c6d5e4f3a2' },
     { key: 'allow_member_team_creation', value: 'true' },
-    { key: 'motd', value: 'Welcome to TGZ Lifesteal SMP!' }
+    { key: 'motd', value: 'Welcome to TGZ Lifestyle SMP!' }
   ];
 
   for (const setting of defaultSettings) {
@@ -356,8 +391,8 @@ function seedInitialData(db) {
       VALUES (?, ?, ?, ?, ?, 'UPDATE', 1, ?, ?)
     `).run(
       'ann_welcome_01',
-      'Welcome to TGZ Lifesteal SMP',
-      'Welcome to the official TGZ Lifesteal community! Join our Minecraft SMP server at node2.vyroxsmp.online:10010, claim hearts, earn playtime crates, and join clans.',
+      'Welcome to TGZ Lifestyle SMP',
+      'Welcome to the official TGZ Minecraft Lifestyle community! Join our server at node2.vyroxsmp.online (Java: 10010 / Bedrock: 10011), build your journey, earn playtime crates, connect with friends, and create teams.',
       adminIds[0] || 'sg_karthi',
       `Admin (${adminIds[0] || 'sg_karthi'})`,
       now,

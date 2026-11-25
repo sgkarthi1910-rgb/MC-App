@@ -1,4 +1,5 @@
 const net = require('node:net');
+const dgram = require('node:dgram');
 
 /**
  * Encodes a VarInt into a Buffer
@@ -190,7 +191,7 @@ async function queryMinecraftServer(host = 'node2.vyroxsmp.online', port = 10010
         onlinePlayers: data.players?.online || 0,
         maxPlayers: data.players?.max || 0,
         version: data.version || '1.20.x',
-        motd: data.motd?.clean?.join(' ') || 'TGZ Lifesteal SMP',
+        motd: data.motd?.clean?.join(' ') || 'TGZ Lifestyle SMP',
         latencyMs: null,
         players: (data.players?.list || []).map(p => ({
           username: typeof p === 'string' ? p : p.name,
@@ -218,7 +219,155 @@ async function queryMinecraftServer(host = 'node2.vyroxsmp.online', port = 10010
   };
 }
 
+/**
+ * Direct Minecraft Bedrock Ping via RakNet UDP (Unconnected Ping 0x01)
+ */
+function pingBedrockServer(host, port, timeoutMs = 2500) {
+  return new Promise((resolve) => {
+    let socket;
+    let resolved = false;
+
+    const cleanup = () => {
+      if (socket) {
+        try { socket.close(); } catch (e) {}
+      }
+    };
+
+    const timer = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        cleanup();
+        resolve(null);
+      }
+    }, timeoutMs);
+
+    try {
+      socket = dgram.createSocket('udp4');
+
+      socket.on('error', () => {
+        if (!resolved) {
+          resolved = true;
+          clearTimeout(timer);
+          cleanup();
+          resolve(null);
+        }
+      });
+
+      socket.on('message', (msg) => {
+        try {
+          if (msg.length >= 35 && msg[0] === 0x1c) {
+            const strLen = msg.readUInt16BE(33);
+            const str = msg.subarray(35, 35 + strLen).toString('utf8');
+            const parts = str.split(';');
+            if (!resolved) {
+              resolved = true;
+              clearTimeout(timer);
+              cleanup();
+              resolve({
+                isOnline: true,
+                host,
+                port,
+                edition: 'BEDROCK',
+                serverName: parts[1] || 'TGZ Lifestyle Bedrock',
+                protocol: parts[2] || '',
+                version: parts[3] || 'Bedrock 1.20+',
+                onlinePlayers: parseInt(parts[4], 10) || 0,
+                maxPlayers: parseInt(parts[5], 10) || 0,
+                motd: parts[7] || parts[1] || 'TGZ Lifestyle Bedrock SMP',
+                players: [],
+                querySource: 'Native RakNet UDP Ping'
+              });
+            }
+          }
+        } catch (e) {}
+      });
+
+      const packet = Buffer.alloc(33);
+      packet.writeUInt8(0x01, 0);
+      packet.writeBigInt64BE(BigInt(Date.now()), 1);
+      const magic = Buffer.from('00ffff00fefefefefdfdfdfd12345678', 'hex');
+      magic.copy(packet, 9);
+      packet.writeBigInt64BE(BigInt(Math.floor(Math.random() * 10000000)), 25);
+
+      socket.send(packet, 0, packet.length, port, host, (err) => {
+        if (err && !resolved) {
+          resolved = true;
+          clearTimeout(timer);
+          cleanup();
+          resolve(null);
+        }
+      });
+    } catch (e) {
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(timer);
+        cleanup();
+        resolve(null);
+      }
+    }
+  });
+}
+
+/**
+ * Queries Minecraft Bedrock server status (Native UDP + HTTP mcsrvstat fallback)
+ */
+async function queryBedrockServer(host = 'node2.vyroxsmp.online', port = 10011) {
+  if (!process.env.VERCEL) {
+    try {
+      const directResult = await pingBedrockServer(host, port, 1500);
+      if (directResult) return directResult;
+    } catch (e) {}
+  }
+
+  // HTTP Fallback to api.mcsrvstat.us/bedrock/3/{host}:{port}
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2000);
+    const resp = await fetch(`https://api.mcsrvstat.us/bedrock/3/${encodeURIComponent(`${host}:${port}`)}`, {
+      signal: controller.signal,
+      headers: { 'User-Agent': 'TGZ-Backend/1.0' }
+    });
+    clearTimeout(timeout);
+
+    if (resp.ok) {
+      const data = await resp.json();
+      return {
+        isOnline: Boolean(data.online),
+        host,
+        port,
+        edition: 'BEDROCK',
+        onlinePlayers: data.players?.online || 0,
+        maxPlayers: data.players?.max || 0,
+        version: data.version || 'Bedrock 1.20+',
+        motd: data.motd?.clean?.join(' ') || 'TGZ Lifestyle Bedrock SMP',
+        latencyMs: null,
+        players: (data.players?.list || []).map(p => ({
+          username: typeof p === 'string' ? p : p.name,
+          uuid: typeof p === 'object' ? p.uuid : null
+        })),
+        querySource: 'api.mcsrvstat.us (Bedrock)'
+      };
+    }
+  } catch (err) {}
+
+  return {
+    isOnline: false,
+    host,
+    port,
+    edition: 'BEDROCK',
+    onlinePlayers: 0,
+    maxPlayers: 0,
+    version: null,
+    motd: null,
+    latencyMs: null,
+    players: [],
+    querySource: 'Offline / Unreachable'
+  };
+}
+
 module.exports = {
   pingMinecraftServer,
-  queryMinecraftServer
+  queryMinecraftServer,
+  pingBedrockServer,
+  queryBedrockServer
 };

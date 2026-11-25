@@ -207,13 +207,28 @@ fun TgzLifestealApp(
     fun copyServerIp() {
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
         clipboard?.setPrimaryClip(
-            ClipData.newPlainText("TGZ Lifesteal Server IP", uiState.serverAddress)
+            ClipData.newPlainText("TGZ Lifestyle Server IP", uiState.serverAddress)
         )
         ipCopied = true
         scope.launch {
             snackbarHostState.currentSnackbarData?.dismiss()
             snackbarHostState.showSnackbar(
                 message = "Copied ${uiState.serverAddress} to clipboard",
+                duration = SnackbarDuration.Short
+            )
+        }
+    }
+
+    fun copyBedrockIp() {
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+        val bedrockAddress = "node2.vyroxsmp.online:10011"
+        clipboard?.setPrimaryClip(
+            ClipData.newPlainText("TGZ Lifestyle Bedrock Server IP", bedrockAddress)
+        )
+        scope.launch {
+            snackbarHostState.currentSnackbarData?.dismiss()
+            snackbarHostState.showSnackbar(
+                message = "Copied Bedrock IP $bedrockAddress to clipboard",
                 duration = SnackbarDuration.Short
             )
         }
@@ -284,7 +299,7 @@ fun TgzLifestealApp(
                         }
                         Column {
                             Text(
-                                text = "TGZ LIFESTEAL",
+                                text = "TGZ LIFESTYLE",
                                 fontFamily = SilkscreenFontFamily,
                                 style = MaterialTheme.typography.titleSmall,
                                 color = TextPrimary
@@ -538,7 +553,7 @@ fun TgzLifestealApp(
                             ) {
                                 VoxelHeartIcon(tint = NetherRed, iconSize = 18.dp)
                                 Text(
-                                    text = "TGZ LIFESTEAL",
+                                    text = "TGZ LIFESTYLE",
                                     fontFamily = SilkscreenFontFamily,
                                     style = MaterialTheme.typography.titleSmall,
                                     color = TextPrimary,
@@ -766,13 +781,20 @@ fun TgzLifestealApp(
 
                         // 10. EXISTING PAGES (Preserved 100%)
                         composable(TgzDestination.LIVE_STATUS.route) {
+                            val javaStatus by viewModel.javaServerStatus.collectAsStateWithLifecycle()
+                            val bedrockStatus by viewModel.bedrockServerStatus.collectAsStateWithLifecycle()
                             LiveStatusScreen(
                                 uiState = uiState,
                                 ipCopied = ipCopied,
                                 onCopyIp = { copyServerIp() },
                                 onRefresh = { viewModel.refreshNow() },
                                 onNavigateToPlayers = { navigateTo(TgzDestination.PLAYERS.route) },
-                                onNavigateToCommunity = { navigateTo(TgzDestination.COMMUNITY.route) }
+                                onNavigateToCommunity = { navigateTo(TgzDestination.COMMUNITY.route) },
+                                javaStatus = javaStatus,
+                                bedrockStatus = bedrockStatus,
+                                onCopyBedrockIp = { copyBedrockIp() },
+                                onRefreshJava = { viewModel.fetchJavaServerStatus() },
+                                onRefreshBedrock = { viewModel.fetchBedrockServerStatus() }
                             )
                         }
 

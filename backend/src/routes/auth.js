@@ -164,11 +164,11 @@ function setupAuthRoutes(router, db) {
         });
       }
 
-      if (user.status === 'SUSPENDED') {
+      if (user.status === 'SUSPENDED' || user.status === 'BANNED') {
         return res.status(403).json({
           success: false,
-          error: 'Account has been suspended. Contact server administration.',
-          code: 'ACCOUNT_SUSPENDED'
+          error: user.status === 'BANNED' ? 'Account has been banned. Contact server administration.' : 'Account has been suspended. Contact server administration.',
+          code: user.status === 'BANNED' ? 'ACCOUNT_BANNED' : 'ACCOUNT_SUSPENDED'
         });
       }
 

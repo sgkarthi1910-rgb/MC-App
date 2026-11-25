@@ -1,21 +1,76 @@
-const { queryMinecraftServer } = require('../minecraft-query');
+const { queryMinecraftServer, queryBedrockServer } = require('../minecraft-query');
 const { syncServerTeams } = require('./teams');
 
 function setupLeaderboardRoutes(router, db) {
-  // 1. GET MINECRAFT SERVER STATUS (Live query to node2.vyroxsmp.online:10010)
+  // 1. GET MINECRAFT SERVER STATUS (Both Java 10010 and Bedrock 10011)
   router.get('/api/minecraft/status', async (req, res) => {
     const hostSetting = db.prepare("SELECT value FROM app_settings WHERE key = 'minecraft_server_host'").get()?.value || 'node2.vyroxsmp.online';
-    const portSetting = parseInt(db.prepare("SELECT value FROM app_settings WHERE key = 'minecraft_server_port'").get()?.value || '10010', 10);
+    const javaPort = parseInt(db.prepare("SELECT value FROM app_settings WHERE key = 'minecraft_server_port'").get()?.value || '10010', 10);
+    const bedrockPort = parseInt(db.prepare("SELECT value FROM app_settings WHERE key = 'minecraft_bedrock_port'").get()?.value || '10011', 10);
 
-    const status = await queryMinecraftServer(hostSetting, portSetting);
+    const [javaStatus, bedrockStatus] = await Promise.all([
+      queryMinecraftServer(hostSetting, javaPort),
+      queryBedrockServer(hostSetting, bedrockPort)
+    ]);
+
+    const lastUpdated = Date.now();
     return res.json({
       server: {
         host: hostSetting,
-        port: portSetting,
-        fullAddress: `${hostSetting}:${portSetting}`,
-        ...status,
-        lastUpdated: Date.now()
+        port: javaPort,
+        fullAddress: `${hostSetting}:${javaPort}`,
+        ...javaStatus,
+        online: Boolean(javaStatus?.isOnline),
+        lastUpdated
+      },
+      java: {
+        host: hostSetting,
+        port: javaPort,
+        fullAddress: `${hostSetting}:${javaPort}`,
+        ...javaStatus,
+        online: Boolean(javaStatus?.isOnline),
+        lastUpdated
+      },
+      bedrock: {
+        host: hostSetting,
+        port: bedrockPort,
+        fullAddress: `${hostSetting}:${bedrockPort}`,
+        ...bedrockStatus,
+        online: Boolean(bedrockStatus?.isOnline),
+        lastUpdated
       }
+    });
+  });
+
+  router.get('/api/minecraft/status/java', async (req, res) => {
+    const hostSetting = db.prepare("SELECT value FROM app_settings WHERE key = 'minecraft_server_host'").get()?.value || 'node2.vyroxsmp.online';
+    const javaPort = parseInt(db.prepare("SELECT value FROM app_settings WHERE key = 'minecraft_server_port'").get()?.value || '10010', 10);
+    const status = await queryMinecraftServer(hostSetting, javaPort);
+    return res.json({
+      edition: 'JAVA',
+      address: hostSetting,
+      host: hostSetting,
+      port: javaPort,
+      fullAddress: `${hostSetting}:${javaPort}`,
+      ...status,
+      online: Boolean(status?.isOnline),
+      lastUpdated: Date.now()
+    });
+  });
+
+  router.get('/api/minecraft/status/bedrock', async (req, res) => {
+    const hostSetting = db.prepare("SELECT value FROM app_settings WHERE key = 'minecraft_server_host'").get()?.value || 'node2.vyroxsmp.online';
+    const bedrockPort = parseInt(db.prepare("SELECT value FROM app_settings WHERE key = 'minecraft_bedrock_port'").get()?.value || '10011', 10);
+    const status = await queryBedrockServer(hostSetting, bedrockPort);
+    return res.json({
+      edition: 'BEDROCK',
+      address: hostSetting,
+      host: hostSetting,
+      port: bedrockPort,
+      fullAddress: `${hostSetting}:${bedrockPort}`,
+      ...status,
+      online: Boolean(status?.isOnline),
+      lastUpdated: Date.now()
     });
   });
 

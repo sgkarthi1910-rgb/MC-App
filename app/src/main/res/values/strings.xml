@@ -1,8 +1,8 @@
 <resources>
     <string name="app_name">TGZ lifestyle</string>
     <string name="hero_title">TGZ LIFESTYLE</string>
-    <string name="hero_tagline">SURVIVE. FIGHT. STEAL HEARTS.</string>
-    <string name="hero_description">Enter a world where every fight matters. Steal hearts, protect your land, build your empire and become the strongest player.</string>
+    <string name="hero_tagline">Welcome to TGZ – Your Minecraft Lifestyle Community</string>
+    <string name="hero_description">Build your journey, connect with players, create teams and become part of the TGZ community.</string>
     <string name="action_join_server">JOIN THE SERVER</string>
     <string name="action_join_discord">JOIN DISCORD</string>
     <string name="action_copy_ip">COPY SERVER IP</string>
@@ -16,9 +16,9 @@
     <string name="status_online">ONLINE</string>
     <string name="status_offline">OFFLINE</string>
     <string name="status_checking">CHECKING…</string>
-    <string name="players_section_title">PLAYERS CURRENTLY SURVIVING</string>
-    <string name="players_empty_title">The Battlefield Is Quiet</string>
-    <string name="players_empty_subtitle">No players are currently online on the Minecraft SMP server. Copy the IP and be the first to drop in.</string>
+    <string name="players_section_title">PLAYERS CURRENTLY EXPLORING</string>
+    <string name="players_empty_title">The Community Is Resting</string>
+    <string name="players_empty_subtitle">No players are currently online on the Minecraft SMP server. Copy the IP and be the first to explore.</string>
     <string name="players_offline_title">Server Unreachable</string>
     <string name="players_offline_subtitle">Could not reach the Minecraft SMP server right now. Check back shortly or join Discord for live announcements.</string>
     <string name="discord_checkout_notice">All packs and ranks are fulfilled directly through our official TGZ Discord server via staff tickets — no in-app payments are collected.</string>

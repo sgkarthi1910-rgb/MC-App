@@ -139,7 +139,7 @@ fun CommunityScreen(
 
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = discord?.guildName ?: "TGZ LIFESTEAL DISCORD",
+                                text = discord?.guildName ?: "TGZ LIFESTYLE DISCORD",
                                 style = MaterialTheme.typography.headlineSmall,
                                 color = TextPrimary
                             )
@@ -233,20 +233,20 @@ fun CommunityScreen(
                     CommunityPillarCard(
                         icon = Icons.Default.EmojiEvents,
                         accent = MinecraftGold,
-                        title = "Clan Wars & Tournaments",
-                        description = "Register your squad for scheduled KOTH wars, Lifesteal bounty hunts, and seasonal heart giveaways."
+                        title = "Events & Tournaments",
+                        description = "Register your squad for scheduled lifestyle events, community builds, and seasonal celebrations."
                     )
                     CommunityPillarCard(
                         icon = Icons.Default.SupportAgent,
                         accent = EmeraldGreen,
                         title = "Store & Support Tickets",
-                        description = "Open private tickets with TGZ staff to order Ranks, Heart Packs, Crate Keys, or report rule-breakers."
+                        description = "Open private tickets with TGZ staff to order Ranks, Crate Keys, or report rule-breakers."
                     )
                     CommunityPillarCard(
                         icon = Icons.Default.Gavel,
                         accent = NetherRed,
                         title = "Fair Play & Server Rules",
-                        description = "Zero hacked clients, no duping, and respectful clan rivalries keep TGZ Lifesteal competitive for everyone."
+                        description = "Zero hacked clients, no duping, and respectful player friendships keep TGZ Lifestyle welcoming for everyone."
                     )
                 }
             }

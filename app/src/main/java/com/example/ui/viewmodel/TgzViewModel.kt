@@ -2,30 +2,7 @@ package com.example.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.data.AdminClaimItemDto
-import com.example.data.AdminRewardConfigDto
-import com.example.data.AdminTeamItemDto
-import com.example.data.AnnouncementDto
-import com.example.data.ClaimHistoryItemDto
-import com.example.data.ConversationDetailResponse
-import com.example.data.ConversationDto
-import com.example.data.DashboardSummaryResponse
-import com.example.data.DashboardUiState
-import com.example.data.LeaderboardPlayerDto
-import com.example.data.MemberSettingsDto
-import com.example.data.PlaytimeRewardDto
-import com.example.data.ServerRepository
-import com.example.data.SessionItemDto
-import com.example.data.SessionManager
-import com.example.data.StoreCategory
-import com.example.data.StoredUser
-import com.example.data.TeamDetailsDto
-import com.example.data.TeamInvitationReceivedDto
-import com.example.data.TeamSearchUserDto
-import com.example.data.TeamSummaryDto
-import com.example.data.TgzBackendRepository
-import com.example.data.UserManagementItemDto
-import com.example.data.UserSearchDto
+import com.example.data.*
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -214,12 +191,57 @@ class TgzViewModel(
     private val _isDashboardLoading = MutableStateFlow(false)
     val isDashboardLoading: StateFlow<Boolean> = _isDashboardLoading.asStateFlow()
 
+    // 10. MINECRAFT SERVER STATUS (JAVA & BEDROCK)
+    private val _javaServerStatus = MutableStateFlow<MinecraftServerStatusDto?>(null)
+    val javaServerStatus: StateFlow<MinecraftServerStatusDto?> = _javaServerStatus.asStateFlow()
+
+    private val _bedrockServerStatus = MutableStateFlow<MinecraftServerStatusDto?>(null)
+    val bedrockServerStatus: StateFlow<MinecraftServerStatusDto?> = _bedrockServerStatus.asStateFlow()
+
+    private val _isServerStatusLoading = MutableStateFlow(false)
+    val isServerStatusLoading: StateFlow<Boolean> = _isServerStatusLoading.asStateFlow()
+
+    // 11. ADMIN REGISTERED MEMBERS STATE
+    private val _adminMembers = MutableStateFlow<List<AdminMemberItemDto>>(emptyList())
+    val adminMembers: StateFlow<List<AdminMemberItemDto>> = _adminMembers.asStateFlow()
+
+    private val _adminMembersPagination = MutableStateFlow<AdminMembersPaginationDto?>(null)
+    val adminMembersPagination: StateFlow<AdminMembersPaginationDto?> = _adminMembersPagination.asStateFlow()
+
+    private val _adminMemberDetails = MutableStateFlow<AdminMemberDetailsResponse?>(null)
+    val adminMemberDetails: StateFlow<AdminMemberDetailsResponse?> = _adminMemberDetails.asStateFlow()
+
+    private val _isAdminMembersLoading = MutableStateFlow(false)
+    val isAdminMembersLoading: StateFlow<Boolean> = _isAdminMembersLoading.asStateFlow()
+
+    // 12. GROUP CHATS STATE
+    private val _groups = MutableStateFlow<List<GroupDto>>(emptyList())
+    val groups: StateFlow<List<GroupDto>> = _groups.asStateFlow()
+
+    private val _currentGroupDetails = MutableStateFlow<GroupDetailResponse?>(null)
+    val currentGroupDetails: StateFlow<GroupDetailResponse?> = _currentGroupDetails.asStateFlow()
+
+    private val _currentGroupMessages = MutableStateFlow<List<GroupMessageDto>>(emptyList())
+    val currentGroupMessages: StateFlow<List<GroupMessageDto>> = _currentGroupMessages.asStateFlow()
+
+    private val _activeGroupId = MutableStateFlow<String?>(null)
+    val activeGroupId: StateFlow<String?> = _activeGroupId.asStateFlow()
+
+    private val _isGroupsLoading = MutableStateFlow(false)
+    val isGroupsLoading: StateFlow<Boolean> = _isGroupsLoading.asStateFlow()
+
+    private val _groupActionMessage = MutableStateFlow<String?>(null)
+    val groupActionMessage: StateFlow<String?> = _groupActionMessage.asStateFlow()
+
     init {
         startAutoRefreshCycle()
+        fetchJavaServerStatus()
+        fetchBedrockServerStatus()
         if (sessionManager?.hasActiveSession() == true) {
             refreshSessionUser()
             loadDashboardSummary()
             loadUnreadMessagesCount()
+            loadGroups()
         }
     }
 
@@ -948,14 +970,234 @@ class TgzViewModel(
         }
     }
 
+    // ----------------- MINECRAFT STATUS ACTIONS -----------------
+
+    fun fetchJavaServerStatus() {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            _isServerStatusLoading.value = true
+            repo.getJavaServerStatus().onSuccess { status ->
+                _javaServerStatus.value = status
+            }
+            _isServerStatusLoading.value = false
+        }
+    }
+
+    fun fetchBedrockServerStatus() {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            _isServerStatusLoading.value = true
+            repo.getBedrockServerStatus().onSuccess { status ->
+                _bedrockServerStatus.value = status
+            }
+            _isServerStatusLoading.value = false
+        }
+    }
+
+    // ----------------- ADMIN REGISTERED MEMBERS ACTIONS -----------------
+
+    fun loadAdminRegisteredMembers(
+        page: Int = 1,
+        search: String? = null,
+        role: String? = null,
+        status: String? = null,
+        sort: String = "created_at",
+        order: String = "desc"
+    ) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            _isAdminMembersLoading.value = true
+            repo.getAdminRegisteredMembers(
+                search = search?.takeIf { it.isNotBlank() },
+                role = role?.takeIf { it.isNotBlank() },
+                status = status?.takeIf { it.isNotBlank() },
+                sort = sort,
+                order = order,
+                page = page,
+                limit = 20
+            ).onSuccess { resp ->
+                _adminMembers.value = resp.users
+                _adminMembersPagination.value = resp.pagination
+            }.onFailure {
+                _adminMembers.value = emptyList()
+            }
+            _isAdminMembersLoading.value = false
+        }
+    }
+
+    fun loadAdminMemberDetails(userId: String) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            _isAdminMembersLoading.value = true
+            repo.getAdminMemberDetails(userId).onSuccess { details ->
+                _adminMemberDetails.value = details
+            }.onFailure {
+                _adminMemberDetails.value = null
+            }
+            _isAdminMembersLoading.value = false
+        }
+    }
+
+    fun clearAdminMemberDetails() {
+        _adminMemberDetails.value = null
+    }
+
+    fun updateAdminMemberRole(userId: String, newRole: String, onDone: () -> Unit = {}) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            repo.updateUserRole(userId, newRole).onSuccess {
+                loadAdminRegisteredMembers()
+                onDone()
+            }
+        }
+    }
+
+    fun updateAdminMemberStatus(userId: String, newStatus: String, onDone: () -> Unit = {}) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            repo.updateUserStatus(userId, newStatus).onSuccess {
+                loadAdminRegisteredMembers()
+                onDone()
+            }
+        }
+    }
+
+    // ----------------- GROUP CHAT ACTIONS -----------------
+
+    fun loadGroups() {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            _isGroupsLoading.value = true
+            repo.getGroups().onSuccess { list ->
+                _groups.value = list
+            }
+            _isGroupsLoading.value = false
+        }
+    }
+
+    fun selectGroup(groupId: String) {
+        _activeGroupId.value = groupId
+        loadGroupDetails(groupId)
+        loadGroupMessages(groupId)
+    }
+
+    fun loadGroupDetails(groupId: String) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            repo.getGroupDetails(groupId).onSuccess { details ->
+                _currentGroupDetails.value = details
+            }
+        }
+    }
+
+    fun loadGroupMessages(groupId: String) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            repo.getGroupMessages(groupId).onSuccess { msgs ->
+                _currentGroupMessages.value = msgs
+            }
+        }
+    }
+
+    fun createGroup(
+        name: String,
+        description: String? = null,
+        avatar: String? = "👥",
+        memberIds: List<String> = emptyList(),
+        onSuccess: (GroupDto) -> Unit = {}
+    ) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            _isGroupsLoading.value = true
+            repo.createGroup(name, description, avatar, memberIds).onSuccess { grp ->
+                loadGroups()
+                selectGroup(grp.id)
+                _groupActionMessage.value = "Group created successfully!"
+                onSuccess(grp)
+            }.onFailure { err ->
+                _groupActionMessage.value = err.localizedMessage ?: "Failed to create group"
+            }
+            _isGroupsLoading.value = false
+        }
+    }
+
+    fun sendGroupMessage(groupId: String, content: String) {
+        val repo = backendRepository ?: return
+        if (content.isBlank()) return
+        viewModelScope.launch {
+            repo.sendGroupMessage(groupId, content.trim()).onSuccess { msg ->
+                _currentGroupMessages.update { it + msg }
+                loadGroups() // Update preview and ordering
+            }
+        }
+    }
+
+    fun updateGroupInfo(groupId: String, name: String?, description: String?, avatar: String?) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            repo.updateGroup(groupId, name, description, avatar).onSuccess {
+                loadGroupDetails(groupId)
+                loadGroups()
+            }
+        }
+    }
+
+    fun addGroupMember(groupId: String, userId: String) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            repo.addGroupMember(groupId, userId).onSuccess {
+                loadGroupDetails(groupId)
+            }
+        }
+    }
+
+    fun removeGroupMember(groupId: String, userId: String) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            repo.removeGroupMember(groupId, userId).onSuccess {
+                loadGroupDetails(groupId)
+            }
+        }
+    }
+
+    fun transferGroupOwnership(groupId: String, newOwnerId: String) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            repo.transferGroupOwnership(groupId, newOwnerId).onSuccess {
+                loadGroupDetails(groupId)
+                loadGroups()
+            }
+        }
+    }
+
+    fun deleteGroup(groupId: String, onDone: () -> Unit = {}) {
+        val repo = backendRepository ?: return
+        viewModelScope.launch {
+            repo.deleteGroup(groupId).onSuccess {
+                _activeGroupId.value = null
+                _currentGroupDetails.value = null
+                _currentGroupMessages.value = emptyList()
+                loadGroups()
+                onDone()
+            }
+        }
+    }
+
+    fun clearGroupActionMessage() {
+        _groupActionMessage.value = null
+    }
+
     // ----------------- EXISTING BASELINE CONTROLS -----------------
 
     fun refreshNow() {
         viewModelScope.launch {
             performRefresh(resetSchedule = true)
+            fetchJavaServerStatus()
+            fetchBedrockServerStatus()
             if (authState.value.isLoggedIn) {
                 loadDashboardSummary()
                 loadUnreadMessagesCount()
+                loadGroups()
             }
         }
     }

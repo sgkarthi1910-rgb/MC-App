@@ -559,4 +559,319 @@ test('TGZ Lifesteal Complete Backend Test Suite', async (t) => {
     assert.equal(memberDash.body.playtime.minutes, 120);
     assert.equal(memberDash.body.rewardProgress.length, 5);
   });
+
+  // 11. Minecraft Java & Bedrock Server Status Separation
+  await t.test('11. Minecraft Java (Port 10010) and Bedrock (Port 10011) status separation', async () => {
+    // Java endpoint
+    const javaRes = await makeRequest(server, {
+      method: 'GET',
+      path: '/api/minecraft/status/java'
+    });
+    assert.equal(javaRes.statusCode, 200);
+    assert.equal(javaRes.body.address, 'node2.vyroxsmp.online');
+    assert.equal(javaRes.body.port, 10010);
+    assert.equal(javaRes.body.edition, 'JAVA');
+    assert.equal(typeof javaRes.body.online, 'boolean');
+    assert.ok(javaRes.body.players);
+
+    // Bedrock endpoint
+    const bedrockRes = await makeRequest(server, {
+      method: 'GET',
+      path: '/api/minecraft/status/bedrock'
+    });
+    assert.equal(bedrockRes.statusCode, 200);
+    assert.equal(bedrockRes.body.address, 'node2.vyroxsmp.online');
+    assert.equal(bedrockRes.body.port, 10011);
+    assert.equal(bedrockRes.body.edition, 'BEDROCK');
+    assert.equal(typeof bedrockRes.body.online, 'boolean');
+    assert.ok(bedrockRes.body.players);
+
+    // General status includes both
+    const statusRes = await makeRequest(server, {
+      method: 'GET',
+      path: '/api/minecraft/status'
+    });
+    assert.equal(statusRes.statusCode, 200);
+    assert.ok(statusRes.body.java);
+    assert.ok(statusRes.body.bedrock);
+    assert.equal(statusRes.body.java.port, 10010);
+    assert.equal(statusRes.body.bedrock.port, 10011);
+  });
+
+  // 12. Admin Registered Members Management & Details
+  await t.test('12. Admin Registered Members list, search, filter, pagination, details, and status control', async () => {
+    // 1. Non-admin gets 403 Forbidden
+    const forbiddenRes = await makeRequest(server, {
+      method: 'GET',
+      path: '/api/settings/admin/users',
+      headers: { Authorization: `Bearer ${memberToken1}` }
+    });
+    assert.equal(forbiddenRes.statusCode, 403);
+
+    // 2. Admin retrieves complete list of registered members
+    const allUsersRes = await makeRequest(server, {
+      method: 'GET',
+      path: '/api/settings/admin/users',
+      headers: { Authorization: `Bearer ${adminToken}` }
+    });
+    assert.equal(allUsersRes.statusCode, 200);
+    assert.ok(Array.isArray(allUsersRes.body.users));
+    assert.ok(allUsersRes.body.users.length >= 5); // 4 initial admins + 2 registered members
+    assert.ok(allUsersRes.body.pagination);
+    assert.ok(allUsersRes.body.pagination.total >= 5);
+
+    // Verify no password hashes are exposed
+    for (const u of allUsersRes.body.users) {
+      assert.equal(u.password_hash, undefined);
+      assert.equal(u.sessionToken, undefined);
+    }
+
+    // 3. Search members by Unique ID
+    const searchRes = await makeRequest(server, {
+      method: 'GET',
+      path: '/api/settings/admin/users?search=player_hunter',
+      headers: { Authorization: `Bearer ${adminToken}` }
+    });
+    assert.equal(searchRes.statusCode, 200);
+    assert.equal(searchRes.body.users.length, 1);
+    assert.equal(searchRes.body.users[0].id, 'player_hunter');
+
+    // 4. Filter by role
+    const modFilterRes = await makeRequest(server, {
+      method: 'GET',
+      path: '/api/settings/admin/users?role=ADMIN',
+      headers: { Authorization: `Bearer ${adminToken}` }
+    });
+    assert.equal(modFilterRes.statusCode, 200);
+    assert.ok(modFilterRes.body.users.every(u => u.role === 'ADMIN'));
+
+    // 5. Get member detailed profile
+    const detailsRes = await makeRequest(server, {
+      method: 'GET',
+      path: '/api/settings/admin/users/player_hunter/details',
+      headers: { Authorization: `Bearer ${adminToken}` }
+    });
+    assert.equal(detailsRes.statusCode, 200);
+    assert.equal(detailsRes.body.profile.id, 'player_hunter');
+    assert.equal(detailsRes.body.profile.status, 'ACTIVE');
+    assert.ok(detailsRes.body.team); // player_hunter is in ApexLifesteal
+    assert.equal(detailsRes.body.team.name, 'ApexLifesteal');
+    assert.ok(detailsRes.body.rewards);
+    assert.ok(detailsRes.body.activity);
+
+    // 6. Suspend member account and verify session revoked
+    const suspendRes = await makeRequest(server, {
+      method: 'POST',
+      path: '/api/settings/admin/users/player_shield/status',
+      headers: { Authorization: `Bearer ${adminToken}` }
+    }, {
+      status: 'SUSPENDED'
+    });
+    assert.equal(suspendRes.statusCode, 200);
+    assert.equal(suspendRes.body.status, 'SUSPENDED');
+
+    // Suspended user token cannot access authenticated endpoints (session revoked -> 401)
+    const suspendedReq = await makeRequest(server, {
+      method: 'GET',
+      path: '/api/auth/me',
+      headers: { Authorization: `Bearer ${memberToken2}` }
+    });
+    assert.equal(suspendedReq.statusCode, 401);
+
+    // 7. Reactivate member account
+    const reactivateRes = await makeRequest(server, {
+      method: 'POST',
+      path: '/api/settings/admin/users/player_shield/status',
+      headers: { Authorization: `Bearer ${adminToken}` }
+    }, {
+      status: 'ACTIVE'
+    });
+    assert.equal(reactivateRes.statusCode, 200);
+    assert.equal(reactivateRes.body.status, 'ACTIVE');
+
+    // Log in again to get fresh token
+    const reLogin = await makeRequest(server, {
+      method: 'POST',
+      path: '/api/auth/login'
+    }, {
+      id: 'player_shield',
+      password: 'ShieldPassword123!'
+    });
+    assert.equal(reLogin.statusCode, 200);
+    memberToken2 = reLogin.body.sessionToken;
+
+    // 8. Promote Member to Moderator and Demote back
+    const promoteRes = await makeRequest(server, {
+      method: 'POST',
+      path: '/api/settings/admin/users/player_shield/role',
+      headers: { Authorization: `Bearer ${adminToken}` }
+    }, {
+      role: 'MODERATOR'
+    });
+    assert.equal(promoteRes.statusCode, 200);
+    assert.equal(promoteRes.body.role, 'MODERATOR');
+
+    const demoteRes = await makeRequest(server, {
+      method: 'POST',
+      path: '/api/settings/admin/users/player_shield/role',
+      headers: { Authorization: `Bearer ${adminToken}` }
+    }, {
+      role: 'MEMBER'
+    });
+    assert.equal(demoteRes.statusCode, 200);
+    assert.equal(demoteRes.body.role, 'MEMBER');
+  });
+
+  // 13. Group Chat System & Direct Message Integration
+  await t.test('13. Group Chat creation, member invites, messaging, permissions, and moderation', async () => {
+    // 1. Create a new group chat with player_hunter as creator and player_shield invited
+    const createGroupRes = await makeRequest(server, {
+      method: 'POST',
+      path: '/api/groups',
+      headers: { Authorization: `Bearer ${memberToken1}` }
+    }, {
+      name: 'Lifestyle Builders',
+      description: 'The master architecture squad',
+      avatar: '🏰',
+      memberIds: ['player_shield']
+    });
+    assert.equal(createGroupRes.statusCode, 201);
+    assert.equal(createGroupRes.body.group.name, 'Lifestyle Builders');
+    assert.equal(createGroupRes.body.group.ownerId, 'player_hunter');
+    assert.equal(createGroupRes.body.group.memberCount, 2);
+
+    const groupId = createGroupRes.body.group.id;
+
+    // 2. Both participants see the group in their group list
+    const list1 = await makeRequest(server, {
+      method: 'GET',
+      path: '/api/groups',
+      headers: { Authorization: `Bearer ${memberToken1}` }
+    });
+    assert.equal(list1.statusCode, 200);
+    assert.ok(list1.body.groups.some(g => g.id === groupId));
+
+    const list2 = await makeRequest(server, {
+      method: 'GET',
+      path: '/api/groups',
+      headers: { Authorization: `Bearer ${memberToken2}` }
+    });
+    assert.equal(list2.statusCode, 200);
+    assert.ok(list2.body.groups.some(g => g.id === groupId));
+
+    // 3. Send message into group chat
+    const sendMsgRes = await makeRequest(server, {
+      method: 'POST',
+      path: `/api/groups/${groupId}/messages`,
+      headers: { Authorization: `Bearer ${memberToken1}` }
+    }, {
+      content: 'Welcome to the Lifestyle Builders group!'
+    });
+    assert.equal(sendMsgRes.statusCode, 201);
+    assert.equal(sendMsgRes.body.message.content, 'Welcome to the Lifestyle Builders group!');
+    assert.equal(sendMsgRes.body.message.senderId, 'player_hunter');
+
+    // 4. Retrieve messages in group
+    const msgsRes = await makeRequest(server, {
+      method: 'GET',
+      path: `/api/groups/${groupId}/messages`,
+      headers: { Authorization: `Bearer ${memberToken2}` }
+    });
+    assert.equal(msgsRes.statusCode, 200);
+    assert.equal(msgsRes.body.messages.length, 1);
+    assert.equal(msgsRes.body.messages[0].content, 'Welcome to the Lifestyle Builders group!');
+
+    // 5. Unauthorized non-member cannot post or read messages
+    // Register third member
+    const signup3 = await makeRequest(server, {
+      method: 'POST',
+      path: '/api/auth/signup'
+    }, {
+      id: 'outsider_user',
+      displayName: 'Outsider User',
+      password: 'StrongPass2026!#',
+      confirmPassword: 'StrongPass2026!#'
+    });
+    assert.equal(signup3.statusCode, 201);
+    const outsiderToken = signup3.body.sessionToken;
+
+    const unauthGet = await makeRequest(server, {
+      method: 'GET',
+      path: `/api/groups/${groupId}`,
+      headers: { Authorization: `Bearer ${outsiderToken}` }
+    });
+    assert.equal(unauthGet.statusCode, 403);
+
+    const unauthPost = await makeRequest(server, {
+      method: 'POST',
+      path: `/api/groups/${groupId}/messages`,
+      headers: { Authorization: `Bearer ${outsiderToken}` }
+    }, {
+      content: 'I want to infiltrate your group'
+    });
+    assert.equal(unauthPost.statusCode, 403);
+
+    // 6. Group owner invites the third user
+    const addMemberRes = await makeRequest(server, {
+      method: 'POST',
+      path: `/api/groups/${groupId}/members`,
+      headers: { Authorization: `Bearer ${memberToken1}` }
+    }, {
+      userId: 'outsider_user'
+    });
+    assert.equal(addMemberRes.statusCode, 200);
+
+    // Now newly invited user can read group
+    const authGet = await makeRequest(server, {
+      method: 'GET',
+      path: `/api/groups/${groupId}`,
+      headers: { Authorization: `Bearer ${outsiderToken}` }
+    });
+    assert.equal(authGet.statusCode, 200);
+    assert.equal(authGet.body.members.length, 3);
+
+    // 7. Group owner removes a member
+    const removeMemberRes = await makeRequest(server, {
+      method: 'DELETE',
+      path: `/api/groups/${groupId}/members/outsider_user`,
+      headers: { Authorization: `Bearer ${memberToken1}` }
+    });
+    assert.equal(removeMemberRes.statusCode, 200);
+
+    // 8. Group owner transfers ownership
+    const transferRes = await makeRequest(server, {
+      method: 'POST',
+      path: `/api/groups/${groupId}/transfer`,
+      headers: { Authorization: `Bearer ${memberToken1}` }
+    }, {
+      newOwnerId: 'player_shield'
+    });
+    assert.equal(transferRes.statusCode, 200);
+    assert.equal(transferRes.body.group.ownerId, 'player_shield');
+
+    // 9. Admin moderates and deletes group
+    const adminDeleteRes = await makeRequest(server, {
+      method: 'DELETE',
+      path: `/api/groups/${groupId}`,
+      headers: { Authorization: `Bearer ${adminToken}` }
+    });
+    assert.equal(adminDeleteRes.statusCode, 200);
+
+    // Verify group is gone
+    const verifyDelete = await makeRequest(server, {
+      method: 'GET',
+      path: `/api/groups/${groupId}`,
+      headers: { Authorization: `Bearer ${memberToken2}` }
+    });
+    assert.equal(verifyDelete.statusCode, 404);
+
+    // 10. Verify Direct Messages still work normally
+    const dmRes = await makeRequest(server, {
+      method: 'GET',
+      path: '/api/messages/conversations',
+      headers: { Authorization: `Bearer ${memberToken1}` }
+    });
+    assert.equal(dmRes.statusCode, 200);
+    assert.ok(Array.isArray(dmRes.body.conversations));
+  });
 });

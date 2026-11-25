@@ -1,4 +1,4 @@
-const { queryMinecraftServer } = require('../minecraft-query');
+const { queryMinecraftServer, queryBedrockServer } = require('../minecraft-query');
 
 function setupDashboardRoutes(router, db) {
   // 1. ROLE-BASED DASHBOARD SUMMARY
@@ -10,10 +10,15 @@ function setupDashboardRoutes(router, db) {
     const role = req.user.role;
     const now = Date.now();
 
-    // Common server status
+    // Common server status for Java and Bedrock
     const host = db.prepare("SELECT value FROM app_settings WHERE key = 'minecraft_server_host'").get()?.value || 'node2.vyroxsmp.online';
-    const port = parseInt(db.prepare("SELECT value FROM app_settings WHERE key = 'minecraft_server_port'").get()?.value || '10010', 10);
-    const mcStatus = await queryMinecraftServer(host, port);
+    const javaPort = parseInt(db.prepare("SELECT value FROM app_settings WHERE key = 'minecraft_server_port'").get()?.value || '10010', 10);
+    const bedrockPort = parseInt(db.prepare("SELECT value FROM app_settings WHERE key = 'minecraft_bedrock_port'").get()?.value || '10011', 10);
+
+    const [mcStatus, bedrockStatus] = await Promise.all([
+      queryMinecraftServer(host, javaPort),
+      queryBedrockServer(host, bedrockPort)
+    ]);
 
     // Latest announcement for dashboard
     const latestAnnouncement = db.prepare(`
@@ -45,6 +50,8 @@ function setupDashboardRoutes(router, db) {
         },
         recentRegistrations: recentUsers,
         serverStatus: mcStatus,
+        javaServerStatus: mcStatus,
+        bedrockServerStatus: bedrockStatus,
         latestAnnouncement
       });
     }
@@ -73,6 +80,8 @@ function setupDashboardRoutes(router, db) {
         },
         recentMessages,
         serverStatus: mcStatus,
+        javaServerStatus: mcStatus,
+        bedrockServerStatus: bedrockStatus,
         latestAnnouncement
       });
     }
@@ -162,6 +171,8 @@ function setupDashboardRoutes(router, db) {
         createdAt: req.user.created_at
       },
       serverStatus: mcStatus,
+      javaServerStatus: mcStatus,
+      bedrockServerStatus: bedrockStatus,
       playtime: {
         seconds: playtimeSeconds,
         minutes: playtimeMinutes,

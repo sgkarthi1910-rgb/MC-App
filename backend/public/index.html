@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TGZ Lifesteal SMP | Official Server & Portal</title>
+  <title>TGZ Lifestyle SMP | Official Community & Portal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Silkscreen:wght@400;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
@@ -12,7 +12,9 @@
       --bg-black: #0A0A0C;
       --card-bg: #121318;
       --card-border: #1F222E;
+      --card-hover: #181B26;
       --emerald: #10B981;
+      --emerald-dark: #059669;
       --emerald-glow: rgba(16, 185, 129, 0.25);
       --gold: #FFAA00;
       --red: #EF4444;
@@ -21,6 +23,7 @@
       --silver: #9CA3AF;
       --text-primary: #F1F5F9;
       --text-muted: #94A3B8;
+      --border-subtle: #272B3B;
     }
     * {
       box-sizing: border-box;
@@ -35,12 +38,12 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 24px 16px 60px;
+      padding: 20px 16px 60px;
       line-height: 1.5;
     }
     .container {
       width: 100%;
-      max-width: 920px;
+      max-width: 980px;
       display: flex;
       flex-direction: column;
       gap: 24px;
@@ -49,10 +52,10 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 16px 20px;
+      padding: 16px 22px;
       background: var(--card-bg);
       border: 1px solid var(--card-border);
-      border-radius: 12px;
+      border-radius: 14px;
       flex-wrap: wrap;
       gap: 12px;
     }
@@ -61,17 +64,18 @@
       align-items: center;
       gap: 12px;
     }
-    .heart-logo {
-      width: 28px;
-      height: 28px;
-      background: var(--red);
-      clip-path: polygon(50% 15%, 80% 0%, 100% 20%, 100% 50%, 50% 100%, 0% 50%, 0% 20%, 20% 0%);
+    .gem-logo {
+      width: 26px;
+      height: 26px;
+      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      clip-path: polygon(50% 0%, 100% 30%, 100% 70%, 50% 100%, 0% 70%, 0% 30%);
       display: inline-block;
-      animation: pulse 2s infinite ease-in-out;
+      box-shadow: 0 0 12px var(--emerald-glow);
+      animation: pulse 2.5s infinite ease-in-out;
     }
     @keyframes pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.1); filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.6)); }
+      0%, 100% { transform: scale(1); filter: drop-shadow(0 0 4px rgba(16, 185, 129, 0.4)); }
+      50% { transform: scale(1.08); filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.8)); }
     }
     .header-title {
       font-family: 'Silkscreen', monospace;
@@ -83,6 +87,7 @@
       display: flex;
       align-items: center;
       gap: 10px;
+      flex-wrap: wrap;
     }
     .btn-auth-nav {
       background: rgba(16, 185, 129, 0.15);
@@ -121,7 +126,7 @@
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 6px 14px;
+      padding: 6px 16px;
       background: rgba(16, 185, 129, 0.12);
       border: 1px solid var(--emerald);
       border-radius: 999px;
@@ -138,17 +143,24 @@
       border-radius: 50%;
       animation: pulse 1.5s infinite;
     }
+    .pulse-dot-red {
+      width: 8px;
+      height: 8px;
+      background-color: var(--red);
+      border-radius: 50%;
+    }
     h1 {
       font-family: 'Silkscreen', monospace;
-      font-size: 2.2rem;
+      font-size: 2.1rem;
       color: #fff;
-      margin-bottom: 8px;
-      letter-spacing: 1px;
+      margin-bottom: 10px;
+      letter-spacing: 0.5px;
+      line-height: 1.3;
     }
     .subtitle {
       color: var(--text-muted);
       font-size: 1.05rem;
-      max-width: 620px;
+      max-width: 680px;
       margin: 0 auto;
     }
     .card {
@@ -167,79 +179,227 @@
       align-items: center;
       gap: 10px;
     }
-    .ip-box {
+    .server-dual-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+    }
+    .server-card {
+      background: #090A0E;
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: border-color 0.2s ease;
+    }
+    .server-card:hover {
+      border-color: var(--emerald);
+    }
+    .server-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: #090A0D;
-      border: 1px solid var(--card-border);
-      border-radius: 10px;
-      padding: 16px 20px;
-      gap: 12px;
       flex-wrap: wrap;
+      gap: 8px;
     }
-    .ip-address {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: #fff;
-      letter-spacing: 0.5px;
-    }
-    .copy-btn {
-      background-color: var(--emerald);
-      color: #06110D;
+    .server-title {
       font-family: 'Silkscreen', monospace;
-      font-weight: 700;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 0.85rem;
-      transition: all 0.2s ease;
-      display: inline-flex;
+      font-size: 1rem;
+      color: #fff;
+      display: flex;
       align-items: center;
       gap: 8px;
     }
-    .copy-btn:hover {
-      background-color: #34D399;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 16px var(--emerald-glow);
+    .server-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-family: 'Silkscreen', monospace;
+      font-size: 0.7rem;
+      font-weight: 700;
     }
-    .stats-grid {
+    .badge-online {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid var(--emerald);
+      color: var(--emerald);
+    }
+    .badge-offline {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid var(--red);
+      color: var(--red);
+    }
+    .server-ip-box {
+      background: #0D0E13;
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+    .server-ip-text {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #fff;
+      word-break: break-all;
+    }
+    .btn-copy-small {
+      background: var(--emerald);
+      color: #06110D;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-family: 'Silkscreen', monospace;
+      font-size: 0.72rem;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .btn-copy-small:hover {
+      background: #34D399;
+      box-shadow: 0 0 10px var(--emerald-glow);
+    }
+    .server-details-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 16px;
-      margin-top: 16px;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
     }
-    .stat-item {
-      background: #090A0D;
-      border: 1px solid var(--card-border);
-      border-radius: 10px;
-      padding: 16px;
+    .server-stat-cell {
+      background: #0D0E13;
+      border-radius: 6px;
+      padding: 10px;
       text-align: center;
     }
-    .stat-label {
+    .server-stat-label {
+      font-size: 0.72rem;
       color: var(--text-muted);
-      font-size: 0.8rem;
       text-transform: uppercase;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
-    .stat-value {
+    .server-stat-val {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 1.4rem;
+      font-size: 1.1rem;
       font-weight: 700;
       color: var(--emerald);
+    }
+    .server-players-list {
+      background: #0D0E13;
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      max-height: 80px;
+      overflow-y: auto;
+    }
+    .server-players-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 6px;
+    }
+    .player-chip {
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #E2E8F0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    .server-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: auto;
+      padding-top: 6px;
+    }
+    .btn-refresh-icon {
+      background: transparent;
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      padding: 4px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s;
+    }
+    .btn-refresh-icon:hover {
+      border-color: var(--emerald);
+      color: var(--emerald);
+    }
+    .join-guide-box {
+      margin-top: 18px;
+      background: #090A0E;
+      border: 1px dashed var(--border-subtle);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .join-guide-title {
+      font-family: 'Silkscreen', monospace;
+      font-size: 0.85rem;
+      color: var(--emerald);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .join-instructions-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 14px;
+      font-size: 0.85rem;
+    }
+    .instruction-card {
+      background: #0D0E13;
+      border-radius: 8px;
+      padding: 12px;
+    }
+    .instruction-card h4 {
+      color: #fff;
+      font-size: 0.85rem;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .instruction-card p {
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      line-height: 1.4;
+      margin-bottom: 8px;
+    }
+    .instruction-code {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--cyan);
+      background: #060709;
+      padding: 4px 8px;
+      border-radius: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.78rem;
     }
     .dashboard-panel {
       border: 1px solid var(--emerald);
       box-shadow: 0 0 20px var(--emerald-glow);
-      display: none;
     }
     .admin-badge {
       background: rgba(16, 185, 129, 0.2);
       border: 1px solid var(--emerald);
       color: var(--emerald);
-      padding: 4px 10px;
+      padding: 3px 8px;
       border-radius: 6px;
       font-family: 'Silkscreen', monospace;
       font-size: 0.75rem;
@@ -261,13 +421,426 @@
     .diag-val-err { color: var(--red); font-weight: bold; }
     .diag-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
       gap: 10px;
       margin-top: 12px;
     }
+    /* Tabs Navigation */
+    .tabs-bar {
+      display: flex;
+      gap: 8px;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .tab-btn {
+      background: transparent;
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-family: 'Silkscreen', monospace;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .tab-btn:hover {
+      border-color: var(--emerald);
+      color: #fff;
+    }
+    .tab-btn.active {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: var(--emerald);
+      color: var(--emerald);
+      box-shadow: 0 0 10px var(--emerald-glow);
+    }
+    .tab-badge {
+      background: var(--red);
+      color: #fff;
+      font-size: 0.7rem;
+      padding: 1px 6px;
+      border-radius: 999px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    /* Member Management Table */
+    .table-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .table-search-box {
+      flex: 1;
+      min-width: 220px;
+      position: relative;
+    }
+    .table-input {
+      width: 100%;
+      background: #090A0E;
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 9px 12px;
+      color: #fff;
+      font-size: 0.85rem;
+      font-family: 'Space Grotesk', sans-serif;
+    }
+    .table-input:focus {
+      outline: none;
+      border-color: var(--emerald);
+    }
+    .filters-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .table-select {
+      background: #090A0E;
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: var(--text-primary);
+      font-size: 0.82rem;
+      font-family: 'Space Grotesk', sans-serif;
+      cursor: pointer;
+    }
+    .table-select:focus {
+      outline: none;
+      border-color: var(--emerald);
+    }
+    .member-table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      background: #090A0E;
+    }
+    table.member-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.85rem;
+    }
+    table.member-table th {
+      background: #0E1016;
+      padding: 12px 14px;
+      color: var(--text-muted);
+      font-family: 'Silkscreen', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--border-subtle);
+      white-space: nowrap;
+    }
+    table.member-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      vertical-align: middle;
+    }
+    table.member-table tr:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .avatar-cell {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .user-avatar-circle {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: #1E2230;
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: var(--emerald);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .user-avatar-circle img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-family: 'Silkscreen', monospace;
+      font-weight: bold;
+    }
+    .status-active { background: rgba(16, 185, 129, 0.15); border: 1px solid var(--emerald); color: var(--emerald); }
+    .status-suspended { background: rgba(255, 170, 0, 0.15); border: 1px solid var(--gold); color: var(--gold); }
+    .status-banned { background: rgba(239, 68, 68, 0.15); border: 1px solid var(--red); color: var(--red); }
+    .role-badge-table {
+      font-family: 'Silkscreen', monospace;
+      font-size: 0.72rem;
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+    .role-admin { background: rgba(16, 185, 129, 0.2); color: var(--emerald); }
+    .role-mod { background: rgba(56, 189, 248, 0.2); color: var(--cyan); }
+    .role-member { background: rgba(156, 163, 175, 0.2); color: var(--silver); }
+    .action-btn-sm {
+      background: #141722;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .action-btn-sm:hover {
+      border-color: var(--emerald);
+      color: var(--emerald);
+    }
+    .actions-cell {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: nowrap;
+    }
+    .pagination-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 4px 0;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .pagination-btns {
+      display: flex;
+      gap: 6px;
+    }
+    /* Group Chat UI Styles */
+    .chat-layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 16px;
+      min-height: 480px;
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      background: #090A0E;
+      overflow: hidden;
+    }
+    @media (max-width: 768px) {
+      .chat-layout {
+        grid-template-columns: 1fr;
+      }
+      .chat-sidebar.hidden-mobile {
+        display: none;
+      }
+      .chat-main.hidden-mobile {
+        display: none;
+      }
+    }
+    .chat-sidebar {
+      background: #0D0E14;
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar-header {
+      padding: 14px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .groups-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .group-item-card {
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: transparent;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .group-item-card:hover {
+      background: #141722;
+    }
+    .group-item-card.active {
+      background: rgba(16, 185, 129, 0.12);
+      border-color: var(--emerald);
+    }
+    .group-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: #1E2230;
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+    .group-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .group-name {
+      font-weight: 600;
+      font-size: 0.88rem;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .group-preview {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .chat-main {
+      display: flex;
+      flex-direction: column;
+      background: #090A0E;
+    }
+    .chat-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0D0E14;
+    }
+    .chat-messages-container {
+      flex: 1;
+      padding: 16px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 380px;
+    }
+    .chat-msg {
+      display: flex;
+      gap: 10px;
+      max-width: 82%;
+    }
+    .chat-msg.sent {
+      align-self: flex-end;
+      flex-direction: row-reverse;
+    }
+    .chat-msg-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #1B1E2B;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 0.75rem;
+      color: var(--emerald);
+      flex-shrink: 0;
+    }
+    .chat-bubble {
+      background: #141722;
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 10px 14px;
+    }
+    .chat-msg.sent .chat-bubble {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: rgba(16, 185, 129, 0.4);
+    }
+    .chat-sender {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--emerald);
+      margin-bottom: 3px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .chat-msg.sent .chat-sender {
+      color: #34D399;
+      justify-content: flex-end;
+    }
+    .chat-time {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      font-weight: normal;
+    }
+    .chat-text {
+      font-size: 0.88rem;
+      color: #F1F5F9;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+    .chat-input-area {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border-subtle);
+      background: #0D0E14;
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+    .chat-textarea {
+      flex: 1;
+      background: #090A0E;
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: #fff;
+      font-size: 0.88rem;
+      font-family: 'Space Grotesk', sans-serif;
+      resize: none;
+      min-height: 42px;
+      max-height: 100px;
+    }
+    .chat-textarea:focus {
+      outline: none;
+      border-color: var(--emerald);
+    }
+    .btn-send {
+      background: var(--emerald);
+      color: #06110D;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 18px;
+      font-family: 'Silkscreen', monospace;
+      font-weight: bold;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-send:hover {
+      background: #34D399;
+      box-shadow: 0 0 10px var(--emerald-glow);
+    }
+    /* Lifestyle Ranks */
     .ranks-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
       gap: 14px;
     }
     .rank-card {
@@ -279,7 +852,7 @@
       flex-direction: column;
       align-items: center;
       text-align: center;
-      transition: transform 0.2s ease;
+      transition: transform 0.2s ease, border-color 0.2s;
     }
     .rank-card:hover {
       transform: translateY(-4px);
@@ -323,25 +896,6 @@
       color: var(--emerald);
       font-size: 0.75rem;
     }
-    .api-status-box {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: #090A0D;
-      padding: 14px 18px;
-      border-radius: 8px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.85rem;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-    footer {
-      text-align: center;
-      color: var(--text-muted);
-      font-size: 0.85rem;
-      padding-top: 20px;
-      border-top: 1px solid var(--card-border);
-    }
     /* Modal Styles */
     .modal-overlay {
       position: fixed;
@@ -349,8 +903,8 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.8);
-      backdrop-filter: blur(4px);
+      background: rgba(0, 0, 0, 0.82);
+      backdrop-filter: blur(5px);
       display: none;
       align-items: center;
       justify-content: center;
@@ -361,22 +915,24 @@
       background: var(--card-bg);
       border: 1px solid var(--emerald);
       border-radius: 14px;
-      padding: 28px;
+      padding: 26px;
       width: 100%;
-      max-width: 440px;
+      max-width: 480px;
       box-shadow: 0 0 30px var(--emerald-glow);
       position: relative;
+      max-height: 90vh;
+      overflow-y: auto;
     }
     .modal-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 20px;
+      margin-bottom: 18px;
     }
     .modal-title {
       font-family: 'Silkscreen', monospace;
       color: var(--emerald);
-      font-size: 1.2rem;
+      font-size: 1.15rem;
     }
     .modal-close {
       background: transparent;
@@ -387,23 +943,23 @@
     }
     .modal-close:hover { color: #fff; }
     .form-group {
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
     .form-label {
       display: block;
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       color: var(--text-muted);
-      margin-bottom: 6px;
+      margin-bottom: 5px;
     }
     .form-input {
       width: 100%;
-      padding: 12px 14px;
+      padding: 10px 12px;
       background: #090A0D;
       border: 1px solid var(--card-border);
       border-radius: 8px;
       color: #fff;
       font-family: 'Space Grotesk', sans-serif;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
     }
     .form-input:focus {
       outline: none;
@@ -412,14 +968,14 @@
     }
     .btn-submit {
       width: 100%;
-      padding: 12px;
+      padding: 11px;
       background: var(--emerald);
       border: none;
       border-radius: 8px;
       color: #06110D;
       font-family: 'Silkscreen', monospace;
       font-weight: 700;
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       cursor: pointer;
       transition: all 0.2s;
     }
@@ -428,10 +984,10 @@
       box-shadow: 0 0 16px var(--emerald-glow);
     }
     .alert-banner {
-      padding: 10px 14px;
+      padding: 9px 12px;
       border-radius: 6px;
-      margin-bottom: 16px;
-      font-size: 0.85rem;
+      margin-bottom: 14px;
+      font-size: 0.82rem;
       font-family: 'JetBrains Mono', monospace;
       display: none;
     }
@@ -448,7 +1004,7 @@
     .toggle-auth-mode {
       text-align: center;
       margin-top: 14px;
-      font-size: 0.85rem;
+      font-size: 0.82rem;
       color: var(--text-muted);
     }
     .toggle-auth-link {
@@ -456,14 +1012,36 @@
       cursor: pointer;
       text-decoration: underline;
     }
+    .details-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 0.85rem;
+    }
+    .details-label {
+      color: var(--text-muted);
+    }
+    .details-val {
+      color: #fff;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+    }
+    footer {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      padding-top: 20px;
+      border-top: 1px solid var(--card-border);
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <header>
       <div class="header-logo">
-        <span class="heart-logo"></span>
-        <span class="header-title">TGZ LIFESTEAL</span>
+        <span class="gem-logo"></span>
+        <span class="header-title">TGZ LIFESTYLE</span>
       </div>
       <div class="header-actions">
         <a href="https://discord.gg/J5P89mxXbc" target="_blank" style="text-decoration: none;">
@@ -472,100 +1050,386 @@
           </button>
         </a>
         <div id="auth-buttons-container">
-          <button class="btn-auth-nav" onclick="openLoginModal()">🔑 STAFF LOGIN</button>
+          <button class="btn-auth-nav" onclick="openLoginModal()">🔑 MEMBER / STAFF LOGIN</button>
         </div>
       </div>
     </header>
 
-    <!-- Admin & Member Active Dashboard (Visible when logged in) -->
-    <div id="user-dashboard-card" class="card dashboard-panel">
+    <!-- Hero Banner with Lifestyle community branding -->
+    <div class="hero-banner">
+      <div class="badge-live">
+        <span class="pulse-dot"></span>
+        <span id="api-status-text">MINECRAFT LIFESTYLE COMMUNITY</span>
+      </div>
+      <h1>Welcome to TGZ – Your Minecraft Lifestyle Community</h1>
+      <p class="subtitle">Build your journey, connect with players, create teams and become part of the TGZ community.</p>
+    </div>
+
+    <!-- Active User Dashboard (Visible when logged in) -->
+    <div id="user-dashboard-card" class="card dashboard-panel" style="display: none;">
       <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
         <div>
           <div class="section-title" style="margin-bottom: 4px;">
-            🛡️ <span id="dash-display-name">Admin (sg_karthi)</span>
-            <span id="dash-role-badge" class="admin-badge">ADMIN</span>
+            🛡️ <span id="dash-display-name">User</span>
+            <span id="dash-role-badge" class="admin-badge">MEMBER</span>
           </div>
           <div style="color: var(--text-muted); font-size: 0.85rem; font-family: 'JetBrains Mono', monospace;">
-            User ID: <strong id="dash-user-id" style="color: #fff;">sg_karthi</strong> | Session: <span style="color: var(--emerald);">Active (Persistent)</span>
+            Unique ID: <strong id="dash-user-id" style="color: #fff;">-</strong> | Status: <span style="color: var(--emerald);" id="dash-status-text">ACTIVE</span>
           </div>
         </div>
         <button class="btn-auth-nav btn-logout" onclick="performLogout()">LOGOUT</button>
       </div>
 
       <div id="password-change-warning" style="display: none; background: rgba(255, 170, 0, 0.15); border: 1px solid var(--gold); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
-        <strong style="color: var(--gold);">⚠️ Mandatory Action Required:</strong> You are using the initial bootstrap credentials. Please change your password to secure this account.
+        <strong style="color: var(--gold);">⚠️ Mandatory Action Required:</strong> You are using initial bootstrap credentials. Please update your password.
         <button onclick="openChangePasswordModal()" style="margin-left: 10px; background: var(--gold); color: #000; border: none; padding: 4px 10px; border-radius: 4px; font-weight: bold; cursor: pointer;">Change Password</button>
       </div>
 
-      <div class="section-title" style="font-size: 0.95rem; margin-top: 10px;">🔒 Production System & Auth Diagnostics</div>
-      <div class="diag-grid" id="system-diag-grid">
-        <div class="diag-item">
-          <span class="diag-label">Database Status:</span>
-          <span id="diag-db-status" class="diag-val-ok">Checking...</span>
+      <!-- Navigation Tabs inside Dashboard -->
+      <div class="tabs-bar">
+        <button class="tab-btn active" id="tab-btn-overview" onclick="switchDashboardTab('overview')">📊 Overview</button>
+        <button class="tab-btn" id="tab-btn-messages" onclick="switchDashboardTab('messages')">💬 Community Messages</button>
+        <button class="tab-btn" id="tab-btn-admin-members" style="display: none;" onclick="switchDashboardTab('admin-members')">👥 Registered Members</button>
+      </div>
+
+      <!-- Tab Content: Overview -->
+      <div id="tab-pane-overview">
+        <div class="section-title" style="font-size: 0.95rem;">🔒 Production System & Auth Diagnostics</div>
+        <div class="diag-grid">
+          <div class="diag-item">
+            <span class="diag-label">Database Status:</span>
+            <span id="diag-db-status" class="diag-val-ok">Connected</span>
+          </div>
+          <div class="diag-item">
+            <span class="diag-label">Admin Accounts:</span>
+            <span id="diag-admin-prov" class="diag-val-ok">Provisioned</span>
+          </div>
+          <div class="diag-item">
+            <span class="diag-label">Auth Storage:</span>
+            <span id="diag-storage-type" class="diag-val-ok">Persisted Store</span>
+          </div>
+          <div class="diag-item">
+            <span class="diag-label">Session Lifetime:</span>
+            <span class="diag-val-ok">30 Days (Rolling)</span>
+          </div>
         </div>
-        <div class="diag-item">
-          <span class="diag-label">Admin Provisioned:</span>
-          <span id="diag-admin-prov" class="diag-val-ok">Checking...</span>
+      </div>
+
+      <!-- Tab Content: Messaging (Direct Messages & Group Chats) -->
+      <div id="tab-pane-messages" style="display: none;">
+        <div style="display: flex; gap: 8px; margin-bottom: 14px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">
+          <button class="tab-btn active" id="msg-subtab-groups" onclick="switchMessageSubtab('groups')">👥 Group Chats</button>
+          <button class="tab-btn" id="msg-subtab-dm" onclick="switchMessageSubtab('dm')">💬 Direct Messages</button>
         </div>
-        <div class="diag-item">
-          <span class="diag-label">Auth Storage:</span>
-          <span id="diag-storage-type" class="diag-val-ok">Persisted Store</span>
+
+        <!-- Subtab: Group Chats -->
+        <div id="subpane-groups">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <div style="font-size: 0.9rem; color: var(--text-muted);">Collaborate with your friends and team members in real-time group conversations.</div>
+            <button class="btn-auth-nav" onclick="openCreateGroupModal()" style="font-size: 0.75rem; padding: 6px 12px;">➕ CREATE GROUP</button>
+          </div>
+
+          <div class="chat-layout">
+            <!-- Sidebar: Groups List -->
+            <div class="chat-sidebar" id="group-sidebar">
+              <div class="sidebar-header">
+                <span style="font-family: 'Silkscreen', monospace; font-size: 0.8rem; color: var(--emerald);">GROUPS</span>
+                <button class="btn-refresh-icon" onclick="loadUserGroups()">↻</button>
+              </div>
+              <div class="groups-list" id="groups-list-container">
+                <div style="padding: 16px; text-align: center; color: var(--text-muted); font-size: 0.8rem;">Loading groups...</div>
+              </div>
+            </div>
+
+            <!-- Main: Active Group Chat Window -->
+            <div class="chat-main" id="group-chat-main">
+              <div class="chat-header" id="active-group-header">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span id="active-group-avatar" class="group-avatar" style="width: 32px; height: 32px; font-size: 1rem;">👥</span>
+                  <div>
+                    <div id="active-group-name" style="font-weight: 700; font-size: 0.95rem; color: #fff;">Select a group</div>
+                    <div id="active-group-meta" style="font-size: 0.75rem; color: var(--text-muted);">-</div>
+                  </div>
+                </div>
+                <div id="active-group-controls" style="display: none;">
+                  <button class="action-btn-sm" onclick="openGroupSettingsModal()">⚙️ Settings</button>
+                </div>
+              </div>
+
+              <div class="chat-messages-container" id="group-messages-container">
+                <div style="text-align: center; color: var(--text-muted); font-size: 0.85rem; margin: auto;">
+                  Select a group from the left or create a new one to start chatting!
+                </div>
+              </div>
+
+              <form class="chat-input-area" id="group-send-form" onsubmit="handleSendGroupMessage(event)" style="display: none;">
+                <textarea id="group-msg-input" class="chat-textarea" placeholder="Type your message... (Shift+Enter for newline)" rows="1" onkeydown="handleChatKeyDown(event)"></textarea>
+                <button type="submit" id="btn-group-send" class="btn-send">SEND</button>
+              </form>
+            </div>
+          </div>
         </div>
-        <div class="diag-item">
-          <span class="diag-label">Session Lifetime:</span>
-          <span class="diag-val-ok">30 Days (Rolling)</span>
+
+        <!-- Subtab: Direct Messages -->
+        <div id="subpane-dm" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <div style="font-size: 0.9rem; color: var(--text-muted);">One-to-one private messages with community members.</div>
+            <button class="btn-auth-nav" onclick="openNewDMModal()" style="font-size: 0.75rem; padding: 6px 12px;">✉️ NEW DM</button>
+          </div>
+
+          <div class="chat-layout">
+            <!-- Sidebar: DM Conversations List -->
+            <div class="chat-sidebar">
+              <div class="sidebar-header">
+                <span style="font-family: 'Silkscreen', monospace; font-size: 0.8rem; color: var(--cyan);">CONVERSATIONS</span>
+                <button class="btn-refresh-icon" onclick="loadDMConversations()">↻</button>
+              </div>
+              <div class="groups-list" id="dm-conversations-list">
+                <div style="padding: 16px; text-align: center; color: var(--text-muted); font-size: 0.8rem;">Loading conversations...</div>
+              </div>
+            </div>
+
+            <!-- Main: Active DM Window -->
+            <div class="chat-main">
+              <div class="chat-header" id="active-dm-header">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span id="active-dm-avatar" class="group-avatar" style="width: 32px; height: 32px; font-size: 1rem;">💬</span>
+                  <div>
+                    <div id="active-dm-name" style="font-weight: 700; font-size: 0.95rem; color: #fff;">Select a conversation</div>
+                    <div id="active-dm-meta" style="font-size: 0.75rem; color: var(--text-muted);">-</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="chat-messages-container" id="dm-messages-container">
+                <div style="text-align: center; color: var(--text-muted); font-size: 0.85rem; margin: auto;">
+                  Select a member to chat privately.
+                </div>
+              </div>
+
+              <form class="chat-input-area" id="dm-send-form" onsubmit="handleSendDMMessage(event)" style="display: none;">
+                <textarea id="dm-msg-input" class="chat-textarea" placeholder="Type a direct message..." rows="1" onkeydown="handleDMKeyDown(event)"></textarea>
+                <button type="submit" id="btn-dm-send" class="btn-send">SEND</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Content: Admin Registered Members (Admin Only) -->
+      <div id="tab-pane-admin-members" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+          <div class="section-title" style="margin-bottom: 0;">👥 Registered Members Management</div>
+          <div style="font-size: 0.82rem; color: var(--emerald); font-family: 'JetBrains Mono', monospace;" id="members-count-summary">
+            Total: 0 members
+          </div>
+        </div>
+
+        <!-- Search, Filter & Sort Controls -->
+        <div class="table-controls">
+          <div class="table-search-box">
+            <input type="text" id="member-search-input" class="table-input" placeholder="Search by Unique ID or Minecraft Username..." oninput="debounceMemberSearch()">
+          </div>
+          <div class="filters-group">
+            <select id="member-role-filter" class="table-select" onchange="fetchAdminMembers(1)">
+              <option value="">All Roles</option>
+              <option value="ADMIN">Admin</option>
+              <option value="MODERATOR">Moderator</option>
+              <option value="MEMBER">Member</option>
+            </select>
+            <select id="member-status-filter" class="table-select" onchange="fetchAdminMembers(1)">
+              <option value="">All Statuses</option>
+              <option value="ACTIVE">Active</option>
+              <option value="SUSPENDED">Suspended</option>
+              <option value="BANNED">Banned</option>
+            </select>
+            <select id="member-sort-filter" class="table-select" onchange="fetchAdminMembers(1)">
+              <option value="created_at-desc">Registered: Newest First</option>
+              <option value="created_at-asc">Registered: Oldest First</option>
+              <option value="last_login_at-desc">Last Login: Recent</option>
+              <option value="id-asc">Unique ID: A to Z</option>
+            </select>
+            <button class="btn-auth-nav" onclick="fetchAdminMembers(1)" style="font-size: 0.75rem; padding: 6px 12px;">↻ REFRESH</button>
+          </div>
+        </div>
+
+        <!-- Table displaying registered members -->
+        <div class="member-table-wrap">
+          <table class="member-table">
+            <thead>
+              <tr>
+                <th>MEMBER / UNIQUE ID</th>
+                <th>MINECRAFT USER</th>
+                <th>ROLE</th>
+                <th>STATUS</th>
+                <th>PRESENCE</th>
+                <th>REGISTERED</th>
+                <th>LAST LOGIN</th>
+                <th>ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody id="admin-members-tbody">
+              <tr>
+                <td colspan="8" style="text-align: center; padding: 24px; color: var(--text-muted);">
+                  Loading registered members...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination-bar">
+          <div id="pagination-info">Showing 0 of 0 members</div>
+          <div class="pagination-btns">
+            <button class="action-btn-sm" id="btn-page-prev" onclick="changeMemberPage(-1)" disabled>◀ Previous</button>
+            <span id="pagination-current-page" style="font-family: 'JetBrains Mono', monospace; padding: 4px 8px;">Page 1</span>
+            <button class="action-btn-sm" id="btn-page-next" onclick="changeMemberPage(1)" disabled>Next ▶</button>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="hero-banner">
-      <div class="badge-live">
-        <span class="pulse-dot"></span>
-        <span id="api-status-text">MINECRAFT SMP ONLINE</span>
-      </div>
-      <h1>TGZ LIFESTEAL SMP</h1>
-      <p class="subtitle">Experience high-stakes hardcore survival. Kill players to claim hearts, forge clan alliances, and dominate the seasonal leaderboards.</p>
-    </div>
-
+    <!-- 2. MINECRAFT JAVA AND BEDROCK SERVER SUPPORT SECTION -->
     <div class="card">
-      <div class="section-title">⚡ SERVER CONNECTION</div>
-      <div class="ip-box">
-        <div>
-          <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Server Address (Java 1.20+)</div>
-          <div class="ip-address" id="ip-text">node2.vyroxsmp.online:10010</div>
+      <div class="section-title">⚡ SERVER STATUS (JAVA & BEDROCK)</div>
+
+      <div class="server-dual-grid">
+        <!-- Java Edition Card -->
+        <div class="server-card">
+          <div class="server-header">
+            <div class="server-title">
+              <span>☕</span> JAVA EDITION
+            </div>
+            <div id="java-status-badge" class="server-badge badge-online">
+              <span class="pulse-dot"></span> CHECKING...
+            </div>
+          </div>
+
+          <div class="server-ip-box">
+            <div>
+              <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase;">Java Server Address</div>
+              <div class="server-ip-text" id="java-ip-text">node2.vyroxsmp.online:10010</div>
+            </div>
+            <button class="btn-copy-small" onclick="copyText('node2.vyroxsmp.online:10010', 'Java Server IP')">
+              📋 COPY IP
+            </button>
+          </div>
+
+          <div class="server-details-grid">
+            <div class="server-stat-cell">
+              <div class="server-stat-label">Online Players</div>
+              <div class="server-stat-val" id="java-player-count">- / -</div>
+            </div>
+            <div class="server-stat-cell">
+              <div class="server-stat-label">Server Version</div>
+              <div class="server-stat-val" id="java-version" style="font-size: 0.95rem; color: var(--cyan);">1.20.4+</div>
+            </div>
+          </div>
+
+          <div class="server-players-list">
+            <div style="font-size: 0.72rem; text-transform: uppercase; color: var(--text-muted);">Active Players</div>
+            <div id="java-players-container" class="server-players-chips">
+              <span style="font-size: 0.75rem; color: var(--text-muted);">Querying live player list...</span>
+            </div>
+          </div>
+
+          <div class="server-footer">
+            <span id="java-last-updated">Updated: Just now</span>
+            <button class="btn-refresh-icon" onclick="fetchJavaStatus()">↻ Refresh Java</button>
+          </div>
         </div>
-        <button class="copy-btn" onclick="copyIp()">
-          <span>📋</span> COPY SERVER IP
-        </button>
+
+        <!-- Bedrock Edition Card -->
+        <div class="server-card">
+          <div class="server-header">
+            <div class="server-title">
+              <span>📱</span> BEDROCK EDITION
+            </div>
+            <div id="bedrock-status-badge" class="server-badge badge-offline">
+              <span class="pulse-dot-red"></span> CHECKING...
+            </div>
+          </div>
+
+          <div class="server-ip-box">
+            <div>
+              <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase;">Bedrock Server Address</div>
+              <div class="server-ip-text" id="bedrock-ip-text">node2.vyroxsmp.online:10011</div>
+            </div>
+            <button class="btn-copy-small" onclick="copyText('node2.vyroxsmp.online:10011', 'Bedrock Server IP')">
+              📋 COPY IP
+            </button>
+          </div>
+
+          <div class="server-details-grid">
+            <div class="server-stat-cell">
+              <div class="server-stat-label">Online Players</div>
+              <div class="server-stat-val" id="bedrock-player-count">- / -</div>
+            </div>
+            <div class="server-stat-cell">
+              <div class="server-stat-label">Bedrock Port</div>
+              <div class="server-stat-val" style="font-size: 0.95rem; color: var(--gold);">10011</div>
+            </div>
+          </div>
+
+          <div class="server-players-list">
+            <div style="font-size: 0.72rem; text-transform: uppercase; color: var(--text-muted);">Active Players</div>
+            <div id="bedrock-players-container" class="server-players-chips">
+              <span style="font-size: 0.75rem; color: var(--text-muted);">Bedrock presence verified separately</span>
+            </div>
+          </div>
+
+          <div class="server-footer">
+            <span id="bedrock-last-updated">Updated: Just now</span>
+            <button class="btn-refresh-icon" onclick="fetchBedrockStatus()">↻ Refresh Bedrock</button>
+          </div>
+        </div>
       </div>
 
-      <div class="stats-grid">
-        <div class="stat-item">
-          <div class="stat-label">SMP Status</div>
-          <div class="stat-value" id="smp-status">ONLINE</div>
+      <!-- Server Connection Instructions -->
+      <div class="join-guide-box">
+        <div class="join-guide-title">
+          <span>🎮</span> HOW TO CONNECT & JOIN THE TGZ LIFESTYLE COMMUNITY
         </div>
-        <div class="stat-item">
-          <div class="stat-label">Server Version</div>
-          <div class="stat-value" style="color: var(--cyan);">1.20.4+</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-label">Lifesteal Plugin</div>
-          <div class="stat-value" style="color: var(--gold);">v2.4 Active</div>
+        <div class="join-instructions-grid">
+          <div class="instruction-card">
+            <h4>☕ Java Edition (PC / Mac / Linux)</h4>
+            <p>1. Open Minecraft Java 1.20+<br>2. Select <strong>Multiplayer</strong> &rarr; <strong>Direct Connection</strong> or Add Server<br>3. Enter the server address below:</p>
+            <div class="instruction-code">
+              <span>node2.vyroxsmp.online:10010</span>
+              <button class="btn-copy-small" style="padding: 2px 8px; font-size: 0.68rem;" onclick="copyText('node2.vyroxsmp.online:10010', 'Java Address')">COPY</button>
+            </div>
+          </div>
+          <div class="instruction-card">
+            <h4>📱 Bedrock Edition (Mobile / Console / Windows 10/11)</h4>
+            <p>1. Open Minecraft Bedrock &rarr; <strong>Play</strong> &rarr; <strong>Servers</strong><br>2. Click <strong>Add Server</strong><br>3. Enter Server Name: <strong>TGZ Lifestyle</strong><br>4. Enter Server Address & Port:</p>
+            <div class="instruction-code" style="margin-bottom: 6px;">
+              <span>Address: node2.vyroxsmp.online</span>
+              <button class="btn-copy-small" style="padding: 2px 8px; font-size: 0.68rem;" onclick="copyText('node2.vyroxsmp.online', 'Bedrock Address')">COPY</button>
+            </div>
+            <div class="instruction-code">
+              <span>Port: 10011</span>
+              <button class="btn-copy-small" style="padding: 2px 8px; font-size: 0.68rem;" onclick="copyText('10011', 'Bedrock Port')">COPY</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
+    <!-- 3. LIFESTYLE STORE & COMMUNITY RANKS SECTION -->
     <div class="card">
-      <div class="section-title">💎 VIP STORE & RANKS</div>
+      <div class="section-title">💎 VIP STORE & COMMUNITY RANKS</div>
+      <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 16px;">Support the TGZ Lifestyle community, unlock exclusive cosmetic badges, claim extra land blocks, and access vault storage.</p>
       <div class="ranks-grid">
         <div class="rank-card" style="border-color: rgba(16, 185, 129, 0.4);">
           <span class="rank-badge" style="background: rgba(16, 185, 129, 0.15); color: var(--emerald);">STARTER</span>
           <div class="rank-title" style="color: var(--emerald);">TITAN</div>
           <div class="rank-price">₹29</div>
           <ul class="perks-list">
-            <li>[Titan] Prefix & Role</li>
+            <li>[Titan] Chat Prefix</li>
             <li>+2,500 Claim Blocks</li>
             <li>1x Common Key</li>
+            <li>Access to /hat</li>
           </ul>
         </div>
         <div class="rank-card" style="border-color: rgba(56, 189, 248, 0.4);">
@@ -576,7 +1440,7 @@
             <li>[Wizard] Prefix & Role</li>
             <li>+5,000 Claim Blocks</li>
             <li>1x Monthly Key</li>
-            <li>/hat Command</li>
+            <li>Vault Storage (/pv 1)</li>
           </ul>
         </div>
         <div class="rank-card" style="border-color: rgba(255, 170, 0, 0.4);">
@@ -597,7 +1461,7 @@
           <ul class="perks-list">
             <li>[Static+] Prefix & Role</li>
             <li>+15,000 Claim Blocks</li>
-            <li>1x Death Heart Retain</li>
+            <li>Priority Queue Access</li>
             <li>3x Vault Storage (/pv 1-3)</li>
           </ul>
         </div>
@@ -608,27 +1472,16 @@
           <ul class="perks-list">
             <li>[Chaos] Prefix & Role</li>
             <li>+25,000 Claim Blocks</li>
-            <li>2x Death Heart Retain</li>
             <li>5x Vault Storage (/pv 1-5)</li>
-            <li>Monthly Mystery Crate</li>
+            <li>Monthly Lifestyle Mystery Crate</li>
           </ul>
         </div>
       </div>
     </div>
 
-    <div class="card">
-      <div class="section-title">📡 BACKEND API HEALTH</div>
-      <div class="api-status-box">
-        <div>
-          <span>REST API Endpoint: </span>
-          <strong style="color: var(--emerald);">/api/health</strong>
-        </div>
-        <div id="api-ping-indicator" style="color: var(--emerald);">Checking...</div>
-      </div>
-    </div>
-
+    <!-- FOOTER -->
     <footer>
-      TGZ Lifesteal SMP © 2026. Java Edition 1.20+. Discord: discord.gg/J5P89mxXbc
+      TGZ Lifestyle SMP © 2026. Java Edition 10010 & Bedrock Edition 10011. Discord: discord.gg/J5P89mxXbc
     </footer>
   </div>
 
@@ -636,7 +1489,7 @@
   <div id="auth-modal" class="modal-overlay">
     <div class="modal-box">
       <div class="modal-header">
-        <div class="modal-title" id="auth-modal-title">STAFF / MEMBER LOGIN</div>
+        <div class="modal-title" id="auth-modal-title">MEMBER / STAFF LOGIN</div>
         <button class="modal-close" onclick="closeAuthModal()">&times;</button>
       </div>
 
@@ -664,11 +1517,11 @@
       <form id="signup-form" style="display: none;" onsubmit="handleSignupSubmit(event)">
         <div class="form-group">
           <label class="form-label">Choose Unique ID (letters, numbers, underscores)</label>
-          <input type="text" id="signup-id" class="form-input" placeholder="e.g. hunter_99" required>
+          <input type="text" id="signup-id" class="form-input" placeholder="e.g. lifestyle_builder" required>
         </div>
         <div class="form-group">
           <label class="form-label">Display Name</label>
-          <input type="text" id="signup-display" class="form-input" placeholder="e.g. Hunter Champion" required>
+          <input type="text" id="signup-display" class="form-input" placeholder="e.g. Lifestyle Builder" required>
         </div>
         <div class="form-group">
           <label class="form-label">Password (min 8 characters)</label>
@@ -714,35 +1567,151 @@
     </div>
   </div>
 
+  <!-- ADMIN MEMBER DETAILS MODAL -->
+  <div id="member-details-modal" class="modal-overlay">
+    <div class="modal-box" style="max-width: 520px;">
+      <div class="modal-header">
+        <div class="modal-title">MEMBER PROFILE DETAILS</div>
+        <button class="modal-close" onclick="closeMemberDetailsModal()">&times;</button>
+      </div>
+      <div id="member-details-content">
+        <div style="text-align: center; color: var(--text-muted); padding: 20px;">Loading profile details...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CREATE GROUP MODAL -->
+  <div id="create-group-modal" class="modal-overlay">
+    <div class="modal-box" style="max-width: 500px;">
+      <div class="modal-header">
+        <div class="modal-title">CREATE GROUP CHAT</div>
+        <button class="modal-close" onclick="closeCreateGroupModal()">&times;</button>
+      </div>
+      <div id="create-group-err" class="alert-banner alert-danger"></div>
+      <form onsubmit="handleCreateGroupSubmit(event)">
+        <div class="form-group">
+          <label class="form-label">Group Name *</label>
+          <input type="text" id="grp-name-input" class="form-input" placeholder="e.g. Builders Guild, SMP Team Alpha" required maxlength="50">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description (optional)</label>
+          <input type="text" id="grp-desc-input" class="form-input" placeholder="Short description of the group" maxlength="200">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Group Icon / Avatar</label>
+          <select id="grp-avatar-select" class="form-input" style="cursor: pointer;">
+            <option value="👥">👥 Community Group</option>
+            <option value="⚔️">⚔️ Warriors Guild</option>
+            <option value="🏰">🏰 Builders Empire</option>
+            <option value="💎">💎 Emerald Traders</option>
+            <option value="🌲">🌲 Forest Explorers</option>
+            <option value="⚡">⚡ Lightning Crew</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Invite Initial Members by Unique App ID</label>
+          <input type="text" id="grp-member-search" class="form-input" placeholder="Search members by unique ID..." oninput="filterGroupInviteMembers()">
+          <div id="grp-invite-candidates" style="max-height: 140px; overflow-y: auto; margin-top: 8px; border: 1px solid var(--border-subtle); border-radius: 6px; padding: 6px; background: #090A0E;">
+            <div style="font-size: 0.78rem; color: var(--text-muted); padding: 4px;">Type to search members or select below:</div>
+          </div>
+          <div id="grp-selected-chips" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;"></div>
+        </div>
+        <button type="submit" id="btn-create-grp-submit" class="btn-submit">CREATE GROUP</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- GROUP SETTINGS / MANAGEMENT MODAL -->
+  <div id="group-settings-modal" class="modal-overlay">
+    <div class="modal-box" style="max-width: 520px;">
+      <div class="modal-header">
+        <div class="modal-title">GROUP SETTINGS & MEMBERS</div>
+        <button class="modal-close" onclick="closeGroupSettingsModal()">&times;</button>
+      </div>
+      <div id="grp-settings-content">
+        <div style="text-align: center; color: var(--text-muted); padding: 20px;">Loading group settings...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NEW DM MODAL -->
+  <div id="new-dm-modal" class="modal-overlay">
+    <div class="modal-box" style="max-width: 440px;">
+      <div class="modal-header">
+        <div class="modal-title">START DIRECT MESSAGE</div>
+        <button class="modal-close" onclick="closeNewDMModal()">&times;</button>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Search Member by Unique ID</label>
+        <input type="text" id="dm-search-member-input" class="form-input" placeholder="Type Unique ID or name..." oninput="searchDMMembers()">
+      </div>
+      <div id="dm-member-search-results" style="max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
+        <div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 12px;">Type to find registered members...</div>
+      </div>
+    </div>
+  </div>
+
   <script>
     let currentUser = null;
+    let currentAdminPage = 1;
+    let currentAdminLimit = 15;
+    let memberSearchTimeout = null;
+    let activeGroupId = null;
+    let activeDMUserId = null;
+    let selectedInviteUserIds = new Set();
+    let availableInviteUsers = [];
 
-    function copyIp() {
-      const text = document.getElementById('ip-text').innerText;
+    // Copy helper
+    function copyText(text, label) {
       navigator.clipboard.writeText(text).then(() => {
-        alert('Server IP copied to clipboard: ' + text);
+        alert((label || 'Text') + ' copied to clipboard: ' + text);
+      }).catch(err => {
+        prompt('Copy to clipboard:', text);
       });
     }
 
+    // Modal controls
     function openLoginModal() {
       document.getElementById('auth-modal').style.display = 'flex';
       switchAuthMode('login');
     }
-
     function closeAuthModal() {
       document.getElementById('auth-modal').style.display = 'none';
       document.getElementById('auth-error-banner').style.display = 'none';
       document.getElementById('auth-success-banner').style.display = 'none';
     }
-
     function openChangePasswordModal() {
       document.getElementById('change-pass-modal').style.display = 'flex';
     }
-
     function closeChangePasswordModal() {
       document.getElementById('change-pass-modal').style.display = 'none';
       document.getElementById('chg-error-banner').style.display = 'none';
       document.getElementById('chg-success-banner').style.display = 'none';
+    }
+    function openCreateGroupModal() {
+      selectedInviteUserIds.clear();
+      renderSelectedInviteChips();
+      document.getElementById('grp-name-input').value = '';
+      document.getElementById('grp-desc-input').value = '';
+      document.getElementById('create-group-err').style.display = 'none';
+      document.getElementById('create-group-modal').style.display = 'flex';
+      fetchInviteCandidateUsers();
+    }
+    function closeCreateGroupModal() {
+      document.getElementById('create-group-modal').style.display = 'none';
+    }
+    function closeMemberDetailsModal() {
+      document.getElementById('member-details-modal').style.display = 'none';
+    }
+    function closeGroupSettingsModal() {
+      document.getElementById('group-settings-modal').style.display = 'none';
+    }
+    function openNewDMModal() {
+      document.getElementById('new-dm-modal').style.display = 'flex';
+      searchDMMembers();
+    }
+    function closeNewDMModal() {
+      document.getElementById('new-dm-modal').style.display = 'none';
     }
 
     function switchAuthMode(mode) {
@@ -753,12 +1722,124 @@
         document.getElementById('login-form').style.display = 'none';
         document.getElementById('signup-form').style.display = 'block';
       } else {
-        document.getElementById('auth-modal-title').innerText = 'STAFF / MEMBER LOGIN';
+        document.getElementById('auth-modal-title').innerText = 'MEMBER / STAFF LOGIN';
         document.getElementById('signup-form').style.display = 'none';
         document.getElementById('login-form').style.display = 'block';
       }
     }
 
+    // Tab Switcher inside Dashboard
+    function switchDashboardTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = document.getElementById('tab-btn-' + tabId);
+      if (activeBtn) activeBtn.classList.add('active');
+
+      document.getElementById('tab-pane-overview').style.display = (tabId === 'overview') ? 'block' : 'none';
+      document.getElementById('tab-pane-messages').style.display = (tabId === 'messages') ? 'block' : 'none';
+      const adminPane = document.getElementById('tab-pane-admin-members');
+      if (adminPane) adminPane.style.display = (tabId === 'admin-members') ? 'block' : 'none';
+
+      if (tabId === 'admin-members') {
+        fetchAdminMembers(1);
+      } else if (tabId === 'messages') {
+        loadUserGroups();
+        loadDMConversations();
+      }
+    }
+
+    function switchMessageSubtab(subtab) {
+      document.getElementById('msg-subtab-groups').classList.toggle('active', subtab === 'groups');
+      document.getElementById('msg-subtab-dm').classList.toggle('active', subtab === 'dm');
+      document.getElementById('subpane-groups').style.display = (subtab === 'groups') ? 'block' : 'none';
+      document.getElementById('subpane-dm').style.display = (subtab === 'dm') ? 'block' : 'none';
+    }
+
+    // 1. MINECRAFT STATUS QUERIES (Separate Java and Bedrock)
+    async function fetchJavaStatus() {
+      const badge = document.getElementById('java-status-badge');
+      const countEl = document.getElementById('java-player-count');
+      const playersEl = document.getElementById('java-players-container');
+      const timeEl = document.getElementById('java-last-updated');
+
+      badge.innerHTML = '<span class="pulse-dot"></span> CHECKING...';
+      try {
+        const res = await fetch('/api/minecraft/status/java');
+        const data = await res.json();
+        const nowStr = new Date().toLocaleTimeString();
+        timeEl.innerText = 'Updated: ' + nowStr;
+
+        if (data.online) {
+          badge.className = 'server-badge badge-online';
+          badge.innerHTML = '<span class="pulse-dot"></span> ONLINE';
+          const pOnline = (data.players && typeof data.players.online === 'number') ? data.players.online : 0;
+          const pMax = (data.players && typeof data.players.max === 'number') ? data.players.max : 200;
+          countEl.innerText = `${pOnline} / ${pMax}`;
+
+          if (data.players && Array.isArray(data.players.list) && data.players.list.length > 0) {
+            playersEl.innerHTML = data.players.list.map(p => {
+              const name = typeof p === 'string' ? p : (p.name || 'Player');
+              return `<span class="player-chip">● ${name}</span>`;
+            }).join('');
+          } else if (pOnline > 0) {
+            playersEl.innerHTML = `<span style="font-size: 0.75rem; color: var(--emerald);">${pOnline} player(s) exploring TGZ Lifestyle</span>`;
+          } else {
+            playersEl.innerHTML = `<span style="font-size: 0.75rem; color: var(--text-muted);">No players online right now</span>`;
+          }
+        } else {
+          badge.className = 'server-badge badge-offline';
+          badge.innerHTML = '<span class="pulse-dot-red"></span> OFFLINE';
+          countEl.innerText = '0 / 200';
+          playersEl.innerHTML = `<span style="font-size: 0.75rem; color: var(--red);">Server unreachable or restarting</span>`;
+        }
+      } catch (err) {
+        badge.className = 'server-badge badge-offline';
+        badge.innerHTML = '<span class="pulse-dot-red"></span> ERROR';
+        countEl.innerText = '- / -';
+      }
+    }
+
+    async function fetchBedrockStatus() {
+      const badge = document.getElementById('bedrock-status-badge');
+      const countEl = document.getElementById('bedrock-player-count');
+      const playersEl = document.getElementById('bedrock-players-container');
+      const timeEl = document.getElementById('bedrock-last-updated');
+
+      badge.innerHTML = '<span class="pulse-dot"></span> CHECKING...';
+      try {
+        const res = await fetch('/api/minecraft/status/bedrock');
+        const data = await res.json();
+        const nowStr = new Date().toLocaleTimeString();
+        timeEl.innerText = 'Updated: ' + nowStr;
+
+        if (data.online) {
+          badge.className = 'server-badge badge-online';
+          badge.innerHTML = '<span class="pulse-dot"></span> ONLINE';
+          const pOnline = (data.players && typeof data.players.online === 'number') ? data.players.online : 0;
+          const pMax = (data.players && typeof data.players.max === 'number') ? data.players.max : 200;
+          countEl.innerText = `${pOnline} / ${pMax}`;
+
+          if (data.players && Array.isArray(data.players.list) && data.players.list.length > 0) {
+            playersEl.innerHTML = data.players.list.map(p => {
+              const name = typeof p === 'string' ? p : (p.name || 'Player');
+              return `<span class="player-chip">● ${name}</span>`;
+            }).join('');
+          } else {
+            playersEl.innerHTML = `<span style="font-size: 0.75rem; color: var(--emerald);">Bedrock RakNet gateway ready</span>`;
+          }
+        } else {
+          badge.className = 'server-badge badge-offline';
+          badge.innerHTML = '<span class="pulse-dot-red"></span> OFFLINE';
+          countEl.innerText = '0 / 200';
+          playersEl.innerHTML = `<span style="font-size: 0.75rem; color: var(--text-muted);">Bedrock port 10011 standby</span>`;
+        }
+      } catch (err) {
+        badge.className = 'server-badge badge-offline';
+        badge.innerHTML = '<span class="pulse-dot-red"></span> ERROR';
+        countEl.innerText = '- / -';
+      }
+    }
+
+    // 2. AUTHENTICATION HANDLERS
     async function handleLoginSubmit(event) {
       event.preventDefault();
       const errBox = document.getElementById('auth-error-banner');
@@ -791,12 +1872,11 @@
             updateUIAfterLogin(data.user);
           }, 600);
         } else {
-          const diagCode = data.code ? ' [' + data.code + ']' : '';
-          errBox.innerText = (data.error || 'Login failed') + diagCode;
+          errBox.innerText = (data.error || 'Login failed') + (data.code ? ` [${data.code}]` : '');
           errBox.style.display = 'block';
         }
       } catch (err) {
-        errBox.innerText = 'Network error connecting to /api/auth/login: ' + err.message;
+        errBox.innerText = 'Network error: ' + err.message;
         errBox.style.display = 'block';
       } finally {
         submitBtn.disabled = false;
@@ -838,7 +1918,7 @@
 
         if (res.ok && data.success) {
           currentUser = data.user;
-          succBox.innerText = 'Registration successful! Logged in as ' + data.user.displayName;
+          succBox.innerText = 'Registration successful! Welcome to TGZ Lifestyle, ' + data.user.displayName;
           succBox.style.display = 'block';
           setTimeout(() => {
             closeAuthModal();
@@ -898,7 +1978,7 @@
       currentUser = null;
       document.getElementById('user-dashboard-card').style.display = 'none';
       document.getElementById('auth-buttons-container').innerHTML = `
-        <button class="btn-auth-nav" onclick="openLoginModal()">🔑 STAFF LOGIN</button>
+        <button class="btn-auth-nav" onclick="openLoginModal()">🔑 MEMBER / STAFF LOGIN</button>
       `;
     }
 
@@ -906,16 +1986,25 @@
       currentUser = user;
       document.getElementById('dash-display-name').innerText = user.displayName || user.id;
       document.getElementById('dash-user-id').innerText = user.id;
+      document.getElementById('dash-status-text').innerText = user.status || 'ACTIVE';
+
       const badge = document.getElementById('dash-role-badge');
       badge.innerText = user.role;
       if (user.role === 'ADMIN') {
         badge.style.borderColor = 'var(--emerald)';
         badge.style.color = 'var(--emerald)';
         badge.style.background = 'rgba(16, 185, 129, 0.2)';
-      } else {
+        document.getElementById('tab-btn-admin-members').style.display = 'inline-flex';
+      } else if (user.role === 'MODERATOR') {
         badge.style.borderColor = 'var(--cyan)';
         badge.style.color = 'var(--cyan)';
         badge.style.background = 'rgba(56, 189, 248, 0.2)';
+        document.getElementById('tab-btn-admin-members').style.display = 'none';
+      } else {
+        badge.style.borderColor = 'var(--silver)';
+        badge.style.color = 'var(--silver)';
+        badge.style.background = 'rgba(156, 163, 175, 0.2)';
+        document.getElementById('tab-btn-admin-members').style.display = 'none';
       }
 
       if (user.mustChangePassword) {
@@ -952,7 +2041,7 @@
           const d = await res.json();
           document.getElementById('diag-db-status').innerText = d.databaseConnected ? '● Online (Connected)' : 'Disconnected';
           document.getElementById('diag-db-status').className = d.databaseConnected ? 'diag-val-ok' : 'diag-val-err';
-          const adminLabel = (d.adminUserIds && d.adminUserIds.length) ? d.adminUserIds.join(', ') : 'sg_karthi, dhanush, lmtg, darksight';
+          const adminLabel = (d.adminUserIds && d.adminUserIds.length) ? d.adminUserIds.join(', ') : 'Ready';
           document.getElementById('diag-admin-prov').innerText = d.adminProvisioned ? `● Ready (${adminLabel})` : 'Not Provisioned';
           document.getElementById('diag-admin-prov').className = d.adminProvisioned ? 'diag-val-ok' : 'diag-val-warn';
           document.getElementById('diag-storage-type').innerText = d.databaseType || 'Persisted Store';
@@ -960,18 +2049,897 @@
       } catch (e) {}
     }
 
-    // Ping API Health Status
-    fetch('/api/health')
-      .then(res => res.json())
-      .then(data => {
-        document.getElementById('api-ping-indicator').innerText = '● Operational (200 OK)';
-      })
-      .catch(err => {
-        document.getElementById('api-ping-indicator').innerText = '● Standby';
-      });
+    // 3. ADMIN: REGISTERED MEMBERS TABLE & CONTROLS
+    function debounceMemberSearch() {
+      clearTimeout(memberSearchTimeout);
+      memberSearchTimeout = setTimeout(() => {
+        fetchAdminMembers(1);
+      }, 350);
+    }
 
-    // Check existing session on page load
+    async function fetchAdminMembers(page = 1) {
+      if (!currentUser || currentUser.role !== 'ADMIN') return;
+      currentAdminPage = page;
+      const tbody = document.getElementById('admin-members-tbody');
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 20px; color: var(--text-muted);">Fetching registered members...</td></tr>`;
+
+      const search = (document.getElementById('member-search-input').value || '').trim();
+      const role = document.getElementById('member-role-filter').value;
+      const status = document.getElementById('member-status-filter').value;
+      const sortVal = document.getElementById('member-sort-filter').value;
+      const [sort, order] = sortVal.split('-');
+
+      const params = new URLSearchParams({
+        page,
+        limit: currentAdminLimit,
+        sort,
+        order
+      });
+      if (search) params.append('search', search);
+      if (role) params.append('role', role);
+      if (status) params.append('status', status);
+
+      try {
+        const res = await fetch('/api/settings/admin/users?' + params.toString(), { credentials: 'include' });
+        if (!res.ok) {
+          tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--red);">Access denied or error loading members.</td></tr>`;
+          return;
+        }
+        const data = await res.json();
+        const users = data.users || [];
+        const pagination = data.pagination || { total: 0, page: 1, pages: 1 };
+
+        document.getElementById('members-count-summary').innerText = `Total: ${pagination.total} registered members`;
+        document.getElementById('pagination-info').innerText = `Showing ${users.length} of ${pagination.total} members (Page ${pagination.page} of ${pagination.pages || 1})`;
+        document.getElementById('pagination-current-page').innerText = `Page ${pagination.page}`;
+        document.getElementById('btn-page-prev').disabled = (pagination.page <= 1);
+        document.getElementById('btn-page-next').disabled = (pagination.page >= pagination.pages);
+
+        if (users.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 24px; color: var(--text-muted);">No registered members found matching filter criteria.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = users.map(u => {
+          const initials = (u.displayName || u.id).slice(0, 2).toUpperCase();
+          const avatarHtml = u.avatar ? `<img src="${u.avatar}" alt="${u.id}">` : initials;
+          const regDate = u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '-';
+          const lastLogin = u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleDateString() : 'Never';
+          
+          let statusBadgeClass = 'status-active';
+          if (u.status === 'SUSPENDED') statusBadgeClass = 'status-suspended';
+          if (u.status === 'BANNED') statusBadgeClass = 'status-banned';
+
+          let roleClass = 'role-member';
+          if (u.role === 'ADMIN') roleClass = 'role-admin';
+          if (u.role === 'MODERATOR') roleClass = 'role-mod';
+
+          const presenceDot = u.isOnline 
+            ? '<span style="color: var(--emerald); font-size: 0.75rem; font-family: monospace;">● ONLINE</span>'
+            : '<span style="color: var(--text-muted); font-size: 0.75rem; font-family: monospace;">○ Offline</span>';
+
+          const isSelf = currentUser && currentUser.id === u.id;
+          const canManageRole = !isSelf && u.role !== 'ADMIN';
+          const canManageStatus = !isSelf;
+
+          let roleActionBtn = '';
+          if (canManageRole) {
+            if (u.role === 'MEMBER') {
+              roleActionBtn = `<button class="action-btn-sm" title="Promote to Moderator" onclick="updateMemberRole('${u.id}', 'MODERATOR')">⬆️ Mod</button>`;
+            } else if (u.role === 'MODERATOR') {
+              roleActionBtn = `<button class="action-btn-sm" title="Demote to Member" onclick="updateMemberRole('${u.id}', 'MEMBER')">⬇️ Demote</button>`;
+            }
+          }
+
+          let statusActionBtn = '';
+          if (canManageStatus) {
+            if (u.status === 'ACTIVE') {
+              statusActionBtn = `
+                <button class="action-btn-sm" style="color: var(--gold);" title="Suspend Account" onclick="updateMemberStatus('${u.id}', 'SUSPENDED')">⏸️ Suspend</button>
+                <button class="action-btn-sm" style="color: var(--red);" title="Ban Account" onclick="updateMemberStatus('${u.id}', 'BANNED')">🚫 Ban</button>
+              `;
+            } else {
+              statusActionBtn = `<button class="action-btn-sm" style="color: var(--emerald);" title="Reactivate Account" onclick="updateMemberStatus('${u.id}', 'ACTIVE')">▶️ Activate</button>`;
+            }
+          }
+
+          return `
+            <tr>
+              <td>
+                <div class="avatar-cell">
+                  <div class="user-avatar-circle">${avatarHtml}</div>
+                  <div>
+                    <div style="font-weight: 600; color: #fff;">${u.displayName || u.id}</div>
+                    <div style="font-size: 0.75rem; color: var(--emerald); font-family: 'JetBrains Mono', monospace;">ID: ${u.id}</div>
+                  </div>
+                </div>
+              </td>
+              <td style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;">
+                ${u.minecraftUsername ? '⛏️ ' + u.minecraftUsername : '<span style="color: var(--text-muted);">None</span>'}
+              </td>
+              <td><span class="role-badge-table ${roleClass}">${u.role}</span></td>
+              <td><span class="status-badge ${statusBadgeClass}">${u.status}</span></td>
+              <td>${presenceDot}</td>
+              <td style="font-size: 0.8rem; color: var(--text-muted);">${regDate}</td>
+              <td style="font-size: 0.8rem; color: var(--text-muted);">${lastLogin}</td>
+              <td>
+                <div class="actions-cell">
+                  <button class="action-btn-sm" title="View Full Profile Details" onclick="viewMemberDetails('${u.id}')">👁️ Details</button>
+                  ${roleActionBtn}
+                  ${statusActionBtn}
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--red);">Error connecting to admin members API.</td></tr>`;
+      }
+    }
+
+    function changeMemberPage(delta) {
+      fetchAdminMembers(currentAdminPage + delta);
+    }
+
+    async function updateMemberRole(userId, newRole) {
+      if (!confirm(`Are you sure you want to change ${userId}'s role to ${newRole}?`)) return;
+      try {
+        const res = await fetch(`/api/settings/admin/users/${encodeURIComponent(userId)}/role`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ role: newRole })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          fetchAdminMembers(currentAdminPage);
+        } else {
+          alert('Failed to update role: ' + (data.error || 'Unknown error'));
+        }
+      } catch (e) {
+        alert('Error updating role: ' + e.message);
+      }
+    }
+
+    async function updateMemberStatus(userId, newStatus) {
+      if (!confirm(`Are you sure you want to set status of ${userId} to ${newStatus}?`)) return;
+      try {
+        const res = await fetch(`/api/settings/admin/users/${encodeURIComponent(userId)}/status`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ status: newStatus })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          fetchAdminMembers(currentAdminPage);
+        } else {
+          alert('Failed to update status: ' + (data.error || 'Unknown error'));
+        }
+      } catch (e) {
+        alert('Error updating status: ' + e.message);
+      }
+    }
+
+    async function viewMemberDetails(userId) {
+      document.getElementById('member-details-modal').style.display = 'flex';
+      const container = document.getElementById('member-details-content');
+      container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 24px;">Loading profile details...</div>';
+
+      try {
+        const res = await fetch(`/api/settings/admin/users/${encodeURIComponent(userId)}/details`, { credentials: 'include' });
+        if (!res.ok) {
+          container.innerHTML = '<div style="color: var(--red); text-align: center; padding: 20px;">Could not load profile details.</div>';
+          return;
+        }
+        const data = await res.json();
+        const p = data.profile || {};
+        const team = data.team;
+        const rewards = data.rewards || {};
+        const activity = data.activity || {};
+
+        container.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--border-subtle);">
+            <div class="user-avatar-circle" style="width: 52px; height: 52px; font-size: 1.2rem;">
+              ${p.avatar ? `<img src="${p.avatar}">` : (p.displayName || p.id).slice(0, 2).toUpperCase()}
+            </div>
+            <div>
+              <div style="font-size: 1.15rem; font-weight: 700; color: #fff;">${p.displayName || p.id}</div>
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; color: var(--emerald);">ID: ${p.id}</div>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 14px;">
+            <div class="section-title" style="font-size: 0.85rem; margin-bottom: 8px;">👤 ACCOUNT PROFILE</div>
+            <div class="details-row"><span class="details-label">Role:</span><span class="details-val">${p.role}</span></div>
+            <div class="details-row"><span class="details-label">Account Status:</span><span class="details-val">${p.status}</span></div>
+            <div class="details-row"><span class="details-label">Minecraft Username:</span><span class="details-val">${p.minecraftUsername || 'Not connected'}</span></div>
+            <div class="details-row"><span class="details-label">Registration Date:</span><span class="details-val">${p.createdAt ? new Date(p.createdAt).toLocaleString() : '-'}</span></div>
+            <div class="details-row"><span class="details-label">Last Login:</span><span class="details-val">${p.lastLoginAt ? new Date(p.lastLoginAt).toLocaleString() : 'Never'}</span></div>
+            <div class="details-row"><span class="details-label">Live Presence:</span><span class="details-val" style="color: ${p.isOnline ? 'var(--emerald)' : 'var(--text-muted)'};">${p.isOnline ? '● Online (Active session)' : 'Offline'}</span></div>
+          </div>
+
+          <div style="margin-bottom: 14px;">
+            <div class="section-title" style="font-size: 0.85rem; margin-bottom: 8px;">🛡️ TEAM INFORMATION</div>
+            ${team ? `
+              <div class="details-row"><span class="details-label">Team Name:</span><span class="details-val">${team.name} [${team.tag}]</span></div>
+              <div class="details-row"><span class="details-label">Role in Team:</span><span class="details-val">${team.role}</span></div>
+              <div class="details-row"><span class="details-label">Joined Team:</span><span class="details-val">${new Date(team.joinedAt).toLocaleDateString()}</span></div>
+            ` : '<div style="color: var(--text-muted); font-size: 0.82rem; padding: 4px 0;">No team joined currently.</div>'}
+          </div>
+
+          <div style="margin-bottom: 14px;">
+            <div class="section-title" style="font-size: 0.85rem; margin-bottom: 8px;">🎁 REWARDS & CRATES</div>
+            <div class="details-row"><span class="details-label">Total Reward Claims:</span><span class="details-val">${rewards.totalClaims || 0}</span></div>
+            <div class="details-row"><span class="details-label">Last Claimed Reward:</span><span class="details-val">${rewards.lastClaimed ? new Date(rewards.lastClaimed).toLocaleString() : 'None'}</span></div>
+          </div>
+
+          <div>
+            <div class="section-title" style="font-size: 0.85rem; margin-bottom: 8px;">📈 ACTIVITY STATS</div>
+            <div class="details-row"><span class="details-label">Active Login Sessions:</span><span class="details-val">${activity.activeSessions || 0}</span></div>
+            <div class="details-row"><span class="details-label">Direct Messages Sent:</span><span class="details-val">${activity.directMessagesSent || 0}</span></div>
+            <div class="details-row"><span class="details-label">Group Messages Sent:</span><span class="details-val">${activity.groupMessagesSent || 0}</span></div>
+          </div>
+        `;
+      } catch (err) {
+        container.innerHTML = '<div style="color: var(--red); text-align: center; padding: 20px;">Network error loading details.</div>';
+      }
+    }
+
+    // 4. GROUP CHAT SYSTEM
+    async function loadUserGroups() {
+      if (!currentUser) return;
+      const listEl = document.getElementById('groups-list-container');
+      try {
+        const res = await fetch('/api/groups', { credentials: 'include' });
+        if (!res.ok) {
+          listEl.innerHTML = `<div style="padding: 16px; text-align: center; color: var(--red); font-size: 0.8rem;">Failed to load groups.</div>`;
+          return;
+        }
+        const data = await res.json();
+        const groups = data.groups || [];
+        if (groups.length === 0) {
+          listEl.innerHTML = `
+            <div style="padding: 20px 14px; text-align: center; color: var(--text-muted); font-size: 0.8rem;">
+              You have no active group chats.<br><br>
+              <button class="action-btn-sm" onclick="openCreateGroupModal()" style="color: var(--emerald);">➕ Create One Now</button>
+            </div>
+          `;
+          return;
+        }
+
+        listEl.innerHTML = groups.map(g => {
+          const isActive = g.id === activeGroupId;
+          const preview = g.latestMessage ? `${g.latestMessage.senderName || g.latestMessage.senderId}: ${g.latestMessage.content}` : (g.description || 'No messages yet');
+          const time = g.latestMessageTime ? new Date(g.latestMessageTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+          const unreadBadge = (g.unreadCount > 0) ? `<span class="tab-badge">${g.unreadCount}</span>` : '';
+          const ownerBadge = (g.ownerId === currentUser.id) ? '<span style="font-size: 0.65rem; color: var(--gold); border: 1px solid var(--gold); padding: 1px 4px; border-radius: 3px;">OWNER</span>' : '';
+
+          return `
+            <div class="group-item-card ${isActive ? 'active' : ''}" onclick="selectGroup('${g.id}')">
+              <div class="group-avatar">${g.avatar || '👥'}</div>
+              <div class="group-info">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px;">
+                  <div class="group-name">${g.name} ${ownerBadge}</div>
+                  <div style="font-size: 0.68rem; color: var(--text-muted);">${time}</div>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2px;">
+                  <div class="group-preview">${preview}</div>
+                  ${unreadBadge}
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        if (activeGroupId) {
+          loadGroupChatRoom(activeGroupId);
+        }
+      } catch (err) {
+        listEl.innerHTML = `<div style="padding: 16px; text-align: center; color: var(--red); font-size: 0.8rem;">Network error loading groups.</div>`;
+      }
+    }
+
+    async function selectGroup(groupId) {
+      activeGroupId = groupId;
+      loadGroupChatRoom(groupId);
+      loadUserGroups();
+    }
+
+    async function loadGroupChatRoom(groupId) {
+      if (!groupId) return;
+      const headerName = document.getElementById('active-group-name');
+      const headerMeta = document.getElementById('active-group-meta');
+      const headerAvatar = document.getElementById('active-group-avatar');
+      const controls = document.getElementById('active-group-controls');
+      const msgContainer = document.getElementById('group-messages-container');
+      const sendForm = document.getElementById('group-send-form');
+
+      try {
+        const [grpRes, msgRes] = await Promise.all([
+          fetch(`/api/groups/${groupId}`, { credentials: 'include' }),
+          fetch(`/api/groups/${groupId}/messages`, { credentials: 'include' })
+        ]);
+
+        if (!grpRes.ok || !msgRes.ok) {
+          msgContainer.innerHTML = '<div style="text-align: center; color: var(--red); margin: auto;">Unable to load group conversation.</div>';
+          return;
+        }
+
+        const grpData = await grpRes.json();
+        const msgData = await msgRes.json();
+        const group = grpData.group;
+        const members = grpData.members || [];
+        const messages = msgData.messages || [];
+
+        headerName.innerText = group.name;
+        headerMeta.innerText = `${members.length} member(s) • ${group.description || 'TGZ Lifestyle Group'}`;
+        headerAvatar.innerText = group.avatar || '👥';
+        controls.style.display = 'block';
+        sendForm.style.display = 'flex';
+
+        if (messages.length === 0) {
+          msgContainer.innerHTML = `
+            <div style="text-align: center; color: var(--text-muted); font-size: 0.85rem; margin: auto;">
+              No messages in <strong>${group.name}</strong> yet.<br>Send the first message below!
+            </div>
+          `;
+        } else {
+          msgContainer.innerHTML = messages.map(m => {
+            const isSent = currentUser && m.senderId === currentUser.id;
+            const time = m.createdAt ? new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+            return `
+              <div class="chat-msg ${isSent ? 'sent' : ''}">
+                <div class="chat-msg-avatar">${(m.senderName || m.senderId).slice(0, 2).toUpperCase()}</div>
+                <div class="chat-bubble">
+                  <div class="chat-sender">
+                    <span>${m.senderName || m.senderId}</span>
+                    <span class="chat-time">${time}</span>
+                  </div>
+                  <div class="chat-text">${escapeHtml(m.content)}</div>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+
+        msgContainer.scrollTop = msgContainer.scrollHeight;
+      } catch (e) {
+        msgContainer.innerHTML = '<div style="text-align: center; color: var(--red); margin: auto;">Network error loading group chat.</div>';
+      }
+    }
+
+    function handleChatKeyDown(event) {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        handleSendGroupMessage(event);
+      }
+    }
+
+    async function handleSendGroupMessage(event) {
+      if (event) event.preventDefault();
+      if (!activeGroupId) return;
+      const input = document.getElementById('group-msg-input');
+      const content = input.value.trim();
+      if (!content) return;
+
+      const btn = document.getElementById('btn-group-send');
+      btn.disabled = true;
+      try {
+        const res = await fetch(`/api/groups/${activeGroupId}/messages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ content })
+        });
+        if (res.ok) {
+          input.value = '';
+          loadGroupChatRoom(activeGroupId);
+        } else {
+          const err = await res.json();
+          alert('Could not send message: ' + (err.error || 'Unknown error'));
+        }
+      } catch (e) {
+        alert('Network error sending message: ' + e.message);
+      } finally {
+        btn.disabled = false;
+        input.focus();
+      }
+    }
+
+    // Create Group Form
+    async function fetchInviteCandidateUsers() {
+      try {
+        const res = await fetch('/api/messages/users/search', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          availableInviteUsers = data.users || [];
+          renderInviteCandidateList(availableInviteUsers);
+        }
+      } catch (e) {}
+    }
+
+    function renderInviteCandidateList(users) {
+      const container = document.getElementById('grp-invite-candidates');
+      if (users.length === 0) {
+        container.innerHTML = '<div style="font-size: 0.78rem; color: var(--text-muted); padding: 4px;">No members found.</div>';
+        return;
+      }
+      container.innerHTML = users.map(u => {
+        const isChecked = selectedInviteUserIds.has(u.id);
+        return `
+          <label style="display: flex; align-items: center; justify-content: space-between; padding: 4px 6px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+            <span><strong>${u.id}</strong> (${u.displayName})</span>
+            <input type="checkbox" value="${u.id}" ${isChecked ? 'checked' : ''} onchange="toggleInviteUser('${u.id}')">
+          </label>
+        `;
+      }).join('');
+    }
+
+    function filterGroupInviteMembers() {
+      const query = (document.getElementById('grp-member-search').value || '').toLowerCase().trim();
+      const filtered = availableInviteUsers.filter(u => 
+        u.id.toLowerCase().includes(query) || (u.displayName && u.displayName.toLowerCase().includes(query))
+      );
+      renderInviteCandidateList(filtered);
+    }
+
+    function toggleInviteUser(userId) {
+      if (selectedInviteUserIds.has(userId)) {
+        selectedInviteUserIds.delete(userId);
+      } else {
+        selectedInviteUserIds.add(userId);
+      }
+      renderSelectedInviteChips();
+      filterGroupInviteMembers();
+    }
+
+    function renderSelectedInviteChips() {
+      const chipsEl = document.getElementById('grp-selected-chips');
+      if (selectedInviteUserIds.size === 0) {
+        chipsEl.innerHTML = '';
+        return;
+      }
+      chipsEl.innerHTML = Array.from(selectedInviteUserIds).map(uid => `
+        <span class="player-chip" style="cursor: pointer;" onclick="toggleInviteUser('${uid}')">
+          ● ${uid} &times;
+        </span>
+      `).join('');
+    }
+
+    async function handleCreateGroupSubmit(event) {
+      event.preventDefault();
+      const errBox = document.getElementById('create-group-err');
+      const submitBtn = document.getElementById('btn-create-grp-submit');
+      errBox.style.display = 'none';
+
+      const name = document.getElementById('grp-name-input').value.trim();
+      const description = document.getElementById('grp-desc-input').value.trim();
+      const avatar = document.getElementById('grp-avatar-select').value;
+      const memberIds = Array.from(selectedInviteUserIds);
+
+      if (!name) {
+        errBox.innerText = 'Group name is required.';
+        errBox.style.display = 'block';
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.innerText = 'CREATING...';
+
+      try {
+        const res = await fetch('/api/groups', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ name, description, avatar, memberIds })
+        });
+        const data = await res.json();
+        if (res.ok && data.group) {
+          closeCreateGroupModal();
+          activeGroupId = data.group.id;
+          loadUserGroups();
+        } else {
+          errBox.innerText = data.error || 'Failed to create group.';
+          errBox.style.display = 'block';
+        }
+      } catch (e) {
+        errBox.innerText = 'Network error creating group: ' + e.message;
+        errBox.style.display = 'block';
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = 'CREATE GROUP';
+      }
+    }
+
+    // Group Settings & Management Modal
+    async function openGroupSettingsModal() {
+      if (!activeGroupId) return;
+      document.getElementById('group-settings-modal').style.display = 'flex';
+      const container = document.getElementById('grp-settings-content');
+      container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px;">Loading group details...</div>';
+
+      try {
+        const res = await fetch(`/api/groups/${activeGroupId}`, { credentials: 'include' });
+        if (!res.ok) {
+          container.innerHTML = '<div style="color: var(--red); text-align: center;">Could not load settings.</div>';
+          return;
+        }
+        const data = await res.json();
+        const g = data.group;
+        const members = data.members || [];
+        const isOwner = currentUser && (g.ownerId === currentUser.id);
+        const isAdmin = currentUser && (currentUser.role === 'ADMIN');
+
+        container.innerHTML = `
+          <div style="margin-bottom: 16px;">
+            <div style="font-size: 1.1rem; font-weight: 700; color: #fff;">${g.avatar || '👥'} ${g.name}</div>
+            <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 4px;">Owner: <strong style="color: var(--gold);">${g.ownerId}</strong></div>
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">${g.description || 'No description provided.'}</div>
+          </div>
+
+          ${isOwner ? `
+            <div style="margin-bottom: 16px; background: #0D0E14; padding: 12px; border-radius: 8px;">
+              <div class="section-title" style="font-size: 0.82rem; margin-bottom: 8px;">EDIT GROUP INFO</div>
+              <div class="form-group">
+                <input type="text" id="edit-grp-name" class="form-input" value="${g.name}" placeholder="Group name">
+              </div>
+              <div class="form-group">
+                <input type="text" id="edit-grp-desc" class="form-input" value="${g.description || ''}" placeholder="Description">
+              </div>
+              <button class="action-btn-sm" style="color: var(--emerald);" onclick="saveGroupInfo('${g.id}')">Save Changes</button>
+            </div>
+
+            <div style="margin-bottom: 16px; background: #0D0E14; padding: 12px; border-radius: 8px;">
+              <div class="section-title" style="font-size: 0.82rem; margin-bottom: 8px;">INVITE MEMBER BY UNIQUE ID</div>
+              <div style="display: flex; gap: 8px;">
+                <input type="text" id="invite-member-id-input" class="form-input" placeholder="Member unique ID...">
+                <button class="action-btn-sm" style="color: var(--emerald); white-space: nowrap;" onclick="inviteMemberToGroup('${g.id}')">➕ Invite</button>
+              </div>
+            </div>
+          ` : ''}
+
+          <div style="margin-bottom: 16px;">
+            <div class="section-title" style="font-size: 0.82rem; margin-bottom: 8px;">PARTICIPANTS (${members.length})</div>
+            <div style="max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
+              ${members.map(m => {
+                const isGroupOwner = (m.userId === g.ownerId);
+                const isCurrentUser = currentUser && (m.userId === currentUser.id);
+                return `
+                  <div style="display: flex; justify-content: space-between; align-items: center; background: #0D0E14; padding: 8px 10px; border-radius: 6px;">
+                    <div>
+                      <span style="font-weight: 600; font-size: 0.85rem; color: #fff;">${m.displayName || m.userId}</span>
+                      <span style="font-family: monospace; font-size: 0.75rem; color: var(--emerald);">(${m.userId})</span>
+                      ${isGroupOwner ? '<span style="font-size: 0.68rem; color: var(--gold); margin-left: 6px;">👑 Owner</span>' : ''}
+                    </div>
+                    <div>
+                      ${isOwner && !isGroupOwner ? `
+                        <button class="action-btn-sm" style="color: var(--gold); font-size: 0.7rem;" onclick="transferGroupOwnership('${g.id}', '${m.userId}')">Crown</button>
+                        <button class="action-btn-sm" style="color: var(--red); font-size: 0.7rem;" onclick="removeGroupMember('${g.id}', '${m.userId}')">Kick</button>
+                      ` : ''}
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-subtle); padding-top: 14px;">
+            ${!isOwner ? `
+              <button class="action-btn-sm" style="color: var(--gold);" onclick="leaveGroup('${g.id}')">🚪 Leave Group</button>
+            ` : '<span></span>'}
+
+            ${(isOwner || isAdmin) ? `
+              <button class="action-btn-sm" style="color: var(--red); border-color: var(--red);" onclick="deleteGroup('${g.id}')">🗑️ Delete Group</button>
+            ` : ''}
+          </div>
+        `;
+      } catch (e) {
+        container.innerHTML = '<div style="color: var(--red); text-align: center;">Network error.</div>';
+      }
+    }
+
+    async function saveGroupInfo(groupId) {
+      const name = document.getElementById('edit-grp-name').value.trim();
+      const description = document.getElementById('edit-grp-desc').value.trim();
+      try {
+        const res = await fetch(`/api/groups/${groupId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ name, description })
+        });
+        if (res.ok) {
+          alert('Group info saved!');
+          openGroupSettingsModal();
+          loadUserGroups();
+        } else {
+          const err = await res.json();
+          alert('Failed to save group: ' + err.error);
+        }
+      } catch (e) {
+        alert('Network error: ' + e.message);
+      }
+    }
+
+    async function inviteMemberToGroup(groupId) {
+      const input = document.getElementById('invite-member-id-input');
+      const userId = input.value.trim();
+      if (!userId) return;
+      try {
+        const res = await fetch(`/api/groups/${groupId}/members`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ userId })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          input.value = '';
+          openGroupSettingsModal();
+          loadGroupChatRoom(groupId);
+        } else {
+          alert(data.error || 'Failed to invite member.');
+        }
+      } catch (e) {
+        alert('Network error: ' + e.message);
+      }
+    }
+
+    async function removeGroupMember(groupId, userId) {
+      if (!confirm(`Are you sure you want to remove ${userId} from the group?`)) return;
+      try {
+        const res = await fetch(`/api/groups/${groupId}/members/${encodeURIComponent(userId)}`, {
+          method: 'DELETE',
+          credentials: 'include'
+        });
+        if (res.ok) {
+          openGroupSettingsModal();
+          loadGroupChatRoom(groupId);
+        }
+      } catch (e) {}
+    }
+
+    async function transferGroupOwnership(groupId, newOwnerId) {
+      if (!confirm(`Transfer ownership of this group to ${newOwnerId}? You will become a regular member.`)) return;
+      try {
+        const res = await fetch(`/api/groups/${groupId}/transfer`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ newOwnerId })
+        });
+        if (res.ok) {
+          openGroupSettingsModal();
+          loadUserGroups();
+        }
+      } catch (e) {}
+    }
+
+    async function leaveGroup(groupId) {
+      if (!confirm('Leave this group? You will no longer receive group messages.')) return;
+      try {
+        const res = await fetch(`/api/groups/${groupId}/members/${encodeURIComponent(currentUser.id)}`, {
+          method: 'DELETE',
+          credentials: 'include'
+        });
+        if (res.ok) {
+          closeGroupSettingsModal();
+          activeGroupId = null;
+          loadUserGroups();
+        }
+      } catch (e) {}
+    }
+
+    async function deleteGroup(groupId) {
+      if (!confirm('Are you sure you want to permanently delete this group and all its message history?')) return;
+      try {
+        const res = await fetch(`/api/groups/${groupId}`, {
+          method: 'DELETE',
+          credentials: 'include'
+        });
+        if (res.ok) {
+          closeGroupSettingsModal();
+          activeGroupId = null;
+          loadUserGroups();
+        }
+      } catch (e) {}
+    }
+
+    // 5. DIRECT MESSAGES SYSTEM
+    async function loadDMConversations() {
+      if (!currentUser) return;
+      const listEl = document.getElementById('dm-conversations-list');
+      try {
+        const res = await fetch('/api/messages/conversations', { credentials: 'include' });
+        if (!res.ok) {
+          listEl.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--red); font-size: 0.8rem;">Could not load conversations.</div>';
+          return;
+        }
+        const data = await res.json();
+        const convs = data.conversations || [];
+        if (convs.length === 0) {
+          listEl.innerHTML = `
+            <div style="padding: 20px 14px; text-align: center; color: var(--text-muted); font-size: 0.8rem;">
+              No direct messages yet.<br><br>
+              <button class="action-btn-sm" onclick="openNewDMModal()" style="color: var(--cyan);">Start a Conversation</button>
+            </div>
+          `;
+          return;
+        }
+
+        listEl.innerHTML = convs.map(c => {
+          const isActive = c.partner_id === activeDMUserId;
+          const unreadBadge = (c.unread_count > 0) ? `<span class="tab-badge">${c.unread_count}</span>` : '';
+          const preview = c.last_message || 'No messages yet';
+          const time = c.last_message_time ? new Date(c.last_message_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+          return `
+            <div class="group-item-card ${isActive ? 'active' : ''}" onclick="selectDMUser('${c.partner_id}')">
+              <div class="group-avatar" style="font-size: 0.95rem;">${(c.partner_name || c.partner_id).slice(0, 2).toUpperCase()}</div>
+              <div class="group-info">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px;">
+                  <div class="group-name">${c.partner_name || c.partner_id}</div>
+                  <div style="font-size: 0.68rem; color: var(--text-muted);">${time}</div>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2px;">
+                  <div class="group-preview">${preview}</div>
+                  ${unreadBadge}
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        if (activeDMUserId) {
+          loadDMChatRoom(activeDMUserId);
+        }
+      } catch (e) {
+        listEl.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--red); font-size: 0.8rem;">Network error.</div>';
+      }
+    }
+
+    async function selectDMUser(partnerId) {
+      activeDMUserId = partnerId;
+      loadDMChatRoom(partnerId);
+      loadDMConversations();
+    }
+
+    async function loadDMChatRoom(partnerId) {
+      if (!partnerId) return;
+      const headerName = document.getElementById('active-dm-name');
+      const headerMeta = document.getElementById('active-dm-meta');
+      const msgContainer = document.getElementById('dm-messages-container');
+      const sendForm = document.getElementById('dm-send-form');
+
+      try {
+        const res = await fetch(`/api/messages/conversations/${encodeURIComponent(partnerId)}`, { credentials: 'include' });
+        if (!res.ok) {
+          msgContainer.innerHTML = '<div style="text-align: center; color: var(--red); margin: auto;">Unable to load conversation.</div>';
+          return;
+        }
+        const data = await res.json();
+        const partner = data.partner;
+        const messages = data.messages || [];
+
+        headerName.innerText = partner.displayName || partner.id;
+        headerMeta.innerText = `Role: ${partner.role} • Status: ${partner.status}${partner.teamName ? ' • Team: ' + partner.teamName : ''}`;
+        sendForm.style.display = 'flex';
+
+        if (messages.length === 0) {
+          msgContainer.innerHTML = `
+            <div style="text-align: center; color: var(--text-muted); font-size: 0.85rem; margin: auto;">
+              No messages with <strong>${partner.displayName || partner.id}</strong> yet.<br>Send a direct message below!
+            </div>
+          `;
+        } else {
+          msgContainer.innerHTML = messages.map(m => {
+            const isSent = currentUser && m.sender_id === currentUser.id;
+            const time = m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+            return `
+              <div class="chat-msg ${isSent ? 'sent' : ''}">
+                <div class="chat-msg-avatar">${(m.sender_name || m.sender_id).slice(0, 2).toUpperCase()}</div>
+                <div class="chat-bubble">
+                  <div class="chat-sender">
+                    <span>${m.sender_name || m.sender_id}</span>
+                    <span class="chat-time">${time}</span>
+                  </div>
+                  <div class="chat-text">${escapeHtml(m.content)}</div>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+        msgContainer.scrollTop = msgContainer.scrollHeight;
+      } catch (e) {
+        msgContainer.innerHTML = '<div style="text-align: center; color: var(--red); margin: auto;">Network error.</div>';
+      }
+    }
+
+    function handleDMKeyDown(event) {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        handleSendDMMessage(event);
+      }
+    }
+
+    async function handleSendDMMessage(event) {
+      if (event) event.preventDefault();
+      if (!activeDMUserId) return;
+      const input = document.getElementById('dm-msg-input');
+      const content = input.value.trim();
+      if (!content) return;
+
+      const btn = document.getElementById('btn-dm-send');
+      btn.disabled = true;
+      try {
+        const res = await fetch('/api/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ recipientId: activeDMUserId, content })
+        });
+        if (res.ok) {
+          input.value = '';
+          loadDMChatRoom(activeDMUserId);
+        } else {
+          const err = await res.json();
+          alert('Could not send message: ' + (err.error || 'Unknown error'));
+        }
+      } catch (e) {
+        alert('Network error: ' + e.message);
+      } finally {
+        btn.disabled = false;
+        input.focus();
+      }
+    }
+
+    async function searchDMMembers() {
+      const q = (document.getElementById('dm-search-member-input').value || '').trim();
+      const resultsEl = document.getElementById('dm-member-search-results');
+      try {
+        const res = await fetch('/api/messages/users/search?q=' + encodeURIComponent(q), { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          const users = data.users || [];
+          if (users.length === 0) {
+            resultsEl.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 10px;">No members found.</div>';
+            return;
+          }
+          resultsEl.innerHTML = users.map(u => `
+            <div style="display: flex; justify-content: space-between; align-items: center; background: #0D0E14; padding: 8px 10px; border-radius: 6px;">
+              <div>
+                <span style="font-weight: 600; font-size: 0.85rem; color: #fff;">${u.displayName}</span>
+                <span style="font-family: monospace; font-size: 0.75rem; color: var(--emerald);">(${u.id})</span>
+              </div>
+              <button class="action-btn-sm" style="color: var(--cyan);" onclick="startDMWithUser('${u.id}')">💬 Message</button>
+            </div>
+          `).join('');
+        }
+      } catch (e) {}
+    }
+
+    function startDMWithUser(userId) {
+      closeNewDMModal();
+      activeDMUserId = userId;
+      loadDMChatRoom(userId);
+      loadDMConversations();
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // INITIALIZATION ON LOAD
+    fetchJavaStatus();
+    fetchBedrockStatus();
     checkActiveSession();
+
+    // Periodic live status update every 30 seconds
+    setInterval(() => {
+      fetchJavaStatus();
+      fetchBedrockStatus();
+    }, 30000);
   </script>
 </body>
 </html>

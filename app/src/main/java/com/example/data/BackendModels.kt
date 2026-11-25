@@ -580,3 +580,204 @@ data class DashboardSummaryResponse(
     @Json(name = "unreadMessagesCount") val unreadMessagesCount: Int = 0,
     @Json(name = "team") val team: MemberTeamSummaryDto? = null
 )
+
+// ----------------- MINECRAFT SERVER STATUS DTOs -----------------
+
+@JsonClass(generateAdapter = true)
+data class MinecraftPlayersDto(
+    @Json(name = "online") val online: Int = 0,
+    @Json(name = "max") val max: Int = 200,
+    @Json(name = "list") val list: List<String>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class MinecraftServerStatusDto(
+    @Json(name = "online") val online: Boolean = false,
+    @Json(name = "address") val address: String = "node2.vyroxsmp.online",
+    @Json(name = "port") val port: Int = 10010,
+    @Json(name = "edition") val edition: String = "JAVA",
+    @Json(name = "players") val players: MinecraftPlayersDto? = null,
+    @Json(name = "version") val version: String? = null,
+    @Json(name = "motd") val motd: String? = null,
+    @Json(name = "lastUpdated") val lastUpdated: Long = 0L
+)
+
+// ----------------- ADMIN REGISTERED MEMBERS DTOs -----------------
+
+@JsonClass(generateAdapter = true)
+data class AdminMemberItemDto(
+    @Json(name = "id") val id: String,
+    @Json(name = "display_name") val displayName: String,
+    @Json(name = "role") val role: String,
+    @Json(name = "status") val status: String,
+    @Json(name = "avatar") val avatar: String? = null,
+    @Json(name = "minecraft_username") val minecraftUsername: String? = null,
+    @Json(name = "created_at") val createdAt: Long = 0L,
+    @Json(name = "last_login_at") val lastLoginAt: Long? = null,
+    @Json(name = "active_sessions") val activeSessions: Int = 0,
+    @Json(name = "is_online") val isOnline: Int = 0,
+    @Json(name = "team_name") val teamName: String? = null,
+    @Json(name = "claimed_rewards_count") val claimedRewardsCount: Int = 0
+)
+
+@JsonClass(generateAdapter = true)
+data class AdminMembersPaginationDto(
+    @Json(name = "total") val total: Int = 0,
+    @Json(name = "page") val page: Int = 1,
+    @Json(name = "limit") val limit: Int = 20,
+    @Json(name = "pages") val pages: Int = 1
+)
+
+@JsonClass(generateAdapter = true)
+data class AdminMembersResponse(
+    @Json(name = "users") val users: List<AdminMemberItemDto> = emptyList(),
+    @Json(name = "pagination") val pagination: AdminMembersPaginationDto? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class AdminMemberProfileDto(
+    @Json(name = "id") val id: String,
+    @Json(name = "displayName") val displayName: String,
+    @Json(name = "role") val role: String,
+    @Json(name = "status") val status: String,
+    @Json(name = "avatar") val avatar: String? = null,
+    @Json(name = "minecraftUsername") val minecraftUsername: String? = null,
+    @Json(name = "createdAt") val createdAt: Long = 0L,
+    @Json(name = "lastLoginAt") val lastLoginAt: Long? = null,
+    @Json(name = "isOnline") val isOnline: Boolean = false
+)
+
+@JsonClass(generateAdapter = true)
+data class AdminMemberTeamInfoDto(
+    @Json(name = "id") val id: String,
+    @Json(name = "name") val name: String,
+    @Json(name = "tag") val tag: String,
+    @Json(name = "role") val role: String,
+    @Json(name = "joinedAt") val joinedAt: Long = 0L
+)
+
+@JsonClass(generateAdapter = true)
+data class AdminMemberRewardsDto(
+    @Json(name = "totalClaims") val totalClaims: Int = 0,
+    @Json(name = "lastClaimed") val lastClaimed: Long? = null,
+    @Json(name = "history") val history: List<ClaimHistoryItemDto> = emptyList()
+)
+
+@JsonClass(generateAdapter = true)
+data class AdminMemberActivityDto(
+    @Json(name = "activeSessions") val activeSessions: Int = 0,
+    @Json(name = "directMessagesSent") val directMessagesSent: Int = 0,
+    @Json(name = "groupMessagesSent") val groupMessagesSent: Int = 0
+)
+
+@JsonClass(generateAdapter = true)
+data class AdminMemberDetailsResponse(
+    @Json(name = "profile") val profile: AdminMemberProfileDto,
+    @Json(name = "team") val team: AdminMemberTeamInfoDto? = null,
+    @Json(name = "rewards") val rewards: AdminMemberRewardsDto? = null,
+    @Json(name = "activity") val activity: AdminMemberActivityDto? = null
+)
+
+// ----------------- GROUP CHAT DTOs -----------------
+
+@JsonClass(generateAdapter = true)
+data class GroupLatestMessageDto(
+    @Json(name = "content") val content: String,
+    @Json(name = "senderId") val senderId: String,
+    @Json(name = "senderName") val senderName: String? = null,
+    @Json(name = "createdAt") val createdAt: Long = 0L
+)
+
+@JsonClass(generateAdapter = true)
+data class GroupDto(
+    @Json(name = "id") val id: String,
+    @Json(name = "name") val name: String,
+    @Json(name = "description") val description: String? = null,
+    @Json(name = "avatar") val avatar: String = "👥",
+    @Json(name = "ownerId") val ownerId: String,
+    @Json(name = "ownerName") val ownerName: String? = null,
+    @Json(name = "createdAt") val createdAt: Long = 0L,
+    @Json(name = "updatedAt") val updatedAt: Long = 0L,
+    @Json(name = "memberCount") val memberCount: Int = 1,
+    @Json(name = "unreadCount") val unreadCount: Int = 0,
+    @Json(name = "latestMessage") val latestMessage: GroupLatestMessageDto? = null,
+    @Json(name = "latestMessageTime") val latestMessageTime: Long? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class GroupListResponse(
+    @Json(name = "groups") val groups: List<GroupDto> = emptyList()
+)
+
+@JsonClass(generateAdapter = true)
+data class GroupMemberDto(
+    @Json(name = "userId") val userId: String,
+    @Json(name = "role") val role: String = "MEMBER",
+    @Json(name = "joinedAt") val joinedAt: Long = 0L,
+    @Json(name = "displayName") val displayName: String,
+    @Json(name = "appRole") val appRole: String = "MEMBER",
+    @Json(name = "avatar") val avatar: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class GroupDetailResponse(
+    @Json(name = "group") val group: GroupDto,
+    @Json(name = "members") val members: List<GroupMemberDto> = emptyList()
+)
+
+@JsonClass(generateAdapter = true)
+data class GroupMessageDto(
+    @Json(name = "id") val id: String,
+    @Json(name = "groupId") val groupId: String,
+    @Json(name = "senderId") val senderId: String,
+    @Json(name = "senderName") val senderName: String = "",
+    @Json(name = "senderAvatar") val senderAvatar: String? = null,
+    @Json(name = "content") val content: String,
+    @Json(name = "createdAt") val createdAt: Long = 0L
+)
+
+@JsonClass(generateAdapter = true)
+data class GroupMessagesResponse(
+    @Json(name = "messages") val messages: List<GroupMessageDto> = emptyList()
+)
+
+@JsonClass(generateAdapter = true)
+data class CreateGroupRequest(
+    @Json(name = "name") val name: String,
+    @Json(name = "description") val description: String? = null,
+    @Json(name = "avatar") val avatar: String? = "👥",
+    @Json(name = "memberIds") val memberIds: List<String> = emptyList()
+)
+
+@JsonClass(generateAdapter = true)
+data class CreateGroupResponse(
+    @Json(name = "group") val group: GroupDto
+)
+
+@JsonClass(generateAdapter = true)
+data class UpdateGroupRequest(
+    @Json(name = "name") val name: String? = null,
+    @Json(name = "description") val description: String? = null,
+    @Json(name = "avatar") val avatar: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class SendGroupMessageRequest(
+    @Json(name = "content") val content: String
+)
+
+@JsonClass(generateAdapter = true)
+data class SendGroupMessageResponse(
+    @Json(name = "message") val message: GroupMessageDto
+)
+
+@JsonClass(generateAdapter = true)
+data class AddGroupMemberRequest(
+    @Json(name = "userId") val userId: String
+)
+
+@JsonClass(generateAdapter = true)
+data class TransferGroupOwnershipRequest(
+    @Json(name = "newOwnerId") val newOwnerId: String
+)
+

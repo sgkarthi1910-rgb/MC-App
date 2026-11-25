@@ -36,6 +36,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.data.DashboardUiState
+import com.example.data.MinecraftServerStatusDto
 import com.example.ui.components.LiveStatsGrid
 import com.example.ui.components.LiveTelemetryBar
 import com.example.ui.components.ObsidianCard
@@ -61,6 +62,11 @@ fun LiveStatusScreen(
     onRefresh: () -> Unit,
     onNavigateToPlayers: () -> Unit,
     onNavigateToCommunity: () -> Unit,
+    javaStatus: MinecraftServerStatusDto? = null,
+    bedrockStatus: MinecraftServerStatusDto? = null,
+    onCopyBedrockIp: () -> Unit = {},
+    onRefreshJava: () -> Unit = {},
+    onRefreshBedrock: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val mc = uiState.minecraftStatus
@@ -79,8 +85,8 @@ fun LiveStatusScreen(
         ) {
             item {
                 SectionHeading(
-                    title = "LIVE STATUS",
-                    subtitle = "Real-time server telemetry synchronized every 2 minutes",
+                    title = "LIVE SERVER STATUS",
+                    subtitle = "Real-time Java & Bedrock telemetry synchronized every 2 minutes",
                     accentColor = EmeraldGreen
                 )
             }
@@ -100,118 +106,77 @@ fun LiveStatusScreen(
                 )
             }
 
-            // SERVER INFORMATION CARD
+            // 1. JAVA EDITION SERVER CARD
             item {
+                val isJavaOnline = javaStatus?.online ?: (mc?.isOnline ?: false)
+                val javaOnlinePlayers = javaStatus?.players?.online ?: (mc?.onlinePlayers ?: 0)
+                val javaMaxPlayers = javaStatus?.players?.max ?: (mc?.maxPlayers ?: 200)
+
                 ObsidianCard(
-                    borderColor = EmeraldGreen.copy(alpha = 0.35f),
+                    borderColor = EmeraldGreen.copy(alpha = 0.4f),
                     accentGlow = EmeraldGreen
                 ) {
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Terminal,
-                            contentDescription = "Server Information",
-                            tint = EmeraldGreen,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Text(
-                            text = "SERVER INFORMATION",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = EmeraldGreen
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(text = "☕", fontSize = 18.sp)
+                            Text(
+                                text = "JAVA EDITION (PC / MAC / LINUX)",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = EmeraldGreen,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Button(
+                            onClick = onRefreshJava,
+                            shape = RoundedCornerShape(6.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = EmeraldGreen.copy(alpha = 0.15f),
+                                contentColor = EmeraldGreen
+                            )
+                        ) {
+                            Text(text = "REFRESH", style = MaterialTheme.typography.labelSmall)
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
 
                     ServerInfoRow(
-                        label = "JAVA SERVER IP",
-                        value = uiState.serverAddress,
+                        label = "JAVA SERVER ADDRESS",
+                        value = "node2.vyroxsmp.online:10010",
                         valueColor = EmeraldGreen,
                         isMono = true
                     )
                     ServerInfoDivider()
 
                     ServerInfoRow(
-                        label = "SERVER STATUS",
-                        value = when {
-                            mc == null -> "Checking…"
-                            mc.isOnline -> "ONLINE"
-                            else -> "OFFLINE"
-                        },
-                        valueColor = when {
-                            mc == null -> MinecraftGold
-                            mc.isOnline -> EmeraldGreen
-                            else -> NetherRed
-                        },
+                        label = "ONLINE STATUS",
+                        value = if (isJavaOnline) "ONLINE" else "OFFLINE",
+                        valueColor = if (isJavaOnline) EmeraldGreen else NetherRed,
                         isMono = true
                     )
                     ServerInfoDivider()
 
                     ServerInfoRow(
-                        label = "CURRENT PLAYERS",
-                        value = when {
-                            mc == null -> "—"
-                            mc.isOnline -> "${mc.onlinePlayers}"
-                            else -> "0"
-                        },
+                        label = "ONLINE PLAYERS",
+                        value = "$javaOnlinePlayers / $javaMaxPlayers",
                         isMono = true
                     )
                     ServerInfoDivider()
 
                     ServerInfoRow(
-                        label = "MAXIMUM PLAYERS",
-                        value = when {
-                            mc == null || mc.maxPlayers <= 0 -> "Unavailable"
-                            else -> "${mc.maxPlayers}"
-                        },
+                        label = "VERSION COMPATIBILITY",
+                        value = javaStatus?.version ?: (mc?.version ?: "1.20.4+"),
+                        valueColor = MinecraftGold,
                         isMono = true
                     )
-
-                    // Only show Server Version if actually available from real server query
-                    if (!mc?.version.isNullOrBlank()) {
-                        ServerInfoDivider()
-                        ServerInfoRow(
-                            label = "SERVER VERSION",
-                            value = mc?.version.orEmpty(),
-                            valueColor = MinecraftGold,
-                            isMono = true
-                        )
-                    }
-
-                    if (mc?.latencyMs != null) {
-                        ServerInfoDivider()
-                        ServerInfoRow(
-                            label = "PING LATENCY",
-                            value = "${mc.latencyMs} ms",
-                            valueColor = EmeraldGreen,
-                            isMono = true
-                        )
-                    }
-
-                    ServerInfoDivider()
-                    ServerInfoRow(
-                        label = "SUPPORTED PLATFORM",
-                        value = "Minecraft: Java Edition"
-                    )
-
-                    if (!mc?.motd.isNullOrBlank()) {
-                        ServerInfoDivider()
-                        Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                            Text(
-                                text = "SERVER MOTD",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = TextMuted
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = mc?.motd.orEmpty(),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = TextPrimary
-                            )
-                        }
-                    }
 
                     Spacer(modifier = Modifier.height(14.dp))
 
@@ -225,17 +190,16 @@ fun LiveStatusScreen(
                         border = if (ipCopied) BorderStroke(1.dp, EmeraldGreen) else null,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp)
-                            .testTag("status_copy_ip_button")
+                            .height(44.dp)
                     ) {
                         Icon(
                             imageVector = if (ipCopied) Icons.Default.Check else Icons.Default.ContentCopy,
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (ipCopied) "COPIED ${uiState.serverAddress}" else "COPY JAVA SERVER IP",
+                            text = if (ipCopied) "COPIED JAVA ADDRESS" else "COPY JAVA IP (10010)",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -243,20 +207,120 @@ fun LiveStatusScreen(
                 }
             }
 
-            // HOW TO JOIN GUIDE
+            // 2. BEDROCK EDITION SERVER CARD
+            item {
+                val isBedrockOnline = bedrockStatus?.online ?: false
+                val bedrockOnlinePlayers = bedrockStatus?.players?.online ?: 0
+                val bedrockMaxPlayers = bedrockStatus?.players?.max ?: 200
+
+                ObsidianCard(
+                    borderColor = Color(0xFF38BDF8).copy(alpha = 0.4f),
+                    accentGlow = Color(0xFF38BDF8)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(text = "📱", fontSize = 18.sp)
+                            Text(
+                                text = "BEDROCK EDITION (PE / CONSOLE / WIN 10)",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = Color(0xFF38BDF8),
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Button(
+                            onClick = onRefreshBedrock,
+                            shape = RoundedCornerShape(6.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF38BDF8).copy(alpha = 0.15f),
+                                contentColor = Color(0xFF38BDF8)
+                            )
+                        ) {
+                            Text(text = "REFRESH", style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    ServerInfoRow(
+                        label = "BEDROCK SERVER ADDRESS",
+                        value = "node2.vyroxsmp.online:10011",
+                        valueColor = Color(0xFF38BDF8),
+                        isMono = true
+                    )
+                    ServerInfoDivider()
+
+                    ServerInfoRow(
+                        label = "BEDROCK PORT",
+                        value = "10011",
+                        valueColor = MinecraftGold,
+                        isMono = true
+                    )
+                    ServerInfoDivider()
+
+                    ServerInfoRow(
+                        label = "ONLINE STATUS",
+                        value = if (isBedrockOnline) "ONLINE" else "STANDBY / OFFLINE",
+                        valueColor = if (isBedrockOnline) EmeraldGreen else NetherRed,
+                        isMono = true
+                    )
+                    ServerInfoDivider()
+
+                    ServerInfoRow(
+                        label = "ONLINE PLAYERS",
+                        value = "$bedrockOnlinePlayers / $bedrockMaxPlayers",
+                        isMono = true
+                    )
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Button(
+                        onClick = onCopyBedrockIp,
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF38BDF8).copy(alpha = 0.2f),
+                            contentColor = Color(0xFF38BDF8)
+                        ),
+                        border = BorderStroke(1.dp, Color(0xFF38BDF8)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ContentCopy,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "COPY BEDROCK ADDRESS (10011)",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            // 3. HOW TO JOIN GUIDE (JAVA & BEDROCK)
             item {
                 ObsidianCard(borderColor = ObsidianBorder) {
                     Text(
-                        text = "HOW TO JOIN TGZ LIFESTEAL",
+                        text = "HOW TO CONNECT TO TGZ LIFESTYLE",
                         style = MaterialTheme.typography.titleSmall,
                         color = MinecraftGold
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     val steps = listOf(
-                        "Step 1" to "Open Minecraft: Java Edition on your computer.",
-                        "Step 2" to "Select Multiplayer from the main menu and click Add Server.",
-                        "Step 3" to "Type TGZ Lifesteal as the Server Name and paste ${uiState.serverAddress} into Server Address.",
-                        "Step 4" to "Click Done, double-click TGZ Lifesteal, and start surviving."
+                        "Java 1.20+" to "Multiplayer -> Add Server -> Enter 'node2.vyroxsmp.online:10010' -> Join.",
+                        "Bedrock / PE" to "Servers -> Add Server -> Address: 'node2.vyroxsmp.online', Port: '10011' -> Save & Play.",
+                        "Consoles" to "Use BedrockConnect or custom DNS with Bedrock Port 10011 to join from Xbox / PlayStation / Switch."
                     )
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         steps.forEach { (step, desc) ->
@@ -287,7 +351,7 @@ fun LiveStatusScreen(
                 }
             }
 
-            // LIVE DATA SOURCES TRANSPARENCY
+            // 4. LIVE DATA SOURCES TRANSPARENCY
             item {
                 ObsidianCard(borderColor = ObsidianBorder) {
                     Row(
@@ -308,18 +372,18 @@ fun LiveStatusScreen(
                     }
                     Spacer(modifier = Modifier.height(10.dp))
                     ServerInfoRow(
-                        label = "DISCORD SOURCE",
-                        value = discord?.dataSource ?: "Discord Live Invite API"
+                        label = "JAVA SOURCE",
+                        value = "Java TCP SLP (Port 10010)"
                     )
                     ServerInfoDivider()
                     ServerInfoRow(
-                        label = "MINECRAFT SOURCE",
-                        value = mc?.querySource ?: "Java TCP SLP + mcsrvstat.us"
+                        label = "BEDROCK SOURCE",
+                        value = "RakNet UDP Ping (Port 10011)"
                     )
                     ServerInfoDivider()
                     ServerInfoRow(
                         label = "AUTO-REFRESH",
-                        value = "Every 120 seconds (exact)",
+                        value = "Every 120 seconds",
                         isMono = true
                     )
                 }

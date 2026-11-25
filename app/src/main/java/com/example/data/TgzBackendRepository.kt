@@ -318,4 +318,100 @@ class TgzBackendRepository(
     suspend fun getDashboardSummary(): Result<DashboardSummaryResponse> = runCatching {
         apiService.getDashboardSummary(authHeader())
     }
+
+    // ----------------- MINECRAFT SERVER STATUS -----------------
+
+    suspend fun getJavaServerStatus(): Result<MinecraftServerStatusDto> = runCatching {
+        apiService.getJavaServerStatus()
+    }
+
+    suspend fun getBedrockServerStatus(): Result<MinecraftServerStatusDto> = runCatching {
+        apiService.getBedrockServerStatus()
+    }
+
+    // ----------------- ADMIN REGISTERED MEMBERS -----------------
+
+    suspend fun getAdminRegisteredMembers(
+        search: String? = null,
+        role: String? = null,
+        status: String? = null,
+        sort: String? = null,
+        order: String? = null,
+        page: Int = 1,
+        limit: Int = 20
+    ): Result<AdminMembersResponse> = runCatching {
+        apiService.getAdminRegisteredMembers(
+            auth = authHeader(),
+            search = search,
+            role = role,
+            status = status,
+            sort = sort,
+            order = order,
+            page = page,
+            limit = limit
+        )
+    }
+
+    suspend fun getAdminMemberDetails(userId: String): Result<AdminMemberDetailsResponse> = runCatching {
+        apiService.getAdminMemberDetails(authHeader(), userId)
+    }
+
+    // ----------------- GROUP CHATS -----------------
+
+    suspend fun getGroups(): Result<List<GroupDto>> = runCatching {
+        apiService.getGroups(authHeader()).groups
+    }
+
+    suspend fun createGroup(
+        name: String,
+        description: String? = null,
+        avatar: String? = "👥",
+        memberIds: List<String> = emptyList()
+    ): Result<GroupDto> = runCatching {
+        apiService.createGroup(
+            auth = authHeader(),
+            req = CreateGroupRequest(name, description, avatar, memberIds)
+        ).group
+    }
+
+    suspend fun getGroupDetails(groupId: String): Result<GroupDetailResponse> = runCatching {
+        apiService.getGroupDetails(authHeader(), groupId)
+    }
+
+    suspend fun getGroupMessages(groupId: String): Result<List<GroupMessageDto>> = runCatching {
+        apiService.getGroupMessages(authHeader(), groupId).messages
+    }
+
+    suspend fun sendGroupMessage(groupId: String, content: String): Result<GroupMessageDto> = runCatching {
+        apiService.sendGroupMessage(
+            auth = authHeader(),
+            groupId = groupId,
+            req = SendGroupMessageRequest(content)
+        ).message
+    }
+
+    suspend fun updateGroup(
+        groupId: String,
+        name: String?,
+        description: String?,
+        avatar: String?
+    ): Result<GenericSuccessResponse> = runCatching {
+        apiService.updateGroup(authHeader(), groupId, UpdateGroupRequest(name, description, avatar))
+    }
+
+    suspend fun addGroupMember(groupId: String, userId: String): Result<GenericSuccessResponse> = runCatching {
+        apiService.addGroupMember(authHeader(), groupId, AddGroupMemberRequest(userId))
+    }
+
+    suspend fun removeGroupMember(groupId: String, userId: String): Result<GenericSuccessResponse> = runCatching {
+        apiService.removeGroupMember(authHeader(), groupId, userId)
+    }
+
+    suspend fun transferGroupOwnership(groupId: String, newOwnerId: String): Result<GenericSuccessResponse> = runCatching {
+        apiService.transferGroupOwnership(authHeader(), groupId, TransferGroupOwnershipRequest(newOwnerId))
+    }
+
+    suspend fun deleteGroup(groupId: String): Result<GenericSuccessResponse> = runCatching {
+        apiService.deleteGroup(authHeader(), groupId)
+    }
 }

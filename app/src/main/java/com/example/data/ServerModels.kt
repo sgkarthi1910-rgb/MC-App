@@ -141,13 +141,13 @@ object TgzCatalogData {
     val features: List<ServerFeature> = listOf(
         ServerFeature(
             id = "lifesteal",
-            title = "Lifesteal Mechanics",
-            subtitle = "Every Kill Claims a Heart",
-            description = "Eliminate rival survivors in combat to permanently steal one of their hearts. Drop to zero hearts and face elimination until an ally crafts a Revival Beacon.",
+            title = "Lifestyle Community",
+            subtitle = "Survival, Friendship & Creative Journeys",
+            description = "Build your empire, connect with fellow players, create teams, and explore survival adventures in the TGZ Lifestyle community.",
             highlights = listOf(
-                "Steal +1 permanent heart on every PvP elimination",
-                "Withdraw physical hearts to trade, store, or gift",
-                "Craft custom Heart Crystals & Revival Beacons"
+                "Custom player economy, building, and trade markets",
+                "Team alliances, land claims, and communal projects",
+                "Seasonal lifestyle community events & rewards"
             ),
             accentColor = NetherRed,
             iconType = FeatureIconType.LIFESTEAL
@@ -321,11 +321,11 @@ object TgzCatalogData {
             category = StoreCategory.CHAOS,
             priceDisplay = "₹149",
             badge = "SUPREME",
-            description = "The ultimate apex rank pack in TGZ Lifesteal. Maximum claim limits, 2x heart recovery, and VIP status.",
+            description = "The ultimate apex rank pack in TGZ Lifestyle. Maximum claim limits, vault storage, and VIP status.",
             contents = listOf(
                 "Permanent [Chaos] in-game & Discord prefix",
                 "+25,000 Land Claim Protection blocks",
-                "2x Guaranteed Heart Retention on PvP death",
+                "Priority queue access & lifestyle perks",
                 "5x Vault storage pages (/pv 1-5)",
                 "All VIP commands + priority Discord support",
                 "Exclusive monthly Chaos Champion Mystery crate"
@@ -338,14 +338,14 @@ object TgzCatalogData {
         FaqItem(
             id = "faq_join",
             category = "Getting Started",
-            question = "How do I join the TGZ Lifesteal Minecraft server?",
-            answer = "Open Minecraft: Java Edition, click Multiplayer -> Add Server, enter 'TGZ Lifesteal' as the name and 'node2.vyroxsmp.online:10010' as the Server Address, then save and join."
+            question = "How do I join the TGZ Lifestyle Minecraft server?",
+            answer = "Open Minecraft Java Edition (Port 10010) or Bedrock Edition (Port 10011), add TGZ Lifestyle with address 'node2.vyroxsmp.online', then save and connect."
         ),
         FaqItem(
             id = "faq_lifesteal",
             category = "Gameplay",
-            question = "How do Lifesteal hearts and elimination work?",
-            answer = "Every player starts with 10 hearts. Eliminating another player in PvP steals 1 of their hearts permanently. If you lose all your hearts, you are eliminated until a clanmate revives you using a Revival Beacon or staff event."
+            question = "How do Lifestyle community perks and claims work?",
+            answer = "Enjoy peaceful and adventurous survival with safe land claim protection, player trading, collaborative teams, and community milestones."
         ),
         FaqItem(
             id = "faq_buy",

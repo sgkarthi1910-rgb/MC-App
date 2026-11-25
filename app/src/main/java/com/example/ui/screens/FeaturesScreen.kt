@@ -83,7 +83,7 @@ fun FeaturesScreen(
                     ) {
                         SectionHeading(
                             title = "SERVER FEATURES",
-                            subtitle = "Engineered for high-stakes Lifesteal PvP, clan warfare, and long-term survival empires.",
+                            subtitle = "Engineered for survival adventures, clan collaboration, and long-term community empires.",
                             accentColor = EmeraldGreen
                         )
                     }

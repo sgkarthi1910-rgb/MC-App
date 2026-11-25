@@ -22,7 +22,11 @@ function createInMemoryDatabase(storageFilePath) {
     teams: [],
     team_members: [],
     team_invitations: [],
-    app_settings: []
+    app_settings: [],
+    groups: [],
+    group_members: [],
+    group_messages: [],
+    group_message_reads: []
   };
 
   // Restore existing records from persistent store if available
@@ -264,8 +268,17 @@ function createInMemoryDatabase(storageFilePath) {
             });
 
             // Upsert / Unique Check
-            const primaryKeyCol = cols[0];
-            const existingIdx = list.findIndex(r => r[primaryKeyCol] === newRow[primaryKeyCol]);
+            let existingIdx = -1;
+            if (table === 'group_members' || table === 'group_message_reads') {
+              existingIdx = list.findIndex(r => r.group_id === newRow.group_id && r.user_id === newRow.user_id);
+            } else if (table === 'team_members') {
+              existingIdx = list.findIndex(r => r.team_id === newRow.team_id && r.user_id === newRow.user_id);
+            } else if (table === 'announcement_reads') {
+              existingIdx = list.findIndex(r => r.user_id === newRow.user_id && r.announcement_id === newRow.announcement_id);
+            } else {
+              const primaryKeyCol = cols[0];
+              existingIdx = list.findIndex(r => r[primaryKeyCol] === newRow[primaryKeyCol]);
+            }
             if (existingIdx >= 0) {
               list[existingIdx] = { ...list[existingIdx], ...newRow };
             } else {

@@ -317,12 +317,12 @@ fun HomeScreen(
                 )
             }
 
-            // 4. EXPLORE TGZ LIFESTEAL PORTAL
+            // 4. EXPLORE TGZ LIFESTYLE PORTAL
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     SectionHeading(
                         title = "EXPLORE THE REALM",
-                        subtitle = "Dive into Lifesteal mechanics, ranks, store packs, and community",
+                        subtitle = "Dive into Lifestyle community features, ranks, store packs, and groups",
                         accentColor = MinecraftGold
                     )
 
@@ -332,7 +332,7 @@ fun HomeScreen(
                     ) {
                         PortalShortcutCard(
                             title = "FEATURES",
-                            subtitle = "Lifesteal, PvP, Claims",
+                            subtitle = "Lifestyle, Teams, Claims",
                             icon = Icons.Default.AutoAwesome,
                             accentColor = EmeraldGreen,
                             onClick = { onNavigateToRoute("features") },
@@ -342,7 +342,7 @@ fun HomeScreen(
                         )
                         PortalShortcutCard(
                             title = "RANKS",
-                            subtitle = "Vanguard to Immortal",
+                            subtitle = "Titan to Chaos",
                             icon = Icons.Default.MilitaryTech,
                             accentColor = MinecraftGold,
                             onClick = { onNavigateToRoute("ranks") },
@@ -358,7 +358,7 @@ fun HomeScreen(
                     ) {
                         PortalShortcutCard(
                             title = "STORE PACKS",
-                            subtitle = "Hearts, Crates & Bundles",
+                            subtitle = "Crates, VIP & Bundles",
                             icon = Icons.Default.ShoppingBag,
                             accentColor = NetherRed,
                             onClick = { onNavigateToRoute("store") },

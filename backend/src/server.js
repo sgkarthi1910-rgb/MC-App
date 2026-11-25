@@ -6,6 +6,7 @@ const { hashToken } = require('./crypto-utils');
 const setupAuthRoutes = require('./routes/auth');
 const setupAnnouncementRoutes = require('./routes/announcements');
 const setupMessageRoutes = require('./routes/messages');
+const setupGroupRoutes = require('./routes/groups');
 const setupRewardRoutes = require('./routes/rewards');
 const setupLeaderboardRoutes = require('./routes/leaderboard');
 const setupTeamRoutes = require('./routes/teams');
@@ -89,6 +90,7 @@ function createServer(dbPath) {
   setupAuthRoutes(router, db);
   setupAnnouncementRoutes(router, db);
   setupMessageRoutes(router, db);
+  setupGroupRoutes(router, db);
   setupRewardRoutes(router, db);
   setupLeaderboardRoutes(router, db);
   setupTeamRoutes(router, db);

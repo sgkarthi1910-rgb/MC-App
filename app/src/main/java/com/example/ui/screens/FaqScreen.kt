@@ -72,7 +72,7 @@ fun FaqScreen(
             item {
                 SectionHeading(
                     title = "FREQUENTLY ASKED",
-                    subtitle = "Quick answers about joining TGZ Lifesteal, stealing hearts, live stats, and Discord orders",
+                    subtitle = "Quick answers about joining TGZ Lifestyle, community features, live stats, and Discord orders",
                     accentColor = EmeraldGreen
                 )
             }

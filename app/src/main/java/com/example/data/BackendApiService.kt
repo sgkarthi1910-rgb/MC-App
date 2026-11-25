@@ -243,4 +243,93 @@ interface BackendApiService {
     // ----------------- DASHBOARD -----------------
     @GET("api/dashboard/summary")
     suspend fun getDashboardSummary(@Header("Authorization") auth: String?): DashboardSummaryResponse
+
+    // ----------------- MINECRAFT STATUS -----------------
+    @GET("api/minecraft/status/java")
+    suspend fun getJavaServerStatus(): MinecraftServerStatusDto
+
+    @GET("api/minecraft/status/bedrock")
+    suspend fun getBedrockServerStatus(): MinecraftServerStatusDto
+
+    // ----------------- ADMIN REGISTERED MEMBERS -----------------
+    @GET("api/settings/admin/users")
+    suspend fun getAdminRegisteredMembers(
+        @Header("Authorization") auth: String?,
+        @Query("search") search: String? = null,
+        @Query("role") role: String? = null,
+        @Query("status") status: String? = null,
+        @Query("sort") sort: String? = null,
+        @Query("order") order: String? = null,
+        @Query("page") page: Int = 1,
+        @Query("limit") limit: Int = 20
+    ): AdminMembersResponse
+
+    @GET("api/settings/admin/users/{userId}/details")
+    suspend fun getAdminMemberDetails(
+        @Header("Authorization") auth: String?,
+        @Path("userId") userId: String
+    ): AdminMemberDetailsResponse
+
+    // ----------------- GROUP CHATS -----------------
+    @GET("api/groups")
+    suspend fun getGroups(@Header("Authorization") auth: String?): GroupListResponse
+
+    @POST("api/groups")
+    suspend fun createGroup(
+        @Header("Authorization") auth: String?,
+        @Body req: CreateGroupRequest
+    ): CreateGroupResponse
+
+    @GET("api/groups/{groupId}")
+    suspend fun getGroupDetails(
+        @Header("Authorization") auth: String?,
+        @Path("groupId") groupId: String
+    ): GroupDetailResponse
+
+    @GET("api/groups/{groupId}/messages")
+    suspend fun getGroupMessages(
+        @Header("Authorization") auth: String?,
+        @Path("groupId") groupId: String
+    ): GroupMessagesResponse
+
+    @POST("api/groups/{groupId}/messages")
+    suspend fun sendGroupMessage(
+        @Header("Authorization") auth: String?,
+        @Path("groupId") groupId: String,
+        @Body req: SendGroupMessageRequest
+    ): SendGroupMessageResponse
+
+    @PUT("api/groups/{groupId}")
+    suspend fun updateGroup(
+        @Header("Authorization") auth: String?,
+        @Path("groupId") groupId: String,
+        @Body req: UpdateGroupRequest
+    ): GenericSuccessResponse
+
+    @POST("api/groups/{groupId}/members")
+    suspend fun addGroupMember(
+        @Header("Authorization") auth: String?,
+        @Path("groupId") groupId: String,
+        @Body req: AddGroupMemberRequest
+    ): GenericSuccessResponse
+
+    @DELETE("api/groups/{groupId}/members/{userId}")
+    suspend fun removeGroupMember(
+        @Header("Authorization") auth: String?,
+        @Path("groupId") groupId: String,
+        @Path("userId") userId: String
+    ): GenericSuccessResponse
+
+    @POST("api/groups/{groupId}/transfer")
+    suspend fun transferGroupOwnership(
+        @Header("Authorization") auth: String?,
+        @Path("groupId") groupId: String,
+        @Body req: TransferGroupOwnershipRequest
+    ): GenericSuccessResponse
+
+    @DELETE("api/groups/{groupId}")
+    suspend fun deleteGroup(
+        @Header("Authorization") auth: String?,
+        @Path("groupId") groupId: String
+    ): GenericSuccessResponse
 }
