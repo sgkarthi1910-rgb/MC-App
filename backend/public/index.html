@@ -1077,7 +1077,10 @@
             Unique ID: <strong id="dash-user-id" style="color: #fff;">-</strong> | Status: <span style="color: var(--emerald);" id="dash-status-text">ACTIVE</span>
           </div>
         </div>
-        <button class="btn-auth-nav btn-logout" onclick="performLogout()">LOGOUT</button>
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+          <button class="btn-auth-nav" style="border-color: var(--emerald); color: var(--emerald); background: rgba(32, 229, 138, 0.12); cursor: pointer; padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 0.85rem;" onclick="openChangePasswordModal()">🔑 CHANGE PASSWORD</button>
+          <button class="btn-auth-nav btn-logout" onclick="performLogout()">LOGOUT</button>
+        </div>
       </div>
 
       <div id="password-change-warning" style="display: none; background: rgba(255, 170, 0, 0.15); border: 1px solid var(--gold); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
@@ -2016,7 +2019,10 @@
       document.getElementById('user-dashboard-card').style.display = 'block';
       document.getElementById('auth-buttons-container').innerHTML = `
         <span style="font-size: 0.85rem; color: var(--emerald); font-family: 'Silkscreen', monospace;">● ${user.id}</span>
-        <button class="btn-auth-nav btn-logout" onclick="performLogout()">LOGOUT</button>
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+          <button class="btn-auth-nav" style="border-color: var(--emerald); color: var(--emerald); background: rgba(32, 229, 138, 0.12); cursor: pointer; padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 0.85rem;" onclick="openChangePasswordModal()">🔑 CHANGE PASSWORD</button>
+          <button class="btn-auth-nav btn-logout" onclick="performLogout()">LOGOUT</button>
+        </div>
       `;
 
       loadDiagnostics();
