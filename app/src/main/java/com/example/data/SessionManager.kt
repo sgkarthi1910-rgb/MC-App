@@ -93,7 +93,7 @@ class SessionManager(context: Context) {
 
     fun getBackendUrl(): String {
         val saved = prefs.getString(KEY_BACKEND_URL, null)
-        if (saved.isNullOrBlank() || saved.contains("10.0.2.2") || saved.contains("your-project")) {
+        if (saved.isNullOrBlank() || !saved.startsWith("https://mc-b93ql4ncz-my-project-2751.vercel.app")) {
             return DEFAULT_BACKEND_URL
         }
         return saved
