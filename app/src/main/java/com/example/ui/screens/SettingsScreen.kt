@@ -69,6 +69,7 @@ import com.example.ui.theme.EmeraldGreen
 import com.example.ui.theme.JetBrainsMonoFontFamily
 import com.example.ui.theme.MinecraftGold
 import com.example.ui.theme.NetherRed
+import com.example.ui.theme.NetherRedBright
 import com.example.ui.theme.ObsidianBlack
 import com.example.ui.theme.ObsidianBorder
 import com.example.ui.theme.OnEmeraldDark
