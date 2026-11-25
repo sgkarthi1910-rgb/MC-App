@@ -46,6 +46,7 @@ data class AuthResponse(
 
 @JsonClass(generateAdapter = true)
 data class ChangePasswordRequest(
+    @Json(name = "userId") val userId: String? = null,
     @Json(name = "currentPassword") val currentPassword: String?,
     @Json(name = "newPassword") val newPassword: String,
     @Json(name = "confirmNewPassword") val confirmNewPassword: String
