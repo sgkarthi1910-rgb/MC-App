@@ -25,7 +25,7 @@ object NetworkModule {
     private const val DEFAULT_DISCORD_INVITE = "https://discord.gg/J5P89mxXbc"
     private const val DEFAULT_MINECRAFT_HOST = "node2.vyroxsmp.online"
     private const val DEFAULT_MINECRAFT_PORT = 10010
-    private const val DEFAULT_BACKEND_URL = "http://10.0.2.2:3000/"
+    private const val DEFAULT_BACKEND_URL = "https://mc-b93ql4ncz-my-project-2751.vercel.app/"
 
     private var appContext: Context? = null
 

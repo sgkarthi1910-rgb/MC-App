@@ -223,10 +223,15 @@ class TgzViewModel(
         }
     }
 
-    fun getBackendUrl(): String = sessionManager?.getBackendUrl() ?: "http://10.0.2.2:3000/"
+    private val _backendUrl = MutableStateFlow(sessionManager?.getBackendUrl() ?: "https://mc-b93ql4ncz-my-project-2751.vercel.app/")
+    val backendUrl: StateFlow<String> = _backendUrl.asStateFlow()
+
+    fun getBackendUrl(): String = _backendUrl.value
 
     fun setBackendUrl(url: String) {
-        sessionManager?.setBackendUrl(url)
+        val normalized = if (url.endsWith("/")) url else "$url/"
+        sessionManager?.setBackendUrl(normalized)
+        _backendUrl.value = normalized
     }
 
     // ----------------- AUTHENTICATION ACTIONS -----------------

@@ -27,6 +27,7 @@ class SessionManager(context: Context) {
         private const val KEY_CREATED_AT = "user_created_at"
         private const val KEY_EXPIRES_AT = "session_expires_at"
         private const val KEY_BACKEND_URL = "custom_backend_url"
+        const val DEFAULT_BACKEND_URL = "https://mc-b93ql4ncz-my-project-2751.vercel.app/"
     }
 
     fun saveSession(token: String, user: StoredUser, expiresAt: Long = 0L) {
@@ -91,7 +92,11 @@ class SessionManager(context: Context) {
     }
 
     fun getBackendUrl(): String {
-        return prefs.getString(KEY_BACKEND_URL, "http://10.0.2.2:3000/") ?: "http://10.0.2.2:3000/"
+        val saved = prefs.getString(KEY_BACKEND_URL, null)
+        if (saved.isNullOrBlank() || saved.contains("10.0.2.2") || saved.contains("your-project")) {
+            return DEFAULT_BACKEND_URL
+        }
+        return saved
     }
 
     fun setBackendUrl(url: String) {

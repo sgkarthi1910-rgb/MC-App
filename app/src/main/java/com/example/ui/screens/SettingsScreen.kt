@@ -92,10 +92,11 @@ fun SettingsScreen(
     val activeSessions by viewModel.activeSessions.collectAsStateWithLifecycle()
     val actionMessage by viewModel.settingsActionMessage.collectAsStateWithLifecycle()
 
+    val currentBackendUrl by viewModel.backendUrl.collectAsStateWithLifecycle()
     var selectedTab by remember { mutableStateOf(0) }
     var showChangePasswordDialog by remember { mutableStateOf(false) }
     var showServerConfigDialog by remember { mutableStateOf(false) }
-    var customBackendInput by remember { mutableStateOf(viewModel.getBackendUrl()) }
+    var customBackendInput by remember(currentBackendUrl) { mutableStateOf(currentBackendUrl) }
 
     val isAdmin = authState.role == "ADMIN"
     val isStaff = authState.role == "ADMIN" || authState.role == "MODERATOR"
@@ -495,6 +496,15 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.height(12.dp))
                     Text("Quick Presets:", color = TextMuted, fontSize = 11.sp)
                     Spacer(modifier = Modifier.height(6.dp))
+                    Button(
+                        onClick = { customBackendInput = "https://mc-b93ql4ncz-my-project-2751.vercel.app/" },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen.copy(alpha = 0.2f)),
+                        shape = RoundedCornerShape(6.dp)
+                    ) {
+                        Text("Vercel Cloud (Live)", fontSize = 11.sp, color = EmeraldGreen, fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -505,7 +515,7 @@ fun SettingsScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = DeepCharcoal),
                             shape = RoundedCornerShape(6.dp)
                         ) {
-                            Text("Wi-Fi (PC IP)", fontSize = 11.sp, color = EmeraldGreen)
+                            Text("Wi-Fi IP", fontSize = 11.sp, color = TextSecondary)
                         }
                         Button(
                             onClick = { customBackendInput = "http://10.0.2.2:3000/" },

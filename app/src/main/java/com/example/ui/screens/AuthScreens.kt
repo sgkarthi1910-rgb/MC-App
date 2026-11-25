@@ -37,6 +37,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -75,11 +76,12 @@ fun LoginScreen(
     onLoginSuccess: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val currentServerUrl by viewModel.backendUrl.collectAsState()
     var uniqueId by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var showPassword by remember { mutableStateOf(false) }
     var showServerDialog by remember { mutableStateOf(false) }
-    var customServerInput by remember { mutableStateOf(viewModel.getBackendUrl()) }
+    var customServerInput by remember(currentServerUrl) { mutableStateOf(currentServerUrl) }
 
     Box(
         modifier = modifier
@@ -126,7 +128,7 @@ fun LoginScreen(
                 modifier = Modifier.padding(top = 8.dp)
             ) {
                 Text(
-                    text = "Server: ${viewModel.getBackendUrl()}",
+                    text = "Server: $currentServerUrl",
                     color = TextMuted,
                     fontSize = 11.sp,
                     fontFamily = JetBrainsMonoFontFamily
@@ -138,7 +140,7 @@ fun LoginScreen(
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.clickable {
-                        customServerInput = viewModel.getBackendUrl()
+                        customServerInput = currentServerUrl
                         showServerDialog = true
                     }
                 )
@@ -310,6 +312,15 @@ fun LoginScreen(
                         Spacer(modifier = Modifier.height(12.dp))
                         Text("Quick Presets:", color = TextMuted, fontSize = 11.sp)
                         Spacer(modifier = Modifier.height(6.dp))
+                        Button(
+                            onClick = { customServerInput = "https://mc-b93ql4ncz-my-project-2751.vercel.app/" },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen.copy(alpha = 0.2f)),
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Text("Vercel Cloud (Live)", fontSize = 11.sp, color = EmeraldGreen, fontWeight = FontWeight.Bold)
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -320,7 +331,7 @@ fun LoginScreen(
                                 colors = ButtonDefaults.buttonColors(containerColor = DeepCharcoal),
                                 shape = RoundedCornerShape(6.dp)
                             ) {
-                                Text("Wi-Fi (PC IP)", fontSize = 11.sp, color = EmeraldGreen)
+                                Text("Wi-Fi IP", fontSize = 11.sp, color = TextSecondary)
                             }
                             Button(
                                 onClick = { customServerInput = "http://10.0.2.2:3000/" },
