@@ -160,14 +160,21 @@ function pingMinecraftServer(host, port, timeoutMs = 3500) {
  * Queries Minecraft server status via Native TCP SLP with HTTP fallback to api.mcsrvstat.us
  */
 async function queryMinecraftServer(host = 'node2.vyroxsmp.online', port = 10010) {
-  // 1. Try Native TCP SLP
-  const directResult = await pingMinecraftServer(host, port, 3000);
-  if (directResult) return directResult;
+  // In Vercel serverless, raw TCP sockets on custom ports are blocked by cloud firewalls.
+  // Skip TCP ping and use HTTP API directly when running in Vercel.
+  if (!process.env.VERCEL) {
+    try {
+      const directResult = await pingMinecraftServer(host, port, 1200);
+      if (directResult) return directResult;
+    } catch (e) {
+      // Ignore TCP error
+    }
+  }
 
-  // 2. HTTP Fallback to api.mcsrvstat.us/3/{host}:{port}
+  // HTTP Fallback to api.mcsrvstat.us/3/{host}:{port}
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 4000);
+    const timeout = setTimeout(() => controller.abort(), 2000);
     const resp = await fetch(`https://api.mcsrvstat.us/3/${encodeURIComponent(`${host}:${port}`)}`, {
       signal: controller.signal,
       headers: { 'User-Agent': 'TGZ-Backend/1.0' }
@@ -193,10 +200,10 @@ async function queryMinecraftServer(host = 'node2.vyroxsmp.online', port = 10010
       };
     }
   } catch (err) {
-    // Both failed
+    // Server offline or unreachable
   }
 
-  // Return clean offline status
+  // Return clean offline status safely
   return {
     isOnline: false,
     host,
