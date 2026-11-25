@@ -51,8 +51,15 @@ function getDatabase(dbPath) {
     db = createInMemoryDatabase();
   }
 
-  initSchema(db);
-  seedInitialData(db);
+  try {
+    initSchema(db);
+    seedInitialData(db);
+  } catch (err) {
+    console.warn('[TGZ LIFESTEAL] Database initialization on storage failed, switching to in-memory store:', err.message);
+    db = createInMemoryDatabase();
+    initSchema(db);
+    seedInitialData(db);
+  }
 
   dbInstance = db;
   return dbInstance;
