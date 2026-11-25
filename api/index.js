@@ -20,15 +20,11 @@ module.exports = (req, res) => {
         cachedInstance = createServer();
       }
 
-      // Handle Vercel URL mappings
+      // Handle Vercel URL mappings cleanly
       const parsedUrl = new URL(req.url, 'http://localhost');
-      let targetPath = parsedUrl.searchParams.get('__path') || req.headers['x-matched-path'] || req.headers['x-forwarded-uri'] || parsedUrl.pathname;
-      if (targetPath) {
-        targetPath = '/' + targetPath.replace(/^\/+/, '');
-        req.url = targetPath;
-      }
-      if (req.url === '/api' || req.url === '/api/') {
-        req.url = '/';
+      const matched = req.headers['x-matched-path'] || req.headers['x-forwarded-uri'] || parsedUrl.searchParams.get('__path') || parsedUrl.pathname;
+      if (matched && matched !== '/api' && matched !== '/') {
+        req.url = matched;
       }
 
       cachedInstance.handleRequest(req, res);

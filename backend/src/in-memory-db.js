@@ -5,8 +5,11 @@
  * Zero external dependencies, 100% synchronous API matching Node DatabaseSync.
  */
 
-function createInMemoryDatabase() {
-  const tables = {
+const fs = require('node:fs');
+const path = require('node:path');
+
+function createInMemoryDatabase(storageFilePath) {
+  let tables = {
     users: [],
     sessions: [],
     announcements: [],
@@ -21,6 +24,28 @@ function createInMemoryDatabase() {
     team_invitations: [],
     app_settings: []
   };
+
+  // Restore existing records from persistent store if available
+  if (storageFilePath && fs.existsSync(storageFilePath)) {
+    try {
+      const saved = JSON.parse(fs.readFileSync(storageFilePath, 'utf8'));
+      if (saved && typeof saved === 'object') {
+        Object.keys(tables).forEach(t => {
+          if (Array.isArray(saved[t])) tables[t] = saved[t];
+        });
+      }
+    } catch (e) {}
+  }
+
+  function persist() {
+    if (storageFilePath) {
+      try {
+        const dir = path.dirname(storageFilePath);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(storageFilePath, JSON.stringify(tables, null, 2), 'utf8');
+      } catch (e) {}
+    }
+  }
 
   function matchCondition(row, condStr, params, paramIndexRef, tables) {
     if (!condStr) return true;
@@ -246,6 +271,7 @@ function createInMemoryDatabase() {
             } else {
               list.push(newRow);
             }
+            persist();
             return { changes: 1, lastInsertRowid: list.length };
           }
 
@@ -276,6 +302,7 @@ function createInMemoryDatabase() {
               }
             });
 
+            if (changes > 0) persist();
             return { changes };
           }
 
@@ -294,7 +321,9 @@ function createInMemoryDatabase() {
 
             const initialLen = tables[table].length;
             tables[table] = tables[table].filter(r => !matchCondition(r, whereStr, params, paramIndexRef, tables));
-            return { changes: initialLen - tables[table].length };
+            const changes = initialLen - tables[table].length;
+            if (changes > 0) persist();
+            return { changes };
           }
 
           return { changes: 0 };

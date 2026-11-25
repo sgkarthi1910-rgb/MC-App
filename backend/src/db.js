@@ -9,14 +9,48 @@ const fs = require('node:fs');
 const { hashPasswordSync } = require('./crypto-utils');
 const { createInMemoryDatabase } = require('./in-memory-db');
 
+// Safe, zero-dependency environment loader for local and serverless execution
+function loadEnvSafe() {
+  const envCandidates = [
+    path.join(__dirname, '..', '.env'),
+    path.join(__dirname, '..', '..', '.env'),
+    path.join(process.cwd(), '.env'),
+    path.join(process.cwd(), 'backend', '.env')
+  ];
+  for (const envPath of envCandidates) {
+    if (fs.existsSync(envPath)) {
+      try {
+        const content = fs.readFileSync(envPath, 'utf8');
+        for (const line of content.split('\n')) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith('#')) continue;
+          const eq = trimmed.indexOf('=');
+          if (eq > 0) {
+            const k = trimmed.slice(0, eq).trim();
+            const v = trimmed.slice(eq + 1).trim();
+            if (process.env[k] === undefined) {
+              process.env[k] = v;
+            }
+          }
+        }
+        break;
+      } catch (e) {}
+    }
+  }
+}
+loadEnvSafe();
+
 let dbInstance = null;
 
 function getDatabase(dbPath) {
   if (dbInstance) return dbInstance;
 
   const repoDbPath = path.join(__dirname, '..', 'data', 'tgz_lifesteal.db');
-  // On Vercel serverless, in-memory SQLite provides zero-latency and 100% reliability
-  const defaultDbPath = process.env.VERCEL ? ':memory:' : repoDbPath;
+  const vercelDbPath = path.join('/tmp', 'tgz_lifesteal.db');
+  const defaultDbPath = process.env.VERCEL ? vercelDbPath : repoDbPath;
+  const storeFilePath = process.env.VERCEL
+    ? path.join('/tmp', 'tgz_store.json')
+    : path.join(__dirname, '..', 'data', 'tgz_store.json');
 
   const resolvedPath = dbPath || process.env.DATABASE_PATH || defaultDbPath;
   
@@ -47,16 +81,16 @@ function getDatabase(dbPath) {
   }
 
   if (!db) {
-    console.warn('[TGZ LIFESTEAL] node:sqlite is not available on this platform. Running with zero-dependency high-speed in-memory store.');
-    db = createInMemoryDatabase();
+    console.warn('[TGZ LIFESTEAL] node:sqlite is not available on this platform. Running with persistent store.');
+    db = createInMemoryDatabase(storeFilePath);
   }
 
   try {
     initSchema(db);
     seedInitialData(db);
   } catch (err) {
-    console.warn('[TGZ LIFESTEAL] Database initialization on storage failed, switching to in-memory store:', err.message);
-    db = createInMemoryDatabase();
+    console.warn('[TGZ LIFESTEAL] Database initialization on storage failed, switching to persistent in-memory store:', err.message);
+    db = createInMemoryDatabase(storeFilePath);
     initSchema(db);
     seedInitialData(db);
   }
@@ -198,19 +232,30 @@ function initSchema(db) {
 }
 
 function seedInitialData(db) {
-  // 1. Initial Admin Account: sg_karthi
+  // 1. Initial Admin Account: sg_karthi (Idempotent Server-Side Provisioning)
   const adminId = 'sg_karthi';
-  const existingAdmin = db.prepare('SELECT id FROM users WHERE id = ?').get(adminId);
+  const bootstrapPassword = process.env.ADMIN_BOOTSTRAP_PASSWORD || 'TgzAdminInitial2026!Secure';
+  const existingAdmin = db.prepare('SELECT id, role, must_change_password, password_hash FROM users WHERE id = ?').get(adminId);
+  const now = Date.now();
   
   if (!existingAdmin) {
-    const bootstrapPassword = process.env.ADMIN_BOOTSTRAP_PASSWORD || 'admin123';
     const hash = hashPasswordSync(bootstrapPassword);
-    const now = Date.now();
-
     db.prepare(`
       INSERT INTO users (id, display_name, password_hash, role, must_change_password, status, created_at)
-      VALUES (?, ?, ?, 'ADMIN', 1, 'ACTIVE', ?)
-    `).run(adminId, 'Admin (sg_karthi)', hash, now);
+      VALUES (?, 'Admin (sg_karthi)', ?, 'ADMIN', 1, 'ACTIVE', ?)
+    `).run(adminId, hash, now);
+  } else {
+    // Idempotent safeguard: Ensure role remains ADMIN
+    if (existingAdmin.role !== 'ADMIN') {
+      db.prepare('UPDATE users SET role = ? WHERE id = ?').run('ADMIN', adminId);
+    }
+    // If admin has not yet changed password, sync with explicit ADMIN_BOOTSTRAP_PASSWORD if configured
+    if (existingAdmin.must_change_password === 1 && process.env.ADMIN_BOOTSTRAP_PASSWORD) {
+      const envHash = hashPasswordSync(process.env.ADMIN_BOOTSTRAP_PASSWORD);
+      if (existingAdmin.password_hash !== envHash) {
+        db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(envHash, adminId);
+      }
+    }
   }
 
   // 2. Initial Playtime Rewards: EXACTLY 5 Crates per requirement 7:
@@ -305,6 +350,13 @@ function seedInitialData(db) {
   }
 }
 
+function provisionAdminAccount(db) {
+  seedInitialData(db);
+}
+
 module.exports = {
-  getDatabase
+  getDatabase,
+  initSchema,
+  seedInitialData,
+  provisionAdminAccount
 };

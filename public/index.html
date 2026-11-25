@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TGZ Lifesteal SMP | Official Server & API</title>
+  <title>TGZ Lifesteal SMP | Official Server & Portal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Silkscreen:wght@400;700&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
@@ -40,12 +40,80 @@
     }
     .container {
       width: 100%;
-      max-width: 900px;
+      max-width: 920px;
       display: flex;
       flex-direction: column;
-      gap: 28px;
+      gap: 24px;
     }
     header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .header-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .heart-logo {
+      width: 28px;
+      height: 28px;
+      background: var(--red);
+      clip-path: polygon(50% 15%, 80% 0%, 100% 20%, 100% 50%, 50% 100%, 0% 50%, 0% 20%, 20% 0%);
+      display: inline-block;
+      animation: pulse 2s infinite ease-in-out;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.6)); }
+    }
+    .header-title {
+      font-family: 'Silkscreen', monospace;
+      font-size: 1.25rem;
+      color: var(--emerald);
+      letter-spacing: 1px;
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .btn-auth-nav {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid var(--emerald);
+      color: var(--emerald);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-family: 'Silkscreen', monospace;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-auth-nav:hover {
+      background: var(--emerald);
+      color: #000;
+      box-shadow: 0 0 14px var(--emerald-glow);
+    }
+    .btn-logout {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid var(--red);
+      color: var(--red);
+    }
+    .btn-logout:hover {
+      background: var(--red);
+      color: #fff;
+      box-shadow: 0 0 14px rgba(239, 68, 68, 0.4);
+    }
+    .hero-banner {
       text-align: center;
       padding: 30px 20px 10px;
     }
@@ -58,269 +126,479 @@
       border: 1px solid var(--emerald);
       border-radius: 999px;
       font-family: 'Silkscreen', monospace;
-      font-size: 11px;
+      font-size: 0.75rem;
       color: var(--emerald);
-      letter-spacing: 0.5px;
       margin-bottom: 16px;
+      box-shadow: 0 0 12px var(--emerald-glow);
     }
-    .badge-dot {
+    .pulse-dot {
       width: 8px;
       height: 8px;
-      background: var(--emerald);
+      background-color: var(--emerald);
       border-radius: 50%;
-      box-shadow: 0 0 10px var(--emerald);
-      animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(0.85); }
+      animation: pulse 1.5s infinite;
     }
     h1 {
       font-family: 'Silkscreen', monospace;
-      font-size: clamp(28px, 6vw, 42px);
-      color: var(--emerald);
-      text-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+      font-size: 2.2rem;
+      color: #fff;
       margin-bottom: 8px;
+      letter-spacing: 1px;
     }
     .subtitle {
-      font-size: 15px;
       color: var(--text-muted);
-      max-width: 560px;
+      font-size: 1.05rem;
+      max-width: 620px;
       margin: 0 auto;
     }
     .card {
-      background: var(--card-bg);
+      background-color: var(--card-bg);
       border: 1px solid var(--card-border);
       border-radius: 14px;
       padding: 24px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      position: relative;
     }
-    .server-ip-card {
+    .section-title {
+      font-family: 'Silkscreen', monospace;
+      font-size: 1.05rem;
+      color: var(--emerald);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .ip-box {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #090A0D;
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 16px 20px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .ip-address {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 0.5px;
+    }
+    .copy-btn {
+      background-color: var(--emerald);
+      color: #06110D;
+      font-family: 'Silkscreen', monospace;
+      font-weight: 700;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .copy-btn:hover {
+      background-color: #34D399;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px var(--emerald-glow);
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .stat-item {
+      background: #090A0D;
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+    }
+    .stat-label {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .stat-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--emerald);
+    }
+    .dashboard-panel {
+      border: 1px solid var(--emerald);
+      box-shadow: 0 0 20px var(--emerald-glow);
+      display: none;
+    }
+    .admin-badge {
+      background: rgba(16, 185, 129, 0.2);
+      border: 1px solid var(--emerald);
+      color: var(--emerald);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-family: 'Silkscreen', monospace;
+      font-size: 0.75rem;
+      font-weight: bold;
+    }
+    .diag-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background: #090A0D;
+      border-radius: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+    }
+    .diag-label { color: var(--text-muted); }
+    .diag-val-ok { color: var(--emerald); font-weight: bold; }
+    .diag-val-warn { color: var(--gold); }
+    .diag-val-err { color: var(--red); font-weight: bold; }
+    .diag-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .ranks-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 14px;
+    }
+    .rank-card {
+      background: #090A0D;
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 18px 14px;
       display: flex;
       flex-direction: column;
       align-items: center;
       text-align: center;
-      gap: 14px;
-      border-color: rgba(16, 185, 129, 0.3);
-      background: linear-gradient(180deg, #12151D 0%, #0E1017 100%);
+      transition: transform 0.2s ease;
     }
-    .ip-box {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      background: #090A0D;
-      border: 1px solid var(--emerald);
-      padding: 10px 20px;
-      border-radius: 10px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: clamp(14px, 4vw, 18px);
-      color: var(--emerald);
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .ip-box:hover {
-      background: rgba(16, 185, 129, 0.1);
-      box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
-    }
-    .btn-group {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      justify-content: center;
-    }
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 12px 22px;
-      border-radius: 8px;
-      font-family: 'Silkscreen', monospace;
-      font-size: 12px;
-      font-weight: 700;
-      text-decoration: none;
-      transition: all 0.2s;
-      cursor: pointer;
-    }
-    .btn-primary {
-      background: var(--emerald);
-      color: #062217;
-      border: 1px solid var(--emerald);
-    }
-    .btn-primary:hover {
-      background: #059669;
-      box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
-    }
-    .btn-discord {
-      background: #5865F2;
-      color: #FFFFFF;
-      border: 1px solid #5865F2;
-    }
-    .btn-discord:hover {
-      background: #4752C4;
-      box-shadow: 0 0 15px rgba(88, 101, 242, 0.5);
-    }
-    .btn-outline {
-      background: transparent;
-      color: var(--text-primary);
-      border: 1px solid var(--card-border);
-    }
-    .btn-outline:hover {
-      border-color: var(--emerald);
-      color: var(--emerald);
-    }
-    .section-title {
-      font-family: 'Silkscreen', monospace;
-      font-size: 16px;
-      color: var(--gold);
-      letter-spacing: 1px;
-      margin-bottom: 14px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .ranks-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 14px;
-    }
-    .rank-card {
-      background: #0D0E13;
-      border: 1px solid var(--card-border);
-      border-radius: 10px;
-      padding: 18px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      position: relative;
+    .rank-card:hover {
+      transform: translateY(-4px);
     }
     .rank-badge {
-      font-family: 'Silkscreen', monospace;
-      font-size: 9px;
+      font-size: 0.65rem;
       padding: 3px 8px;
       border-radius: 4px;
-      display: inline-block;
-      width: fit-content;
-      font-weight: 700;
+      font-family: 'Silkscreen', monospace;
+      margin-bottom: 8px;
     }
     .rank-title {
       font-family: 'Silkscreen', monospace;
-      font-size: 16px;
-      font-weight: 700;
+      font-size: 1.1rem;
+      margin-bottom: 4px;
     }
     .rank-price {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 18px;
       font-weight: 700;
-      color: var(--gold);
+      font-size: 1.15rem;
+      color: #fff;
+      margin-bottom: 12px;
     }
     .perks-list {
       list-style: none;
-      font-size: 12px;
+      font-size: 0.78rem;
       color: var(--text-muted);
       display: flex;
       flex-direction: column;
       gap: 6px;
+      text-align: left;
+      width: 100%;
     }
     .perks-list li {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: 6px;
     }
     .perks-list li::before {
       content: "✔";
       color: var(--emerald);
-      font-size: 10px;
+      font-size: 0.75rem;
     }
     .api-status-box {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 12px;
-      background: #07080B;
-      border: 1px solid var(--card-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #090A0D;
       padding: 14px 18px;
       border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: 8px;
     }
     footer {
       text-align: center;
-      font-size: 12px;
       color: var(--text-muted);
-      margin-top: 20px;
+      font-size: 0.85rem;
+      padding-top: 20px;
+      border-top: 1px solid var(--card-border);
+    }
+    /* Modal Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 16px;
+    }
+    .modal-box {
+      background: var(--card-bg);
+      border: 1px solid var(--emerald);
+      border-radius: 14px;
+      padding: 28px;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: 0 0 30px var(--emerald-glow);
+      position: relative;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .modal-title {
+      font-family: 'Silkscreen', monospace;
+      color: var(--emerald);
+      font-size: 1.2rem;
+    }
+    .modal-close {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+    .modal-close:hover { color: #fff; }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .form-input {
+      width: 100%;
+      padding: 12px 14px;
+      background: #090A0D;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      color: #fff;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.95rem;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: var(--emerald);
+      box-shadow: 0 0 8px var(--emerald-glow);
+    }
+    .btn-submit {
+      width: 100%;
+      padding: 12px;
+      background: var(--emerald);
+      border: none;
+      border-radius: 8px;
+      color: #06110D;
+      font-family: 'Silkscreen', monospace;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-submit:hover {
+      background: #34D399;
+      box-shadow: 0 0 16px var(--emerald-glow);
+    }
+    .alert-banner {
+      padding: 10px 14px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+      font-size: 0.85rem;
+      font-family: 'JetBrains Mono', monospace;
+      display: none;
+    }
+    .alert-danger {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid var(--red);
+      color: #FCA5A5;
+    }
+    .alert-success {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid var(--emerald);
+      color: #6EE7B7;
+    }
+    .toggle-auth-mode {
+      text-align: center;
+      margin-top: 14px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .toggle-auth-link {
+      color: var(--emerald);
+      cursor: pointer;
+      text-decoration: underline;
     }
   </style>
 </head>
 <body>
   <div class="container">
     <header>
-      <div class="badge-live">
-        <span class="badge-dot"></span>
-        <span id="api-status-text">CONNECTING TO API...</span>
+      <div class="header-logo">
+        <span class="heart-logo"></span>
+        <span class="header-title">TGZ LIFESTEAL</span>
       </div>
-      <h1>TGZ LIFESTEAL</h1>
-      <p class="subtitle">Official Minecraft SMP Server & Community Hub. Eliminate rivals, claim hearts, unlock playtime crates, and conquer the empire.</p>
+      <div class="header-actions">
+        <a href="https://discord.gg/J5P89mxXbc" target="_blank" style="text-decoration: none;">
+          <button class="btn-auth-nav" style="border-color: var(--purple); color: var(--purple); background: rgba(168, 85, 247, 0.15);">
+            💬 DISCORD
+          </button>
+        </a>
+        <div id="auth-buttons-container">
+          <button class="btn-auth-nav" onclick="openLoginModal()">🔑 STAFF LOGIN</button>
+        </div>
+      </div>
     </header>
 
-    <div class="card server-ip-card">
-      <div class="subtitle" style="text-transform: uppercase; letter-spacing: 1px; font-size: 12px; font-weight: 700;">Join The Minecraft SMP</div>
-      <div class="ip-box" onclick="copyIp()">
-        <span id="ip-text">node2.vyroxsmp.online:10010</span>
-        <span style="font-size: 13px; opacity: 0.7;">📋 Click to Copy</span>
+    <!-- Admin & Member Active Dashboard (Visible when logged in) -->
+    <div id="user-dashboard-card" class="card dashboard-panel">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+        <div>
+          <div class="section-title" style="margin-bottom: 4px;">
+            🛡️ <span id="dash-display-name">Admin (sg_karthi)</span>
+            <span id="dash-role-badge" class="admin-badge">ADMIN</span>
+          </div>
+          <div style="color: var(--text-muted); font-size: 0.85rem; font-family: 'JetBrains Mono', monospace;">
+            User ID: <strong id="dash-user-id" style="color: #fff;">sg_karthi</strong> | Session: <span style="color: var(--emerald);">Active (Persistent)</span>
+          </div>
+        </div>
+        <button class="btn-auth-nav btn-logout" onclick="performLogout()">LOGOUT</button>
       </div>
-      <div class="btn-group">
-        <a href="https://discord.gg/J5P89mxXbc" target="_blank" class="btn btn-discord">Join Discord</a>
-        <a href="/api/health" class="btn btn-outline" target="_blank">API Health Status</a>
-        <a href="/api/leaderboard" class="btn btn-outline" target="_blank">Live Leaderboard</a>
+
+      <div id="password-change-warning" style="display: none; background: rgba(255, 170, 0, 0.15); border: 1px solid var(--gold); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+        <strong style="color: var(--gold);">⚠️ Mandatory Action Required:</strong> You are using the initial bootstrap credentials. Please change your password to secure this account.
+        <button onclick="openChangePasswordModal()" style="margin-left: 10px; background: var(--gold); color: #000; border: none; padding: 4px 10px; border-radius: 4px; font-weight: bold; cursor: pointer;">Change Password</button>
+      </div>
+
+      <div class="section-title" style="font-size: 0.95rem; margin-top: 10px;">🔒 Production System & Auth Diagnostics</div>
+      <div class="diag-grid" id="system-diag-grid">
+        <div class="diag-item">
+          <span class="diag-label">Database Status:</span>
+          <span id="diag-db-status" class="diag-val-ok">Checking...</span>
+        </div>
+        <div class="diag-item">
+          <span class="diag-label">Admin Provisioned:</span>
+          <span id="diag-admin-prov" class="diag-val-ok">Checking...</span>
+        </div>
+        <div class="diag-item">
+          <span class="diag-label">Auth Storage:</span>
+          <span id="diag-storage-type" class="diag-val-ok">Persisted Store</span>
+        </div>
+        <div class="diag-item">
+          <span class="diag-label">Session Lifetime:</span>
+          <span class="diag-val-ok">30 Days (Rolling)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-banner">
+      <div class="badge-live">
+        <span class="pulse-dot"></span>
+        <span id="api-status-text">MINECRAFT SMP ONLINE</span>
+      </div>
+      <h1>TGZ LIFESTEAL SMP</h1>
+      <p class="subtitle">Experience high-stakes hardcore survival. Kill players to claim hearts, forge clan alliances, and dominate the seasonal leaderboards.</p>
+    </div>
+
+    <div class="card">
+      <div class="section-title">⚡ SERVER CONNECTION</div>
+      <div class="ip-box">
+        <div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Server Address (Java 1.20+)</div>
+          <div class="ip-address" id="ip-text">node2.vyroxsmp.online:10010</div>
+        </div>
+        <button class="copy-btn" onclick="copyIp()">
+          <span>📋</span> COPY SERVER IP
+        </button>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-label">SMP Status</div>
+          <div class="stat-value" id="smp-status">ONLINE</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Server Version</div>
+          <div class="stat-value" style="color: var(--cyan);">1.20.4+</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Lifesteal Plugin</div>
+          <div class="stat-value" style="color: var(--gold);">v2.4 Active</div>
+        </div>
       </div>
     </div>
 
     <div class="card">
-      <div class="section-title">⚡ SERVER VIP RANKS</div>
+      <div class="section-title">💎 VIP STORE & RANKS</div>
       <div class="ranks-grid">
-        <div class="rank-card" style="border-color: rgba(156, 163, 175, 0.4);">
-          <span class="rank-badge" style="background: rgba(156, 163, 175, 0.15); color: var(--silver);">TIER 1</span>
-          <div class="rank-title" style="color: var(--silver);">TITAN</div>
-          <div class="rank-price">₹49</div>
+        <div class="rank-card" style="border-color: rgba(16, 185, 129, 0.4);">
+          <span class="rank-badge" style="background: rgba(16, 185, 129, 0.15); color: var(--emerald);">STARTER</span>
+          <div class="rank-title" style="color: var(--emerald);">TITAN</div>
+          <div class="rank-price">₹29</div>
           <ul class="perks-list">
             <li>[Titan] Prefix & Role</li>
             <li>+2,500 Claim Blocks</li>
-            <li>/hat and /near Commands</li>
-            <li>Priority Queue Slot</li>
+            <li>1x Common Key</li>
           </ul>
         </div>
-        <div class="rank-card" style="border-color: rgba(168, 85, 247, 0.4);">
-          <span class="rank-badge" style="background: rgba(168, 85, 247, 0.15); color: var(--purple);">TIER 2</span>
-          <div class="rank-title" style="color: var(--purple);">WIZARD</div>
-          <div class="rank-price">₹59</div>
+        <div class="rank-card" style="border-color: rgba(56, 189, 248, 0.4);">
+          <span class="rank-badge" style="background: rgba(56, 189, 248, 0.15); color: var(--cyan);">POPULAR</span>
+          <div class="rank-title" style="color: var(--cyan);">WIZARD</div>
+          <div class="rank-price">₹49</div>
           <ul class="perks-list">
             <li>[Wizard] Prefix & Role</li>
             <li>+5,000 Claim Blocks</li>
-            <li>/craft & /enderchest anywhere</li>
-            <li>Weekly Potion Care Package</li>
+            <li>1x Monthly Key</li>
+            <li>/hat Command</li>
           </ul>
         </div>
         <div class="rank-card" style="border-color: rgba(255, 170, 0, 0.4);">
-          <span class="rank-badge" style="background: rgba(255, 170, 0, 0.15); color: var(--gold);">POPULAR</span>
+          <span class="rank-badge" style="background: rgba(255, 170, 0, 0.15); color: var(--gold);">ROYAL</span>
           <div class="rank-title" style="color: var(--gold);">KING</div>
           <div class="rank-price">₹79</div>
           <ul class="perks-list">
             <li>[King] Prefix & Role</li>
-            <li>+10,000 Claim Blocks</li>
-            <li>/fly inside claimed territory</li>
-            <li>2x Vault Storage Pages (/pv 1-2)</li>
+            <li>+8,000 Claim Blocks</li>
+            <li>2x Special Crate Keys</li>
+            <li>2x Vault Storage (/pv 1-2)</li>
           </ul>
         </div>
-        <div class="rank-card" style="border-color: rgba(56, 189, 248, 0.4);">
-          <span class="rank-badge" style="background: rgba(56, 189, 248, 0.15); color: var(--cyan);">ELITE</span>
-          <div class="rank-title" style="color: var(--cyan);">STATIC+</div>
-          <div class="rank-price">₹89</div>
+        <div class="rank-card" style="border-color: rgba(168, 85, 247, 0.4);">
+          <span class="rank-badge" style="background: rgba(168, 85, 247, 0.15); color: var(--purple);">ELITE</span>
+          <div class="rank-title" style="color: var(--purple);">STATIC+</div>
+          <div class="rank-price">₹119</div>
           <ul class="perks-list">
             <li>[Static+] Prefix & Role</li>
             <li>+15,000 Claim Blocks</li>
-            <li>1x Guaranteed Death Heart Retention</li>
-            <li>3x Vault Storage Pages (/pv 1-3)</li>
+            <li>1x Death Heart Retain</li>
+            <li>3x Vault Storage (/pv 1-3)</li>
           </ul>
         </div>
         <div class="rank-card" style="border-color: rgba(239, 68, 68, 0.4);">
@@ -330,16 +608,16 @@
           <ul class="perks-list">
             <li>[Chaos] Prefix & Role</li>
             <li>+25,000 Claim Blocks</li>
-            <li>2x Guaranteed Death Heart Retention</li>
-            <li>5x Vault Storage Pages (/pv 1-5)</li>
-            <li>Exclusive Monthly Mystery Crate</li>
+            <li>2x Death Heart Retain</li>
+            <li>5x Vault Storage (/pv 1-5)</li>
+            <li>Monthly Mystery Crate</li>
           </ul>
         </div>
       </div>
     </div>
 
     <div class="card">
-      <div class="section-title">📡 BACKEND API STATUS</div>
+      <div class="section-title">📡 BACKEND API HEALTH</div>
       <div class="api-status-box">
         <div>
           <span>REST API Endpoint: </span>
@@ -354,7 +632,91 @@
     </footer>
   </div>
 
+  <!-- AUTHENTICATION MODAL -->
+  <div id="auth-modal" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title" id="auth-modal-title">STAFF / MEMBER LOGIN</div>
+        <button class="modal-close" onclick="closeAuthModal()">&times;</button>
+      </div>
+
+      <div id="auth-error-banner" class="alert-banner alert-danger"></div>
+      <div id="auth-success-banner" class="alert-banner alert-success"></div>
+
+      <!-- Login Form -->
+      <form id="login-form" onsubmit="handleLoginSubmit(event)">
+        <div class="form-group">
+          <label class="form-label">Unique ID</label>
+          <input type="text" id="login-id" class="form-input" placeholder="e.g. sg_karthi" value="sg_karthi" required autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" id="login-pass" class="form-input" placeholder="Enter password" required autocomplete="current-password">
+        </div>
+        <button type="submit" id="btn-login-submit" class="btn-submit">SIGN IN</button>
+
+        <div class="toggle-auth-mode">
+          Need a member account? <span class="toggle-auth-link" onclick="switchAuthMode('signup')">Register here</span>
+        </div>
+      </form>
+
+      <!-- Signup Form -->
+      <form id="signup-form" style="display: none;" onsubmit="handleSignupSubmit(event)">
+        <div class="form-group">
+          <label class="form-label">Choose Unique ID (letters, numbers, underscores)</label>
+          <input type="text" id="signup-id" class="form-input" placeholder="e.g. hunter_99" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Display Name</label>
+          <input type="text" id="signup-display" class="form-input" placeholder="e.g. Hunter Champion" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password (min 8 characters)</label>
+          <input type="password" id="signup-pass" class="form-input" placeholder="Create password" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirm Password</label>
+          <input type="password" id="signup-pass-confirm" class="form-input" placeholder="Repeat password" required>
+        </div>
+        <button type="submit" id="btn-signup-submit" class="btn-submit">CREATE MEMBER ACCOUNT</button>
+
+        <div class="toggle-auth-mode">
+          Already registered? <span class="toggle-auth-link" onclick="switchAuthMode('login')">Sign in here</span>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- CHANGE PASSWORD MODAL -->
+  <div id="change-pass-modal" class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title">UPDATE PASSWORD</div>
+        <button class="modal-close" onclick="closeChangePasswordModal()">&times;</button>
+      </div>
+      <div id="chg-error-banner" class="alert-banner alert-danger"></div>
+      <div id="chg-success-banner" class="alert-banner alert-success"></div>
+      <form onsubmit="handleChangePasswordSubmit(event)">
+        <div class="form-group">
+          <label class="form-label">Current Password (optional if bootstrap)</label>
+          <input type="password" id="chg-current-pass" class="form-input" placeholder="Current password">
+        </div>
+        <div class="form-group">
+          <label class="form-label">New Password (min 8 characters)</label>
+          <input type="password" id="chg-new-pass" class="form-input" placeholder="New secure password" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirm New Password</label>
+          <input type="password" id="chg-confirm-pass" class="form-input" placeholder="Confirm new password" required>
+        </div>
+        <button type="submit" class="btn-submit">SET NEW PASSWORD</button>
+      </form>
+    </div>
+  </div>
+
   <script>
+    let currentUser = null;
+
     function copyIp() {
       const text = document.getElementById('ip-text').innerText;
       navigator.clipboard.writeText(text).then(() => {
@@ -362,17 +724,253 @@
       });
     }
 
+    function openLoginModal() {
+      document.getElementById('auth-modal').style.display = 'flex';
+      switchAuthMode('login');
+    }
+
+    function closeAuthModal() {
+      document.getElementById('auth-modal').style.display = 'none';
+      document.getElementById('auth-error-banner').style.display = 'none';
+      document.getElementById('auth-success-banner').style.display = 'none';
+    }
+
+    function openChangePasswordModal() {
+      document.getElementById('change-pass-modal').style.display = 'flex';
+    }
+
+    function closeChangePasswordModal() {
+      document.getElementById('change-pass-modal').style.display = 'none';
+      document.getElementById('chg-error-banner').style.display = 'none';
+      document.getElementById('chg-success-banner').style.display = 'none';
+    }
+
+    function switchAuthMode(mode) {
+      document.getElementById('auth-error-banner').style.display = 'none';
+      document.getElementById('auth-success-banner').style.display = 'none';
+      if (mode === 'signup') {
+        document.getElementById('auth-modal-title').innerText = 'MEMBER REGISTRATION';
+        document.getElementById('login-form').style.display = 'none';
+        document.getElementById('signup-form').style.display = 'block';
+      } else {
+        document.getElementById('auth-modal-title').innerText = 'STAFF / MEMBER LOGIN';
+        document.getElementById('signup-form').style.display = 'none';
+        document.getElementById('login-form').style.display = 'block';
+      }
+    }
+
+    async function handleLoginSubmit(event) {
+      event.preventDefault();
+      const errBox = document.getElementById('auth-error-banner');
+      const succBox = document.getElementById('auth-success-banner');
+      const submitBtn = document.getElementById('btn-login-submit');
+
+      errBox.style.display = 'none';
+      succBox.style.display = 'none';
+      submitBtn.disabled = true;
+      submitBtn.innerText = 'SIGNING IN...';
+
+      const id = document.getElementById('login-id').value.trim();
+      const password = document.getElementById('login-pass').value;
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ id, password })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          currentUser = data.user;
+          succBox.innerText = 'Login successful! Welcome back, ' + data.user.displayName;
+          succBox.style.display = 'block';
+          setTimeout(() => {
+            closeAuthModal();
+            updateUIAfterLogin(data.user);
+          }, 600);
+        } else {
+          const diagCode = data.code ? ' [' + data.code + ']' : '';
+          errBox.innerText = (data.error || 'Login failed') + diagCode;
+          errBox.style.display = 'block';
+        }
+      } catch (err) {
+        errBox.innerText = 'Network error connecting to /api/auth/login: ' + err.message;
+        errBox.style.display = 'block';
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = 'SIGN IN';
+      }
+    }
+
+    async function handleSignupSubmit(event) {
+      event.preventDefault();
+      const errBox = document.getElementById('auth-error-banner');
+      const succBox = document.getElementById('auth-success-banner');
+      const submitBtn = document.getElementById('btn-signup-submit');
+
+      errBox.style.display = 'none';
+      succBox.style.display = 'none';
+
+      const id = document.getElementById('signup-id').value.trim();
+      const displayName = document.getElementById('signup-display').value.trim();
+      const password = document.getElementById('signup-pass').value;
+      const confirmPassword = document.getElementById('signup-pass-confirm').value;
+
+      if (password !== confirmPassword) {
+        errBox.innerText = 'Passwords do not match.';
+        errBox.style.display = 'block';
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.innerText = 'REGISTERING...';
+
+      try {
+        const res = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ id, displayName, password, confirmPassword })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          currentUser = data.user;
+          succBox.innerText = 'Registration successful! Logged in as ' + data.user.displayName;
+          succBox.style.display = 'block';
+          setTimeout(() => {
+            closeAuthModal();
+            updateUIAfterLogin(data.user);
+          }, 800);
+        } else {
+          errBox.innerText = data.error || 'Registration failed.';
+          errBox.style.display = 'block';
+        }
+      } catch (err) {
+        errBox.innerText = 'Network connection error: ' + err.message;
+        errBox.style.display = 'block';
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = 'CREATE MEMBER ACCOUNT';
+      }
+    }
+
+    async function handleChangePasswordSubmit(event) {
+      event.preventDefault();
+      const errBox = document.getElementById('chg-error-banner');
+      const succBox = document.getElementById('chg-success-banner');
+      errBox.style.display = 'none';
+      succBox.style.display = 'none';
+
+      const currentPassword = document.getElementById('chg-current-pass').value;
+      const newPassword = document.getElementById('chg-new-pass').value;
+      const confirmNewPassword = document.getElementById('chg-confirm-pass').value;
+
+      try {
+        const res = await fetch('/api/auth/change-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ currentPassword, newPassword, confirmNewPassword })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          succBox.innerText = 'Password updated successfully!';
+          succBox.style.display = 'block';
+          document.getElementById('password-change-warning').style.display = 'none';
+          setTimeout(() => closeChangePasswordModal(), 1200);
+        } else {
+          errBox.innerText = data.error || 'Failed to update password.';
+          errBox.style.display = 'block';
+        }
+      } catch (e) {
+        errBox.innerText = 'Network error: ' + e.message;
+        errBox.style.display = 'block';
+      }
+    }
+
+    async function performLogout() {
+      try {
+        await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+      } catch (e) {}
+      currentUser = null;
+      document.getElementById('user-dashboard-card').style.display = 'none';
+      document.getElementById('auth-buttons-container').innerHTML = `
+        <button class="btn-auth-nav" onclick="openLoginModal()">🔑 STAFF LOGIN</button>
+      `;
+    }
+
+    function updateUIAfterLogin(user) {
+      currentUser = user;
+      document.getElementById('dash-display-name').innerText = user.displayName || user.id;
+      document.getElementById('dash-user-id').innerText = user.id;
+      const badge = document.getElementById('dash-role-badge');
+      badge.innerText = user.role;
+      if (user.role === 'ADMIN') {
+        badge.style.borderColor = 'var(--emerald)';
+        badge.style.color = 'var(--emerald)';
+        badge.style.background = 'rgba(16, 185, 129, 0.2)';
+      } else {
+        badge.style.borderColor = 'var(--cyan)';
+        badge.style.color = 'var(--cyan)';
+        badge.style.background = 'rgba(56, 189, 248, 0.2)';
+      }
+
+      if (user.mustChangePassword) {
+        document.getElementById('password-change-warning').style.display = 'block';
+      } else {
+        document.getElementById('password-change-warning').style.display = 'none';
+      }
+
+      document.getElementById('user-dashboard-card').style.display = 'block';
+      document.getElementById('auth-buttons-container').innerHTML = `
+        <span style="font-size: 0.85rem; color: var(--emerald); font-family: 'Silkscreen', monospace;">● ${user.id}</span>
+        <button class="btn-auth-nav btn-logout" onclick="performLogout()">LOGOUT</button>
+      `;
+
+      loadDiagnostics();
+    }
+
+    async function checkActiveSession() {
+      try {
+        const res = await fetch('/api/auth/me', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.user) {
+            updateUIAfterLogin(data.user);
+          }
+        }
+      } catch (e) {}
+    }
+
+    async function loadDiagnostics() {
+      try {
+        const res = await fetch('/api/auth/diagnostics');
+        if (res.ok) {
+          const d = await res.json();
+          document.getElementById('diag-db-status').innerText = d.databaseConnected ? '● Online (Connected)' : 'Disconnected';
+          document.getElementById('diag-db-status').className = d.databaseConnected ? 'diag-val-ok' : 'diag-val-err';
+          document.getElementById('diag-admin-prov').innerText = d.adminProvisioned ? '● Ready (sg_karthi)' : 'Not Provisioned';
+          document.getElementById('diag-admin-prov').className = d.adminProvisioned ? 'diag-val-ok' : 'diag-val-warn';
+          document.getElementById('diag-storage-type').innerText = d.databaseType || 'Persisted Store';
+        }
+      } catch (e) {}
+    }
+
     // Ping API Health Status
     fetch('/api/health')
       .then(res => res.json())
       .then(data => {
-        document.getElementById('api-status-text').innerText = 'API STATUS: ONLINE';
         document.getElementById('api-ping-indicator').innerText = '● Operational (200 OK)';
       })
       .catch(err => {
-        document.getElementById('api-status-text').innerText = 'API STATUS: RUNNING';
         document.getElementById('api-ping-indicator').innerText = '● Standby';
       });
+
+    // Check existing session on page load
+    checkActiveSession();
   </script>
 </body>
 </html>

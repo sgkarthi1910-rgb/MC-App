@@ -1,6 +1,36 @@
 const { hashPassword, hashPasswordSync, verifyPassword, generateSessionToken, hashToken, generateId } = require('../crypto-utils');
+const { provisionAdminAccount } = require('../db');
 
 function setupAuthRoutes(router, db) {
+  // 0. SAFE AUTHENTICATION DIAGNOSTICS (Zero Secrets Expose)
+  router.get('/api/auth/diagnostics', (req, res) => {
+    let dbConnected = false;
+    let adminProvisioned = false;
+    let adminMustChangePassword = false;
+    let userCount = 0;
+    try {
+      const admin = db.prepare('SELECT id, role, must_change_password FROM users WHERE id = ?').get('sg_karthi');
+      if (admin) {
+        adminProvisioned = (admin.role === 'ADMIN');
+        adminMustChangePassword = Boolean(admin.must_change_password);
+      }
+      const countRow = db.prepare('SELECT COUNT(*) as cnt FROM users').get();
+      userCount = countRow?.cnt || 0;
+      dbConnected = true;
+    } catch (err) {
+      dbConnected = false;
+    }
+
+    return res.json({
+      status: dbConnected ? 'ok' : 'error',
+      databaseConnected: dbConnected,
+      databaseType: process.env.VERCEL ? 'persisted-serverless-store' : 'sqlite-file',
+      adminProvisioned,
+      adminMustChangePassword,
+      totalUsers: userCount,
+      serverTime: Date.now()
+    });
+  });
   // 1. SIGNUP: Public registration creates only MEMBER accounts
   router.post('/api/auth/signup', async (req, res) => {
     try {
@@ -63,7 +93,9 @@ function setupAuthRoutes(router, db) {
       `).run(sessionId, cleanId, tokenHash, deviceInfo || 'TGZ App', clientIp, now, now, expiresAt);
 
       // Set HttpOnly cookie
-      res.setHeader('Set-Cookie', `tgz_session=${rawToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${expirationDays * 86400}`);
+      const isHttps = req.headers['x-forwarded-proto'] === 'https' || !!process.env.VERCEL;
+      const secureFlag = isHttps ? '; Secure' : '';
+      res.setHeader('Set-Cookie', `tgz_session=${rawToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${expirationDays * 86400}${secureFlag}`);
 
       return res.status(201).json({
         success: true,
@@ -93,30 +125,23 @@ function setupAuthRoutes(router, db) {
       const id = req.body?.id || req.body?.uniqueId;
 
       if (!id || !password) {
-        return res.status(400).json({ error: 'Unique ID and password are required.' });
+        return res.status(400).json({
+          success: false,
+          error: 'Unique ID and password are required.',
+          code: 'MISSING_CREDENTIALS',
+          diagnostics: { field: !id ? 'id' : 'password' }
+        });
       }
 
-      let cleanId = id.trim().toLowerCase();
-      // Auto-alias common admin identifiers
-      if (cleanId === 'sgkarthi' || cleanId === 'admin' || cleanId === 'sgkarthi1910' || cleanId === 'sgkarthi1910@gmail.com' || cleanId === 'root') {
-        cleanId = 'sg_karthi';
-      }
-
+      const cleanId = id.trim().toLowerCase();
       let user = db.prepare(`
         SELECT id, display_name, password_hash, role, must_change_password, status, created_at
         FROM users WHERE id = ?
       `).get(cleanId);
 
-      // Self-heal bootstrap admin account if missing
+      // Idempotent server-side provisioning: If admin account is requested but not yet in DB, provision safely
       if (!user && cleanId === 'sg_karthi') {
-        const now = Date.now();
-        const hash = hashPasswordSync('admin123');
-        try {
-          db.prepare(`
-            INSERT INTO users (id, display_name, password_hash, role, must_change_password, status, created_at)
-            VALUES (?, ?, ?, 'ADMIN', 0, 'ACTIVE', ?)
-          `).run('sg_karthi', 'Admin (sg_karthi)', hash, now);
-        } catch (e) {}
+        provisionAdminAccount(db);
         user = db.prepare(`
           SELECT id, display_name, password_hash, role, must_change_password, status, created_at
           FROM users WHERE id = ?
@@ -124,44 +149,87 @@ function setupAuthRoutes(router, db) {
       }
 
       if (!user) {
-        return res.status(401).json({ error: 'Invalid Unique ID or password.' });
+        const isTargetAdmin = (cleanId === 'sg_karthi');
+        return res.status(401).json({
+          success: false,
+          error: isTargetAdmin
+            ? 'Administrator account has not been provisioned in database.'
+            : 'Invalid Unique ID or password.',
+          code: isTargetAdmin ? 'ADMIN_ACCOUNT_NOT_FOUND' : 'INVALID_CREDENTIALS',
+          diagnostics: {
+            stage: 'ACCOUNT_LOOKUP',
+            target: cleanId,
+            isAdminTarget: isTargetAdmin
+          }
+        });
       }
 
       if (user.status === 'SUSPENDED') {
-        return res.status(403).json({ error: 'Account has been suspended. Contact server administration.' });
+        return res.status(403).json({
+          success: false,
+          error: 'Account has been suspended. Contact server administration.',
+          code: 'ACCOUNT_SUSPENDED'
+        });
       }
 
-      const cleanPass = password.trim();
+      const cleanPass = typeof password === 'string' ? password.trim() : '';
       let isValid = await verifyPassword(cleanPass, user.password_hash);
-      if (!isValid && cleanId === 'sg_karthi') {
-        if (cleanPass === 'admin123' || cleanPass === 'admin' || cleanPass === 'TgzAdminInitial2026!Secure' || cleanPass === 'admin@123' || cleanPass === '12345678') {
+
+      // If admin must change password and entered bootstrap password from env, verify and sync
+      if (!isValid && cleanId === 'sg_karthi' && user.must_change_password) {
+        const bootstrapEnv = process.env.ADMIN_BOOTSTRAP_PASSWORD || 'TgzAdminInitial2026!Secure';
+        if (cleanPass === bootstrapEnv) {
           isValid = true;
           try {
             const newHash = hashPasswordSync(cleanPass);
-            db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(newHash, cleanId);
+            db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(newHash, 'sg_karthi');
           } catch (e) {}
         }
       }
+
       if (!isValid) {
-        return res.status(401).json({ error: 'Invalid Unique ID or password.' });
+        return res.status(401).json({
+          success: false,
+          error: 'Invalid Unique ID or password.',
+          code: 'INVALID_CREDENTIALS',
+          diagnostics: {
+            stage: 'PASSWORD_VERIFICATION',
+            target: cleanId
+          }
+        });
       }
 
       const now = Date.now();
       db.prepare('UPDATE users SET last_login_at = ? WHERE id = ?').run(now, cleanId);
 
       // Create persistent session
-      const { rawToken, tokenHash } = generateSessionToken();
-      const sessionId = generateId('sess');
+      let rawToken, tokenHash, sessionId, expiresAt;
+      try {
+        const tokenObj = generateSessionToken();
+        rawToken = tokenObj.rawToken;
+        tokenHash = tokenObj.tokenHash;
+        sessionId = generateId('sess');
+        const expirationDays = parseInt(process.env.SESSION_EXPIRATION_DAYS || '30', 10);
+        expiresAt = now + (expirationDays * 24 * 60 * 60 * 1000);
+        const clientIp = req.socket?.remoteAddress || 'unknown';
+
+        db.prepare(`
+          INSERT INTO sessions (id, user_id, token_hash, device_info, ip_address, created_at, last_active_at, expires_at, is_revoked)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
+        `).run(sessionId, cleanId, tokenHash, deviceInfo || 'TGZ App', clientIp, now, now, expiresAt);
+      } catch (sessErr) {
+        console.error('Session creation failed:', sessErr);
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to create active login session.',
+          code: 'SESSION_CREATION_FAILED'
+        });
+      }
+
+      const isHttps = req.headers['x-forwarded-proto'] === 'https' || !!process.env.VERCEL;
+      const secureFlag = isHttps ? '; Secure' : '';
       const expirationDays = parseInt(process.env.SESSION_EXPIRATION_DAYS || '30', 10);
-      const expiresAt = now + (expirationDays * 24 * 60 * 60 * 1000);
-      const clientIp = req.socket?.remoteAddress || 'unknown';
-
-      db.prepare(`
-        INSERT INTO sessions (id, user_id, token_hash, device_info, ip_address, created_at, last_active_at, expires_at, is_revoked)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
-      `).run(sessionId, cleanId, tokenHash, deviceInfo || 'TGZ App', clientIp, now, now, expiresAt);
-
-      res.setHeader('Set-Cookie', `tgz_session=${rawToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${expirationDays * 86400}`);
+      res.setHeader('Set-Cookie', `tgz_session=${rawToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${expirationDays * 86400}${secureFlag}`);
 
       return res.json({
         success: true,
@@ -180,7 +248,11 @@ function setupAuthRoutes(router, db) {
       });
     } catch (err) {
       console.error('Login error:', err);
-      return res.status(500).json({ error: 'Internal server error during login.' });
+      return res.status(500).json({
+        success: false,
+        error: 'Internal server error during login.',
+        code: 'INTERNAL_SERVER_ERROR'
+      });
     }
   });
 
@@ -189,7 +261,9 @@ function setupAuthRoutes(router, db) {
     if (req.session) {
       db.prepare('UPDATE sessions SET is_revoked = 1 WHERE id = ?').run(req.session.id);
     }
-    res.setHeader('Set-Cookie', 'tgz_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0');
+    const isHttps = req.headers['x-forwarded-proto'] === 'https' || !!process.env.VERCEL;
+    const secureFlag = isHttps ? '; Secure' : '';
+    res.setHeader('Set-Cookie', `tgz_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${secureFlag}`);
     return res.json({ success: true, message: 'Logged out successfully.' });
   });
 
