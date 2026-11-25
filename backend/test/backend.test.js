@@ -874,4 +874,47 @@ test('TGZ Lifesteal Complete Backend Test Suite', async (t) => {
     assert.equal(dmRes.statusCode, 200);
     assert.ok(Array.isArray(dmRes.body.conversations));
   });
+
+  await t.test('14. Public App Version check (OTA Update) and Admin Version publishing', async () => {
+    // 1. Initial public version check
+    const initialVersion = await makeRequest(server, {
+      method: 'GET',
+      path: '/api/app/version'
+    });
+    assert.equal(initialVersion.statusCode, 200);
+    assert.equal(initialVersion.body.versionCode, 1);
+    assert.equal(initialVersion.body.versionName, '1.0');
+    assert.ok(initialVersion.body.apkUrl);
+    assert.equal(initialVersion.body.forceUpdate, false);
+
+    // 2. Admin publishes a new version update
+    const updateRes = await makeRequest(server, {
+      method: 'PUT',
+      path: '/api/settings/admin',
+      headers: { Authorization: `Bearer ${adminToken}` }
+    }, {
+      settings: {
+        app_version_code: 2,
+        app_version_name: '1.1.0',
+        app_apk_url: 'https://github.com/sgkarthi1910-rgb/MC-App/releases/download/v1.1.0/TGZ-Lifestyle-v1.1.apk',
+        app_changelog: 'Added in-app auto updates and performance enhancements.',
+        app_force_update: 'true',
+        app_min_supported_version_code: 2
+      }
+    });
+    assert.equal(updateRes.statusCode, 200);
+
+    // 3. App checks version again (simulating client startup)
+    const newVersion = await makeRequest(server, {
+      method: 'GET',
+      path: '/api/app/version'
+    });
+    assert.equal(newVersion.statusCode, 200);
+    assert.equal(newVersion.body.versionCode, 2);
+    assert.equal(newVersion.body.versionName, '1.1.0');
+    assert.equal(newVersion.body.apkUrl, 'https://github.com/sgkarthi1910-rgb/MC-App/releases/download/v1.1.0/TGZ-Lifestyle-v1.1.apk');
+    assert.equal(newVersion.body.changelog, 'Added in-app auto updates and performance enhancements.');
+    assert.equal(newVersion.body.forceUpdate, true);
+    assert.equal(newVersion.body.minSupportedVersionCode, 2);
+  });
 });

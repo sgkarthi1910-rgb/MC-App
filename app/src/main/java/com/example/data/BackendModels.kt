@@ -781,3 +781,16 @@ data class TransferGroupOwnershipRequest(
     @Json(name = "newOwnerId") val newOwnerId: String
 )
 
+// ----------------- APP OTA UPDATES -----------------
+
+@JsonClass(generateAdapter = true)
+data class AppVersionResponse(
+    @Json(name = "versionCode") val versionCode: Int = 1,
+    @Json(name = "versionName") val versionName: String = "1.0",
+    @Json(name = "apkUrl") val apkUrl: String = "",
+    @Json(name = "changelog") val changelog: String = "",
+    @Json(name = "forceUpdate") val forceUpdate: Boolean = false,
+    @Json(name = "minSupportedVersionCode") val minSupportedVersionCode: Int = 1
+)
+
+

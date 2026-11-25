@@ -29,6 +29,8 @@ import androidx.compose.material.icons.filled.ManageAccounts
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -58,6 +60,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.BuildConfig
 import com.example.data.SessionItemDto
 import com.example.data.UserManagementItemDto
 import com.example.ui.components.ObsidianCard
@@ -97,6 +100,12 @@ fun SettingsScreen(
     var showChangePasswordDialog by remember { mutableStateOf(false) }
     var showServerConfigDialog by remember { mutableStateOf(false) }
     var customBackendInput by remember(currentBackendUrl) { mutableStateOf(currentBackendUrl) }
+
+    var otaVersionCode by remember(adminSettings) { mutableStateOf(adminSettings["app_version_code"] ?: "2") }
+    var otaVersionName by remember(adminSettings) { mutableStateOf(adminSettings["app_version_name"] ?: "1.1") }
+    var otaApkUrl by remember(adminSettings) { mutableStateOf(adminSettings["app_apk_url"] ?: "https://github.com/sgkarthi1910-rgb/MC-App/releases/latest") }
+    var otaChangelog by remember(adminSettings) { mutableStateOf(adminSettings["app_changelog"] ?: "New features and bug fixes.") }
+    var otaForceUpdate by remember(adminSettings) { mutableStateOf(adminSettings["app_force_update"] == "true") }
 
     val isAdmin = authState.role == "ADMIN"
     val isStaff = authState.role == "ADMIN" || authState.role == "MODERATOR"
@@ -356,6 +365,40 @@ fun SettingsScreen(
                     }
                 }
 
+                // APP VERSION & OTA UPDATE CHECK
+                item {
+                    ObsidianCard(borderColor = EmeraldGreen.copy(alpha = 0.3f)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "APP VERSION",
+                                    fontFamily = SilkscreenFontFamily,
+                                    fontSize = 12.sp,
+                                    color = EmeraldGreen
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "v${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE})",
+                                    fontFamily = JetBrainsMonoFontFamily,
+                                    fontSize = 11.sp,
+                                    color = TextMuted
+                                )
+                            }
+                            Button(
+                                onClick = { viewModel.checkForAppUpdate() },
+                                colors = ButtonDefaults.buttonColors(containerColor = DeepCharcoal, contentColor = EmeraldGreen),
+                                shape = RoundedCornerShape(6.dp)
+                            ) {
+                                Text("CHECK UPDATE", fontFamily = SilkscreenFontFamily, fontSize = 10.sp)
+                            }
+                        }
+                    }
+                }
+
                 // ACTIVE SESSIONS
                 item {
                     Text(
@@ -443,6 +486,143 @@ fun SettingsScreen(
                             fontSize = 11.sp,
                             color = EmeraldGreen
                         )
+                    }
+                }
+
+                // OVER-THE-AIR (OTA) APP UPDATES (ADMIN ONLY)
+                item {
+                    ObsidianCard(borderColor = EmeraldGreen.copy(alpha = 0.5f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.CloudUpload, contentDescription = null, tint = EmeraldGreen, modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "OVER-THE-AIR (OTA) APP UPDATES",
+                                fontFamily = SilkscreenFontFamily,
+                                fontSize = 14.sp,
+                                color = EmeraldGreen
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Release new versions to all devices via the Vercel backend without redistributing APK files manually. Devices check for updates automatically on startup.",
+                            fontSize = 12.sp,
+                            color = TextSecondary
+                        )
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = otaVersionCode,
+                                onValueChange = { otaVersionCode = it },
+                                label = { Text("Version Code (e.g. 2)") },
+                                modifier = Modifier.weight(1f),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = EmeraldGreen,
+                                    unfocusedBorderColor = ObsidianBorder
+                                )
+                            )
+
+                            OutlinedTextField(
+                                value = otaVersionName,
+                                onValueChange = { otaVersionName = it },
+                                label = { Text("Version Name (e.g. 1.1)") },
+                                modifier = Modifier.weight(1f),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = EmeraldGreen,
+                                    unfocusedBorderColor = ObsidianBorder
+                                )
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        OutlinedTextField(
+                            value = otaApkUrl,
+                            onValueChange = { otaApkUrl = it },
+                            label = { Text("APK Download URL") },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = EmeraldGreen,
+                                unfocusedBorderColor = ObsidianBorder
+                            )
+                        )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        OutlinedTextField(
+                            value = otaChangelog,
+                            onValueChange = { otaChangelog = it },
+                            label = { Text("What's New / Release Notes") },
+                            modifier = Modifier.fillMaxWidth(),
+                            minLines = 2,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = EmeraldGreen,
+                                unfocusedBorderColor = ObsidianBorder
+                            )
+                        )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Require Immediate Update:",
+                                fontSize = 12.sp,
+                                color = TextSecondary
+                            )
+                            Button(
+                                onClick = { otaForceUpdate = !otaForceUpdate },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (otaForceUpdate) NetherRed.copy(alpha = 0.25f) else DeepCharcoal,
+                                    contentColor = if (otaForceUpdate) NetherRedBright else TextMuted
+                                ),
+                                shape = RoundedCornerShape(6.dp)
+                            ) {
+                                Text(
+                                    text = if (otaForceUpdate) "FORCED (YES)" else "OPTIONAL (NO)",
+                                    fontFamily = SilkscreenFontFamily,
+                                    fontSize = 10.sp
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Button(
+                            onClick = {
+                                viewModel.updateAdminSettings(
+                                    mapOf(
+                                        "app_version_code" to otaVersionCode.trim(),
+                                        "app_version_name" to otaVersionName.trim(),
+                                        "app_apk_url" to otaApkUrl.trim(),
+                                        "app_changelog" to otaChangelog.trim(),
+                                        "app_force_update" to otaForceUpdate.toString(),
+                                        "app_min_supported_version_code" to if (otaForceUpdate) otaVersionCode.trim() else "1"
+                                    )
+                                )
+                            },
+                            modifier = Modifier.fillMaxWidth().height(44.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(Icons.Default.CloudUpload, contentDescription = null, tint = OnEmeraldDark, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "PUBLISH UPDATE TO BACKEND",
+                                fontFamily = SilkscreenFontFamily,
+                                fontSize = 12.sp,
+                                color = OnEmeraldDark,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }

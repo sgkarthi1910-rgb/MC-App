@@ -2,6 +2,7 @@ package com.example.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.BuildConfig
 import com.example.data.*
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -233,15 +234,39 @@ class TgzViewModel(
     private val _groupActionMessage = MutableStateFlow<String?>(null)
     val groupActionMessage: StateFlow<String?> = _groupActionMessage.asStateFlow()
 
+    private val _appUpdateInfo = MutableStateFlow<AppVersionResponse?>(null)
+    val appUpdateInfo: StateFlow<AppVersionResponse?> = _appUpdateInfo.asStateFlow()
+
     init {
         startAutoRefreshCycle()
         fetchJavaServerStatus()
         fetchBedrockServerStatus()
+        checkForAppUpdate()
         if (sessionManager?.hasActiveSession() == true) {
             refreshSessionUser()
             loadDashboardSummary()
             loadUnreadMessagesCount()
             loadGroups()
+        }
+    }
+
+    fun checkForAppUpdate() {
+        viewModelScope.launch {
+            val repo = backendRepository ?: return@launch
+            repo.getAppVersion().onSuccess { version ->
+                if (version.versionCode > BuildConfig.VERSION_CODE) {
+                    _appUpdateInfo.value = version
+                }
+            }.onFailure {
+                // Silently ignore network failures on version polling
+            }
+        }
+    }
+
+    fun dismissAppUpdate() {
+        val info = _appUpdateInfo.value
+        if (info != null && !info.forceUpdate && BuildConfig.VERSION_CODE >= info.minSupportedVersionCode) {
+            _appUpdateInfo.value = null
         }
     }
 
@@ -1194,6 +1219,7 @@ class TgzViewModel(
             performRefresh(resetSchedule = true)
             fetchJavaServerStatus()
             fetchBedrockServerStatus()
+            checkForAppUpdate()
             if (authState.value.isLoggedIn) {
                 loadDashboardSummary()
                 loadUnreadMessagesCount()

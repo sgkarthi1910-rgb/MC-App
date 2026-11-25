@@ -332,4 +332,8 @@ interface BackendApiService {
         @Header("Authorization") auth: String?,
         @Path("groupId") groupId: String
     ): GenericSuccessResponse
+
+    // ----------------- APP OTA UPDATES -----------------
+    @GET("api/app/version")
+    suspend fun getAppVersion(): AppVersionResponse
 }

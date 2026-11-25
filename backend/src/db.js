@@ -372,7 +372,13 @@ function seedInitialData(db) {
     { key: 'session_expiration_days', value: process.env.SESSION_EXPIRATION_DAYS || '30' },
     { key: 'minecraft_plugin_api_key', value: process.env.MINECRAFT_PLUGIN_API_KEY || 'tgz_plugin_sec_99a8b7c6d5e4f3a2' },
     { key: 'allow_member_team_creation', value: 'true' },
-    { key: 'motd', value: 'Welcome to TGZ Lifestyle SMP!' }
+    { key: 'motd', value: 'Welcome to TGZ Lifestyle SMP!' },
+    { key: 'app_version_code', value: '1' },
+    { key: 'app_version_name', value: '1.0' },
+    { key: 'app_apk_url', value: 'https://github.com/sgkarthi1910-rgb/MC-App/releases/latest' },
+    { key: 'app_changelog', value: 'Welcome to TGZ Lifestyle SMP!' },
+    { key: 'app_force_update', value: 'false' },
+    { key: 'app_min_supported_version_code', value: '1' }
   ];
 
   for (const setting of defaultSettings) {

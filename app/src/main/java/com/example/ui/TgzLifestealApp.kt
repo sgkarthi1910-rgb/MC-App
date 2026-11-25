@@ -95,6 +95,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.ui.components.AppUpdateDialog
 import com.example.ui.components.JoinServerModalSheet
 import com.example.ui.components.PulsingStatusDot
 import com.example.ui.components.VoxelHeartIcon
@@ -179,6 +180,7 @@ fun TgzLifestealApp(
     val selectedStoreCategory by viewModel.selectedStoreCategory.collectAsStateWithLifecycle()
     val expandedFaqIds by viewModel.expandedFaqIds.collectAsStateWithLifecycle()
     val unreadMessagesCount by viewModel.unreadMessagesCount.collectAsStateWithLifecycle()
+    val appUpdateInfo by viewModel.appUpdateInfo.collectAsStateWithLifecycle()
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val snackbarHostState = remember { SnackbarHostState() }
@@ -866,6 +868,13 @@ fun TgzLifestealApp(
                 openDiscordInvite()
             },
             onDismiss = { showJoinSheet = false }
+        )
+    }
+
+    if (appUpdateInfo != null) {
+        AppUpdateDialog(
+            updateInfo = appUpdateInfo!!,
+            onDismiss = { viewModel.dismissAppUpdate() }
         )
     }
 }

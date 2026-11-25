@@ -414,4 +414,9 @@ class TgzBackendRepository(
     suspend fun deleteGroup(groupId: String): Result<GenericSuccessResponse> = runCatching {
         apiService.deleteGroup(authHeader(), groupId)
     }
+
+    // ----------------- APP OTA UPDATES -----------------
+    suspend fun getAppVersion(): Result<AppVersionResponse> = runCatching {
+        apiService.getAppVersion()
+    }
 }

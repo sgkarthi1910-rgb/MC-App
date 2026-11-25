@@ -1,4 +1,30 @@
 function setupSettingsRoutes(router, db) {
+  // 0. PUBLIC APP VERSION CHECK (OVER-THE-AIR OTA UPDATE)
+  router.get('/api/app/version', (req, res) => {
+    const rows = db.prepare(`
+      SELECT key, value FROM app_settings 
+      WHERE key IN ('app_version_code', 'app_version_name', 'app_apk_url', 'app_changelog', 'app_force_update', 'app_min_supported_version_code')
+    `).all();
+
+    const config = {};
+    for (const r of rows) {
+      config[r.key] = r.value;
+    }
+
+    const versionCode = parseInt(config.app_version_code || '1', 10);
+    const minSupported = parseInt(config.app_min_supported_version_code || '1', 10);
+    const forceUpdate = (config.app_force_update === 'true' || config.app_force_update === '1');
+
+    return res.json({
+      versionCode: isNaN(versionCode) ? 1 : versionCode,
+      versionName: config.app_version_name || '1.0',
+      apkUrl: config.app_apk_url || 'https://github.com/sgkarthi1910-rgb/MC-App/releases/latest',
+      changelog: config.app_changelog || 'Welcome to TGZ Lifestyle SMP!',
+      forceUpdate: forceUpdate,
+      minSupportedVersionCode: isNaN(minSupported) ? 1 : minSupported
+    });
+  });
+
   // 1. MEMBER SETTINGS PROFILE
   router.get('/api/settings/member', (req, res) => {
     if (!req.user) {
