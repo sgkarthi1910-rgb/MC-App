@@ -196,7 +196,7 @@ function seedInitialData(db) {
   const existingAdmin = db.prepare('SELECT id FROM users WHERE id = ?').get(adminId);
   
   if (!existingAdmin) {
-    const bootstrapPassword = process.env.ADMIN_BOOTSTRAP_PASSWORD || 'TgzAdminInitial2026!Secure';
+    const bootstrapPassword = process.env.ADMIN_BOOTSTRAP_PASSWORD || 'admin123';
     const hash = hashPasswordSync(bootstrapPassword);
     const now = Date.now();
 
