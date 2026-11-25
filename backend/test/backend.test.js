@@ -44,6 +44,7 @@ function makeRequest(server, options, payload) {
 
 test('TGZ Lifesteal Complete Backend Test Suite', async (t) => {
   process.env.ADMIN_BOOTSTRAP_PASSWORD = 'TestBootstrapAdmin2026!';
+  process.env.ADMIN_FORCE_PASSWORD_CHANGE = 'true';
   process.env.MINECRAFT_PLUGIN_API_KEY = 'test_plugin_key_12345';
 
   const { server, db } = createServer(':memory:');
@@ -916,5 +917,26 @@ test('TGZ Lifesteal Complete Backend Test Suite', async (t) => {
     assert.equal(newVersion.body.changelog, 'Added in-app auto updates and performance enhancements.');
     assert.equal(newVersion.body.forceUpdate, true);
     assert.equal(newVersion.body.minSupportedVersionCode, 2);
+  });
+
+  await t.test('15. Admin default login without forced password change (mustChangePassword defaults to false)', async () => {
+    delete process.env.ADMIN_FORCE_PASSWORD_CHANGE;
+    const testServer = createServer(':memory:');
+    await new Promise(resolve => testServer.server.listen(0, '127.0.0.1', resolve));
+
+    const res = await makeRequest(testServer.server, {
+      method: 'POST',
+      path: '/api/auth/login'
+    }, {
+      id: 'sg_karthi',
+      password: 'TestBootstrapAdmin2026!'
+    });
+
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.body.user.id, 'sg_karthi');
+    assert.equal(res.body.user.role, 'ADMIN');
+    assert.equal(res.body.user.mustChangePassword, false);
+
+    testServer.server.close();
   });
 });

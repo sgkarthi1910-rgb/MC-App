@@ -175,14 +175,16 @@ function setupAuthRoutes(router, db) {
       const cleanPass = typeof password === 'string' ? password.trim() : '';
       let isValid = await verifyPassword(cleanPass, user.password_hash);
 
-      // If admin must change password and entered bootstrap password from env, verify and sync
-      if (!isValid && isAdminUserId(cleanId) && user.must_change_password) {
-        const bootstrapEnv = process.env.ADMIN_BOOTSTRAP_PASSWORD || 'TgzAdminInitial2026!Secure';
+      // If admin entered configured password from env or legacy bootstrap, verify, update hash, and clear must_change_password
+      if (!isValid && isAdminUserId(cleanId)) {
+        const bootstrapEnv = process.env.ADMIN_PASSWORD || process.env.ADMIN_BOOTSTRAP_PASSWORD || 'TgzAdminInitial2026!Secure';
         if (cleanPass === bootstrapEnv || cleanPass === 'admin123') {
           isValid = true;
           try {
             const newHash = hashPasswordSync(cleanPass);
-            db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(newHash, cleanId);
+            const forceChange = process.env.ADMIN_FORCE_PASSWORD_CHANGE === 'true';
+            db.prepare('UPDATE users SET password_hash = ?, must_change_password = ? WHERE id = ?')
+              .run(newHash, forceChange ? 1 : 0, cleanId);
           } catch (e) {}
         }
       }

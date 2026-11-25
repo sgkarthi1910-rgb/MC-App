@@ -282,25 +282,31 @@ function isAdminUserId(id) {
 function seedInitialData(db) {
   // 1. Initial Admin Accounts: sg_karthi, dhanush, lmtg, darksight (Idempotent Server-Side Provisioning)
   const adminIds = getAdminUserIds();
-  const bootstrapPassword = process.env.ADMIN_BOOTSTRAP_PASSWORD || 'TgzAdminInitial2026!Secure';
+  const targetPassword = process.env.ADMIN_PASSWORD || process.env.ADMIN_BOOTSTRAP_PASSWORD || 'TgzAdminInitial2026!Secure';
+  const forcePasswordChange = process.env.ADMIN_FORCE_PASSWORD_CHANGE === 'true';
+  const mustChangeValue = forcePasswordChange ? 1 : 0;
   const now = Date.now();
   
   for (const adminId of adminIds) {
     const existingAdmin = db.prepare('SELECT id, role, must_change_password, password_hash FROM users WHERE id = ?').get(adminId);
     if (!existingAdmin) {
-      const hash = hashPasswordSync(bootstrapPassword);
+      const hash = hashPasswordSync(targetPassword);
       db.prepare(`
         INSERT INTO users (id, display_name, password_hash, role, must_change_password, status, created_at)
-        VALUES (?, ?, ?, 'ADMIN', 1, 'ACTIVE', ?)
-      `).run(adminId, `Admin (${adminId})`, hash, now);
+        VALUES (?, ?, ?, 'ADMIN', ?, 'ACTIVE', ?)
+      `).run(adminId, `Admin (${adminId})`, hash, mustChangeValue, now);
     } else {
       // Idempotent safeguard: Ensure role remains ADMIN
       if (existingAdmin.role !== 'ADMIN') {
         db.prepare('UPDATE users SET role = ? WHERE id = ?').run('ADMIN', adminId);
       }
-      // If admin has not yet changed password, sync with explicit ADMIN_BOOTSTRAP_PASSWORD if configured
-      if (existingAdmin.must_change_password === 1 && process.env.ADMIN_BOOTSTRAP_PASSWORD) {
-        const envHash = hashPasswordSync(process.env.ADMIN_BOOTSTRAP_PASSWORD);
+      // Clear must_change_password to 0 by default so admins are never trapped in bootstrap change loop
+      if (!forcePasswordChange && existingAdmin.must_change_password !== 0) {
+        db.prepare('UPDATE users SET must_change_password = 0 WHERE id = ?').run(adminId);
+      }
+      // If configured password differs from database hash, sync it seamlessly
+      if (process.env.ADMIN_BOOTSTRAP_PASSWORD || process.env.ADMIN_PASSWORD) {
+        const envHash = hashPasswordSync(targetPassword);
         if (existingAdmin.password_hash !== envHash) {
           db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(envHash, adminId);
         }

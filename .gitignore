@@ -21,3 +21,4 @@ debug.keystore
 *.db-shm
 *.db-wal
 backend/data/*.db*
+*.apk
