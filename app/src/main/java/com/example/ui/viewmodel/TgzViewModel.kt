@@ -245,7 +245,7 @@ class TgzViewModel(
         }
     }
 
-    private val _backendUrl = MutableStateFlow(sessionManager?.getBackendUrl() ?: "https://mc-b93ql4ncz-my-project-2751.vercel.app/")
+    private val _backendUrl = MutableStateFlow(sessionManager?.getBackendUrl() ?: "https://mc-app-ten.vercel.app/")
     val backendUrl: StateFlow<String> = _backendUrl.asStateFlow()
 
     fun getBackendUrl(): String = _backendUrl.value

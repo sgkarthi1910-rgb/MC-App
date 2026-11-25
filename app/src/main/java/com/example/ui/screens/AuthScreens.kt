@@ -313,7 +313,7 @@ fun LoginScreen(
                         Text("Quick Presets:", color = TextMuted, fontSize = 11.sp)
                         Spacer(modifier = Modifier.height(6.dp))
                         Button(
-                            onClick = { customServerInput = "https://mc-b93ql4ncz-my-project-2751.vercel.app/" },
+                            onClick = { customServerInput = "https://mc-app-ten.vercel.app/" },
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen.copy(alpha = 0.2f)),
                             shape = RoundedCornerShape(6.dp)
