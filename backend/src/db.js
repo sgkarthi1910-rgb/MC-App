@@ -1,4 +1,9 @@
-const { DatabaseSync } = require('node:sqlite');
+let DatabaseSync = null;
+try {
+  DatabaseSync = require('node:sqlite').DatabaseSync;
+} catch (e) {
+  DatabaseSync = null;
+}
 const path = require('node:path');
 const fs = require('node:fs');
 const { hashPasswordSync } = require('./crypto-utils');
@@ -18,7 +23,7 @@ function getDatabase(dbPath) {
   if (resolvedPath !== ':memory:') {
     const dir = path.dirname(resolvedPath);
     if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+      try { fs.mkdirSync(dir, { recursive: true }); } catch (e) {}
     }
     // In Vercel serverless, copy initial pre-seeded database to writable /tmp if not yet present
     if (process.env.VERCEL && resolvedPath === defaultDbPath && !fs.existsSync(resolvedPath) && fs.existsSync(repoDbPath)) {
@@ -30,9 +35,30 @@ function getDatabase(dbPath) {
     }
   }
 
-  const db = new DatabaseSync(resolvedPath);
-  db.exec('PRAGMA foreign_keys = ON;');
-  db.exec('PRAGMA journal_mode = WAL;');
+  let db = null;
+  if (DatabaseSync) {
+    try {
+      db = new DatabaseSync(resolvedPath);
+      try { db.exec('PRAGMA foreign_keys = ON;'); } catch (e) {}
+      if (!process.env.VERCEL) {
+        try { db.exec('PRAGMA journal_mode = WAL;'); } catch (e) {}
+      } else {
+        try { db.exec('PRAGMA journal_mode = MEMORY;'); } catch (e) {}
+      }
+    } catch (err) {
+      console.warn('[TGZ LIFESTEAL] File SQLite open failed, falling back to in-memory SQLite:', err?.message);
+      try {
+        db = new DatabaseSync(':memory:');
+        try { db.exec('PRAGMA foreign_keys = ON;'); } catch (e) {}
+      } catch (err2) {
+        db = null;
+      }
+    }
+  }
+
+  if (!db) {
+    throw new Error('SQLite database initialization failed: node:sqlite DatabaseSync is not available in this Node runtime.');
+  }
 
   initSchema(db);
   seedInitialData(db);

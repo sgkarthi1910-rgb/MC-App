@@ -134,7 +134,7 @@ function createServer(dbPath) {
     res.json({ status: 'ok', service: 'TGZ Lifesteal API', timestamp: Date.now() });
   });
 
-  const server = http.createServer(async (req, res) => {
+  const handleRequest = async (req, res) => {
     // Decorate res with json helper
     res.json = function(data) {
       const payload = JSON.stringify(data);
@@ -253,9 +253,11 @@ function createServer(dbPath) {
       req.body = req.body || {};
       dispatchRoute(router, req, res);
     }
-  });
+  };
 
-  return { server, db, router };
+  const server = http.createServer(handleRequest);
+
+  return { server, db, router, handleRequest };
 }
 
 function dispatchRoute(router, req, res) {
