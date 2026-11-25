@@ -22,9 +22,12 @@ module.exports = (req, res) => {
 
       // Handle Vercel rewrite URL mappings
       const parsedUrl = new URL(req.url, 'http://localhost');
-      const originalPath = req.headers['x-matched-path'] || req.headers['x-forwarded-uri'] || parsedUrl.searchParams.get('__path');
+      let originalPath = req.headers['x-matched-path'] || req.headers['x-forwarded-uri'] || parsedUrl.searchParams.get('__path');
       if (originalPath) {
+        originalPath = '/' + originalPath.replace(/^\/+/, '');
         req.url = originalPath;
+      } else if (req.url.startsWith('/api?__path=')) {
+        req.url = '/' + parsedUrl.searchParams.get('__path').replace(/^\/+/, '');
       } else if (req.url === '/api' || req.url === '/api/') {
         req.url = '/';
       }
