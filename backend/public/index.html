@@ -647,7 +647,7 @@
       <form id="login-form" onsubmit="handleLoginSubmit(event)">
         <div class="form-group">
           <label class="form-label">Unique ID</label>
-          <input type="text" id="login-id" class="form-input" placeholder="e.g. sg_karthi" value="sg_karthi" required autocomplete="username">
+          <input type="text" id="login-id" class="form-input" placeholder="e.g. sg_karthi, dhanush, lmtg, darksight" value="sg_karthi" required autocomplete="username">
         </div>
         <div class="form-group">
           <label class="form-label">Password</label>
@@ -952,7 +952,8 @@
           const d = await res.json();
           document.getElementById('diag-db-status').innerText = d.databaseConnected ? '● Online (Connected)' : 'Disconnected';
           document.getElementById('diag-db-status').className = d.databaseConnected ? 'diag-val-ok' : 'diag-val-err';
-          document.getElementById('diag-admin-prov').innerText = d.adminProvisioned ? '● Ready (sg_karthi)' : 'Not Provisioned';
+          const adminLabel = (d.adminUserIds && d.adminUserIds.length) ? d.adminUserIds.join(', ') : 'sg_karthi, dhanush, lmtg, darksight';
+          document.getElementById('diag-admin-prov').innerText = d.adminProvisioned ? `● Ready (${adminLabel})` : 'Not Provisioned';
           document.getElementById('diag-admin-prov').className = d.adminProvisioned ? 'diag-val-ok' : 'diag-val-warn';
           document.getElementById('diag-storage-type').innerText = d.databaseType || 'Persisted Store';
         }

@@ -157,7 +157,7 @@ fun LoginScreen(
                     value = uniqueId,
                     onValueChange = { uniqueId = it.lowercase() },
                     label = { Text("Unique ID") },
-                    placeholder = { Text("e.g. sg_karthi or hunter_99") },
+                    placeholder = { Text("e.g. dhanush, lmtg, or hunter_99") },
                     leadingIcon = {
                         Icon(Icons.Default.Person, contentDescription = null, tint = EmeraldGreen)
                     },

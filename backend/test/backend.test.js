@@ -58,7 +58,23 @@ test('TGZ Lifesteal Complete Backend Test Suite', async (t) => {
   });
 
   // 1. Initial Admin Account Provisioning & Login
-  await t.test('1. Initial admin account sg_karthi exists and requires password change on bootstrap login', async () => {
+  await t.test('1. Initial admin accounts (sg_karthi, dhanush, lmtg, darksight) exist and require password change on bootstrap login', async () => {
+    // Verify each configured admin account can log in with bootstrap password
+    for (const admId of ['dhanush', 'lmtg', 'darksight']) {
+      const aRes = await makeRequest(server, {
+        method: 'POST',
+        path: '/api/auth/login'
+      }, {
+        id: admId,
+        password: 'TestBootstrapAdmin2026!'
+      });
+      assert.equal(aRes.statusCode, 200, `Failed login for admin ${admId}`);
+      assert.equal(aRes.body.user.id, admId);
+      assert.equal(aRes.body.user.role, 'ADMIN');
+      assert.equal(aRes.body.user.mustChangePassword, true);
+      assert.ok(aRes.body.sessionToken);
+    }
+
     const res = await makeRequest(server, {
       method: 'POST',
       path: '/api/auth/login'
@@ -130,15 +146,17 @@ test('TGZ Lifesteal Complete Backend Test Suite', async (t) => {
     assert.equal(dupRes.statusCode, 409);
 
     // Reserved Admin ID rejection
-    const adminDupRes = await makeRequest(server, {
-      method: 'POST',
-      path: '/api/auth/signup'
-    }, {
-      id: 'sg_karthi',
-      password: 'Password123!',
-      confirmPassword: 'Password123!'
-    });
-    assert.equal(adminDupRes.statusCode, 409);
+    for (const reservedAdmin of ['sg_karthi', 'dhanush', 'lmtg', 'darksight']) {
+      const adminDupRes = await makeRequest(server, {
+        method: 'POST',
+        path: '/api/auth/signup'
+      }, {
+        id: reservedAdmin,
+        password: 'Password123!',
+        confirmPassword: 'Password123!'
+      });
+      assert.equal(adminDupRes.statusCode, 409, `Signup should reject reserved admin ID ${reservedAdmin}`);
+    }
 
     // Signup user2
     const res2 = await makeRequest(server, {

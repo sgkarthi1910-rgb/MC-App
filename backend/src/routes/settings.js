@@ -141,6 +141,10 @@ function setupSettingsRoutes(router, db) {
       return res.status(404).json({ error: 'User not found.' });
     }
 
+    if (targetUser.role === 'ADMIN') {
+      return res.status(400).json({ error: 'Admin accounts cannot be suspended.' });
+    }
+
     db.prepare('UPDATE users SET status = ? WHERE id = ?').run(status, cleanUserId);
 
     // If suspended, revoke all active sessions immediately

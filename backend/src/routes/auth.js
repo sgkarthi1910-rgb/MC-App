@@ -1,5 +1,5 @@
 const { hashPassword, hashPasswordSync, verifyPassword, generateSessionToken, hashToken, generateId } = require('../crypto-utils');
-const { provisionAdminAccount } = require('../db');
+const { provisionAdminAccount, getAdminUserIds, isAdminUserId } = require('../db');
 
 function setupAuthRoutes(router, db) {
   // 0. SAFE AUTHENTICATION DIAGNOSTICS (Zero Secrets Expose)
@@ -9,11 +9,10 @@ function setupAuthRoutes(router, db) {
     let adminMustChangePassword = false;
     let userCount = 0;
     try {
-      const admin = db.prepare('SELECT id, role, must_change_password FROM users WHERE id = ?').get('sg_karthi');
-      if (admin) {
-        adminProvisioned = (admin.role === 'ADMIN');
-        adminMustChangePassword = Boolean(admin.must_change_password);
-      }
+      const adminIds = getAdminUserIds();
+      const admins = db.prepare("SELECT id, role, must_change_password FROM users WHERE role = 'ADMIN'").all();
+      adminProvisioned = adminIds.length > 0 && adminIds.every(id => admins.some(a => a.id === id));
+      adminMustChangePassword = admins.some(a => Boolean(a.must_change_password));
       const countRow = db.prepare('SELECT COUNT(*) as cnt FROM users').get();
       userCount = countRow?.cnt || 0;
       dbConnected = true;
@@ -27,6 +26,7 @@ function setupAuthRoutes(router, db) {
       databaseType: process.env.VERCEL ? 'persisted-serverless-store' : 'sqlite-file',
       adminProvisioned,
       adminMustChangePassword,
+      adminUserIds: getAdminUserIds(),
       totalUsers: userCount,
       serverTime: Date.now()
     });
@@ -48,7 +48,7 @@ function setupAuthRoutes(router, db) {
       }
 
       // Prevent registration of reserved names
-      if (cleanId === 'sg_karthi' || cleanId === 'admin' || cleanId === 'root' || cleanId === 'moderator') {
+      if (isAdminUserId(cleanId) || cleanId === 'admin' || cleanId === 'root' || cleanId === 'moderator') {
         return res.status(409).json({ error: 'This Unique ID is already registered or reserved.' });
       }
 
@@ -140,16 +140,16 @@ function setupAuthRoutes(router, db) {
       `).get(cleanId);
 
       // Idempotent server-side provisioning: If admin account is requested but not yet in DB, provision safely
-      if (!user && cleanId === 'sg_karthi') {
+      if (!user && isAdminUserId(cleanId)) {
         provisionAdminAccount(db);
         user = db.prepare(`
           SELECT id, display_name, password_hash, role, must_change_password, status, created_at
           FROM users WHERE id = ?
-        `).get('sg_karthi');
+        `).get(cleanId);
       }
 
       if (!user) {
-        const isTargetAdmin = (cleanId === 'sg_karthi');
+        const isTargetAdmin = isAdminUserId(cleanId);
         return res.status(401).json({
           success: false,
           error: isTargetAdmin
@@ -176,13 +176,13 @@ function setupAuthRoutes(router, db) {
       let isValid = await verifyPassword(cleanPass, user.password_hash);
 
       // If admin must change password and entered bootstrap password from env, verify and sync
-      if (!isValid && cleanId === 'sg_karthi' && user.must_change_password) {
+      if (!isValid && isAdminUserId(cleanId) && user.must_change_password) {
         const bootstrapEnv = process.env.ADMIN_BOOTSTRAP_PASSWORD || 'TgzAdminInitial2026!Secure';
         if (cleanPass === bootstrapEnv || cleanPass === 'admin123') {
           isValid = true;
           try {
             const newHash = hashPasswordSync(cleanPass);
-            db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(newHash, 'sg_karthi');
+            db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(newHash, cleanId);
           } catch (e) {}
         }
       }

@@ -109,7 +109,7 @@ fun AdminDashboardScreen(
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = "Operator: @${authState.user?.id ?: "sg_karthi"}",
+                                    text = "Operator: @${authState.user?.id ?: "Admin"}",
                                     fontFamily = JetBrainsMonoFontFamily,
                                     fontSize = 12.sp,
                                     color = TextSecondary

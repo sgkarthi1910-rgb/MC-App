@@ -22,7 +22,8 @@ This backend is designed with native Node.js (zero heavy dependencies) and inclu
    In the **Environment Variables** section on Vercel, add:
    | Variable | Recommended / Default Value | Description |
    | :--- | :--- | :--- |
-   | `ADMIN_BOOTSTRAP_PASSWORD` | `TgzAdminInitial2026!Secure` | Initial password for admin `sg_karthi` |
+   | `ADMIN_BOOTSTRAP_PASSWORD` | `TgzAdminInitial2026!Secure` | Initial password for admin accounts (`sg_karthi`, `dhanush`, `lmtg`, `darksight`) |
+   | `ADMIN_USER_IDS` | `sg_karthi,dhanush,lmtg,darksight` | Comma-separated admin unique IDs |
    | `MINECRAFT_SERVER_HOST` | `node2.vyroxsmp.online` | TGZ SMP Server IP |
    | `MINECRAFT_SERVER_PORT` | `10010` | TGZ SMP Server Port |
    | `MINECRAFT_PLUGIN_API_KEY` | `tgz_plugin_sec_99a8b7c6d5e4f3a2` | Key for Minecraft plugin telemetry |
@@ -76,7 +77,7 @@ Once deployed, visit your Vercel URL in your browser:
    ```
 4. Tap **Save & Connect**.
 5. Log in with admin credentials:
-   - **Unique ID**: `sg_karthi`
+   - **Unique ID**: `sg_karthi`, `dhanush`, `lmtg`, or `darksight`
    - **Password**: `TgzAdminInitial2026!Secure` (or the password you set)
 6. You are now live on your cloud Vercel backend!
 

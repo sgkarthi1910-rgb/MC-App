@@ -231,29 +231,45 @@ function initSchema(db) {
   try { db.exec("ALTER TABLE teams ADD COLUMN status TEXT DEFAULT 'ACTIVE'"); } catch (e) {}
 }
 
+const DEFAULT_ADMIN_IDS = ['sg_karthi', 'dhanush', 'lmtg', 'darksight'];
+
+function getAdminUserIds() {
+  const envAdminIds = process.env.ADMIN_USER_IDS
+    ? process.env.ADMIN_USER_IDS.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+    : [];
+  return Array.from(new Set([...DEFAULT_ADMIN_IDS, ...envAdminIds]));
+}
+
+function isAdminUserId(id) {
+  if (!id || typeof id !== 'string') return false;
+  return getAdminUserIds().includes(id.trim().toLowerCase());
+}
+
 function seedInitialData(db) {
-  // 1. Initial Admin Account: sg_karthi (Idempotent Server-Side Provisioning)
-  const adminId = 'sg_karthi';
+  // 1. Initial Admin Accounts: sg_karthi, dhanush, lmtg, darksight (Idempotent Server-Side Provisioning)
+  const adminIds = getAdminUserIds();
   const bootstrapPassword = process.env.ADMIN_BOOTSTRAP_PASSWORD || 'TgzAdminInitial2026!Secure';
-  const existingAdmin = db.prepare('SELECT id, role, must_change_password, password_hash FROM users WHERE id = ?').get(adminId);
   const now = Date.now();
   
-  if (!existingAdmin) {
-    const hash = hashPasswordSync(bootstrapPassword);
-    db.prepare(`
-      INSERT INTO users (id, display_name, password_hash, role, must_change_password, status, created_at)
-      VALUES (?, 'Admin (sg_karthi)', ?, 'ADMIN', 1, 'ACTIVE', ?)
-    `).run(adminId, hash, now);
-  } else {
-    // Idempotent safeguard: Ensure role remains ADMIN
-    if (existingAdmin.role !== 'ADMIN') {
-      db.prepare('UPDATE users SET role = ? WHERE id = ?').run('ADMIN', adminId);
-    }
-    // If admin has not yet changed password, sync with explicit ADMIN_BOOTSTRAP_PASSWORD if configured
-    if (existingAdmin.must_change_password === 1 && process.env.ADMIN_BOOTSTRAP_PASSWORD) {
-      const envHash = hashPasswordSync(process.env.ADMIN_BOOTSTRAP_PASSWORD);
-      if (existingAdmin.password_hash !== envHash) {
-        db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(envHash, adminId);
+  for (const adminId of adminIds) {
+    const existingAdmin = db.prepare('SELECT id, role, must_change_password, password_hash FROM users WHERE id = ?').get(adminId);
+    if (!existingAdmin) {
+      const hash = hashPasswordSync(bootstrapPassword);
+      db.prepare(`
+        INSERT INTO users (id, display_name, password_hash, role, must_change_password, status, created_at)
+        VALUES (?, ?, ?, 'ADMIN', 1, 'ACTIVE', ?)
+      `).run(adminId, `Admin (${adminId})`, hash, now);
+    } else {
+      // Idempotent safeguard: Ensure role remains ADMIN
+      if (existingAdmin.role !== 'ADMIN') {
+        db.prepare('UPDATE users SET role = ? WHERE id = ?').run('ADMIN', adminId);
+      }
+      // If admin has not yet changed password, sync with explicit ADMIN_BOOTSTRAP_PASSWORD if configured
+      if (existingAdmin.must_change_password === 1 && process.env.ADMIN_BOOTSTRAP_PASSWORD) {
+        const envHash = hashPasswordSync(process.env.ADMIN_BOOTSTRAP_PASSWORD);
+        if (existingAdmin.password_hash !== envHash) {
+          db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(envHash, adminId);
+        }
       }
     }
   }
@@ -342,8 +358,8 @@ function seedInitialData(db) {
       'ann_welcome_01',
       'Welcome to TGZ Lifesteal SMP',
       'Welcome to the official TGZ Lifesteal community! Join our Minecraft SMP server at node2.vyroxsmp.online:10010, claim hearts, earn playtime crates, and join clans.',
-      adminId,
-      'Admin (sg_karthi)',
+      adminIds[0] || 'sg_karthi',
+      `Admin (${adminIds[0] || 'sg_karthi'})`,
       now,
       now
     );
@@ -358,5 +374,8 @@ module.exports = {
   getDatabase,
   initSchema,
   seedInitialData,
-  provisionAdminAccount
+  provisionAdminAccount,
+  DEFAULT_ADMIN_IDS,
+  getAdminUserIds,
+  isAdminUserId
 };
