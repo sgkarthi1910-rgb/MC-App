@@ -109,7 +109,7 @@ fun SettingsScreen(
 
     var otaVersionCode by remember(adminSettings) { mutableStateOf(adminSettings["app_version_code"] ?: "2") }
     var otaVersionName by remember(adminSettings) { mutableStateOf(adminSettings["app_version_name"] ?: "1.1") }
-    var otaApkUrl by remember(adminSettings) { mutableStateOf(adminSettings["app_apk_url"] ?: "https://github.com/sgkarthi1910-rgb/MC-App/releases/latest") }
+    var otaApkUrl by remember(adminSettings) { mutableStateOf(adminSettings["app_apk_url"] ?: "https://github.com/sgkarthi1910-rgb/MC-App/releases/download/v1.1/TGZ-Lifestyle-v1.1.apk") }
     var otaChangelog by remember(adminSettings) { mutableStateOf(adminSettings["app_changelog"] ?: "New features and bug fixes.") }
     var otaForceUpdate by remember(adminSettings) { mutableStateOf(adminSettings["app_force_update"] == "true") }
 

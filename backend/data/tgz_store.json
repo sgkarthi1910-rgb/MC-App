@@ -301,11 +301,11 @@
     },
     {
       "key": "app_apk_url",
-      "value": "https://github.com/sgkarthi1910-rgb/MC-App/releases/latest"
+      "value": "https://github.com/sgkarthi1910-rgb/MC-App/releases/download/v1.1/TGZ-Lifestyle-v1.1.apk"
     },
     {
       "key": "app_changelog",
-      "value": "Critical update: permanent admin password persistence, session stability, and performance improvements."
+      "value": "Critical update: in-app updater, permanent admin password persistence, session stability, and performance improvements."
     },
     {
       "key": "app_force_update",
