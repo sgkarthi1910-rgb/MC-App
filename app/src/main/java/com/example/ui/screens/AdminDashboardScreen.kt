@@ -166,7 +166,17 @@ fun AdminDashboardScreen(
                             }
                         }
 
-                        IconButton(onClick = { viewModel.loadDashboardSummary() }) {
+                        IconButton(onClick = {
+                            viewModel.loadDashboardSummary()
+                            viewModel.loadAdminRegisteredMembers(
+                                page = currentPage,
+                                search = memberSearchQuery,
+                                role = selectedRoleFilter,
+                                status = selectedStatusFilter,
+                                sort = selectedSort,
+                                order = selectedOrder
+                            )
+                        }) {
                             Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = EmeraldGreen)
                         }
                     }
@@ -471,12 +481,29 @@ fun AdminDashboardScreen(
                         fontSize = 14.sp,
                         color = EmeraldGreen
                     )
-                    Text(
-                        text = "Total: ${pagination?.total ?: adminMembers.size}",
-                        fontFamily = JetBrainsMonoFontFamily,
-                        fontSize = 12.sp,
-                        color = TextSecondary
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "Total: ${pagination?.total ?: adminMembers.size}",
+                            fontFamily = JetBrainsMonoFontFamily,
+                            fontSize = 12.sp,
+                            color = TextSecondary
+                        )
+                        IconButton(
+                            onClick = {
+                                viewModel.loadAdminRegisteredMembers(
+                                    page = currentPage,
+                                    search = memberSearchQuery,
+                                    role = selectedRoleFilter,
+                                    status = selectedStatusFilter,
+                                    sort = selectedSort,
+                                    order = selectedOrder
+                                )
+                            },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = "Refresh Members", tint = EmeraldGreen, modifier = Modifier.size(16.dp))
+                        }
+                    }
                 }
             }
 

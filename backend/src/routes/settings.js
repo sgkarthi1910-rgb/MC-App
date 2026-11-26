@@ -84,16 +84,11 @@ function setupSettingsRoutes(router, db) {
     let baseQuery = `
       SELECT u.id, u.display_name, u.role, u.status, u.created_at, u.last_login_at,
              u.minecraft_username, u.minecraft_uuid,
-             COALESCE(u.avatar, 'player') AS avatar,
-             (SELECT COUNT(*) FROM sessions s WHERE s.user_id = u.id AND s.is_revoked = 0) AS active_sessions,
-             (SELECT COUNT(*) FROM sessions s WHERE s.user_id = u.id AND s.is_revoked = 0 AND s.expires_at > ? AND s.last_active_at > ?) > 0 AS is_online,
-             (SELECT t.name FROM team_members tm JOIN teams t ON tm.team_id = t.id WHERE tm.user_id = u.id LIMIT 1) AS team_name,
-             (SELECT tm.team_id FROM team_members tm WHERE tm.user_id = u.id LIMIT 1) AS team_id,
-             (SELECT COUNT(*) FROM reward_claims rc WHERE rc.user_id = u.id AND rc.status = 'APPROVED') AS claims_count
+             COALESCE(u.avatar, 'player') AS avatar
       FROM users u
-      WHERE 1=1
+      WHERE 1 = 1
     `;
-    const params = [now, activeCutoff];
+    const params = [];
 
     if (search && search.trim()) {
       const q = `%${search.trim().toLowerCase()}%`;
@@ -115,7 +110,7 @@ function setupSettingsRoutes(router, db) {
     if (sort === 'created_asc') {
       baseQuery += ` ORDER BY u.created_at ASC`;
     } else if (sort === 'last_login_desc') {
-      baseQuery += ` ORDER BY u.last_login_at DESC NULLS LAST, u.created_at DESC`;
+      baseQuery += ` ORDER BY u.last_login_at DESC, u.created_at DESC`;
     } else if (sort === 'id_asc') {
       baseQuery += ` ORDER BY u.id ASC`;
     } else {
@@ -124,6 +119,39 @@ function setupSettingsRoutes(router, db) {
     }
 
     const allMatching = db.prepare(baseQuery).all(...params);
+
+    // Enrich users with session, team, and reward details
+    allMatching.forEach(u => {
+      let activeSessions = 0;
+      let isOnline = false;
+      try {
+        const sess = db.prepare('SELECT id, last_active_at, expires_at FROM sessions WHERE user_id = ? AND is_revoked = 0').all(u.id);
+        activeSessions = sess.length;
+        isOnline = sess.some(s => s.expires_at > now && s.last_active_at > activeCutoff);
+      } catch (e) {}
+
+      let teamName = null;
+      let teamId = null;
+      try {
+        const tm = db.prepare('SELECT tm.team_id, t.name as team_name FROM team_members tm JOIN teams t ON tm.team_id = t.id WHERE tm.user_id = ?').get(u.id);
+        if (tm) {
+          teamName = tm.team_name;
+          teamId = tm.team_id;
+        }
+      } catch (e) {}
+
+      let claimsCount = 0;
+      try {
+        claimsCount = db.prepare("SELECT COUNT(*) as cnt FROM reward_claims WHERE user_id = ? AND status = 'APPROVED'").get(u.id)?.cnt || 0;
+      } catch (e) {}
+
+      u.active_sessions = activeSessions;
+      u.is_online = isOnline ? 1 : 0;
+      u.team_name = teamName;
+      u.team_id = teamId;
+      u.claims_count = claimsCount;
+    });
+
     const total = allMatching.length;
 
     let users = allMatching;
@@ -169,16 +197,24 @@ function setupSettingsRoutes(router, db) {
     const user = db.prepare(`
       SELECT u.id, u.display_name, u.role, u.status, u.created_at, u.last_login_at,
              u.minecraft_username, u.minecraft_uuid,
-             COALESCE(u.avatar, 'player') AS avatar,
-             (SELECT COUNT(*) FROM sessions s WHERE s.user_id = u.id AND s.is_revoked = 0) AS active_sessions,
-             (SELECT COUNT(*) FROM sessions s WHERE s.user_id = u.id AND s.is_revoked = 0 AND s.expires_at > ? AND s.last_active_at > ?) > 0 AS is_online
+             COALESCE(u.avatar, 'player') AS avatar
       FROM users u
       WHERE u.id = ?
-    `).get(now, activeCutoff, cleanUserId);
+    `).get(cleanUserId);
 
     if (!user) {
       return res.status(404).json({ error: 'User not found.' });
     }
+
+    let activeSessions = 0;
+    let isOnline = false;
+    try {
+      const sess = db.prepare('SELECT id, last_active_at, expires_at FROM sessions WHERE user_id = ? AND is_revoked = 0').all(user.id);
+      activeSessions = sess.length;
+      isOnline = sess.some(s => s.expires_at > now && s.last_active_at > activeCutoff);
+    } catch (e) {}
+    user.active_sessions = activeSessions;
+    user.is_online = isOnline ? 1 : 0;
 
     // Team information
     const team = db.prepare(`

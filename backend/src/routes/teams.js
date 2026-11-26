@@ -266,7 +266,14 @@ function setupTeamRoutes(router, db) {
     return res.status(201).json({
       success: true,
       message: `Team '${cleanName}' created successfully.`,
-      teamId
+      teamId,
+      team: {
+        id: teamId,
+        name: cleanName,
+        description: cleanDesc,
+        logo: cleanLogo,
+        ownerId: req.user.id
+      }
     });
   });
 

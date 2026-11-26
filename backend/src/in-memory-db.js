@@ -156,7 +156,7 @@ function createInMemoryDatabase(storageFilePath) {
   function matchCondition(row, condStr, params, paramIndexRef, tables) {
     if (!condStr) return true;
     const clean = condStr.trim();
-    if (!clean || clean === '1' || clean === '1 = 1') return true;
+    if (!clean || clean === '1' || clean.replace(/\s+/g, '') === '1=1') return true;
 
     // Handle OR expressions
     if (clean.includes(' OR ') && !clean.startsWith('(')) {
@@ -178,16 +178,16 @@ function createInMemoryDatabase(storageFilePath) {
     // Strip table prefixes: u.id -> id, s.token_hash -> token_hash
     const norm = clean.replace(/^[a-zA-Z0-9_]+\.([a-zA-Z0-9_]+)/, '$1');
 
-    // Pattern: col = ?
-    const eqParam = norm.match(/^([a-zA-Z0-9_]+)\s*=\s*\?$/);
+    // Pattern: col = ? or LOWER(col) = ? or col = ? COLLATE NOCASE
+    const eqParam = norm.match(/^(?:LOWER\()?([a-zA-Z0-9_]+)\)?\s*=\s*\?(?:\s+COLLATE\s+[a-zA-Z0-9_]+)?$/i);
     if (eqParam) {
       const col = eqParam[1];
       const val = params[paramIndexRef.i++];
       return String(row[col] ?? '').toLowerCase() === String(val ?? '').toLowerCase();
     }
 
-    // Pattern: col != ? or col <> ?
-    const neqParam = norm.match(/^([a-zA-Z0-9_]+)\s*(?:!=|<>)\s*\?$/);
+    // Pattern: col != ? or LOWER(col) != ? or col <> ?
+    const neqParam = norm.match(/^(?:LOWER\()?([a-zA-Z0-9_]+)\)?\s*(?:!=|<>)\s*\?$/i);
     if (neqParam) {
       const col = neqParam[1];
       const val = params[paramIndexRef.i++];
@@ -256,6 +256,33 @@ function createInMemoryDatabase(storageFilePath) {
       return !list.includes(String(row[col]));
     }
 
+    // Pattern: col LIKE ? or LOWER(col) LIKE ?
+    const likeParam = norm.match(/^(?:LOWER\()?([a-zA-Z0-9_]+)\)?\s+LIKE\s+\?$/i);
+    if (likeParam) {
+      const col = likeParam[1];
+      const pattern = String(params[paramIndexRef.i++] || '').toLowerCase();
+      const val = String(row[col] ?? '').toLowerCase();
+      const regexStr = '^' + pattern.replace(/%/g, '.*').replace(/_/g, '.') + '$';
+      try {
+        return new RegExp(regexStr).test(val);
+      } catch (e) {
+        return val.includes(pattern.replace(/%/g, ''));
+      }
+    }
+
+    const coalesceLike = norm.match(/^LOWER\(COALESCE\(([a-zA-Z0-9_]+),\s*''\)\)\s+LIKE\s+\?$/i);
+    if (coalesceLike) {
+      const col = coalesceLike[1];
+      const pattern = String(params[paramIndexRef.i++] || '').toLowerCase();
+      const val = String(row[col] ?? '').toLowerCase();
+      const regexStr = '^' + pattern.replace(/%/g, '.*').replace(/_/g, '.') + '$';
+      try {
+        return new RegExp(regexStr).test(val);
+      } catch (e) {
+        return val.includes(pattern.replace(/%/g, ''));
+      }
+    }
+
     return true;
   }
 
@@ -290,16 +317,35 @@ function createInMemoryDatabase(storageFilePath) {
             return [{ [asName]: filtered.length }];
           }
 
-          // 2. Standard SELECT from table (with optional JOIN support)
-          const selectMatch = raw.match(/^SELECT\s+(.+?)\s+FROM\s+([a-zA-Z0-9_]+)(?:\s+(?:AS\s+)?(?!WHERE\b|ORDER\b|LIMIT\b|JOIN\b|INNER\b|LEFT\b)([a-zA-Z0-9_]+))?(?:\s+((?:(?:INNER|LEFT)\s+)?JOIN\s+(?:(?!WHERE\b|ORDER\b|LIMIT\b).)+?))?(?:\s+WHERE\s+(.+?))?(?:\s+ORDER\s+BY\s+(.+?))?(?:\s+LIMIT\s+([0-9]+))?$/i);
-          if (selectMatch) {
-            const colsStr = selectMatch[1];
-            const table = selectMatch[2];
-            const baseAlias = selectMatch[3] || table;
-            const joinClause = selectMatch[4];
-            const whereStr = selectMatch[5];
-            const orderStr = selectMatch[6];
-            const limitVal = selectMatch[7] ? parseInt(selectMatch[7], 10) : undefined;
+          // 2. Standard SELECT from table (with outer-FROM and optional JOIN support)
+          let outerFromIndex = -1;
+          let outerTable = '';
+          let parenDepth = 0;
+          for (let i = 0; i < raw.length; i++) {
+            if (raw[i] === '(') parenDepth++;
+            else if (raw[i] === ')') parenDepth--;
+            else if (parenDepth === 0) {
+              const sub = raw.slice(i);
+              const fromM = sub.match(/^FROM\s+([a-zA-Z0-9_]+)/i);
+              if (fromM) {
+                outerFromIndex = i;
+                outerTable = fromM[1];
+                break;
+              }
+            }
+          }
+
+          if (outerFromIndex > 0) {
+            const colsStr = raw.slice(0, outerFromIndex).replace(/^SELECT\s+/i, '').trim();
+            const restSql = raw.slice(outerFromIndex + 5 + outerTable.length).trim();
+            const table = outerTable;
+
+            const restMatch = restSql.match(/^(?:(?:AS\s+)?(?!WHERE\b|ORDER\b|LIMIT\b|JOIN\b|INNER\b|LEFT\b)([a-zA-Z0-9_]+))?(?:\s*((?:(?:INNER|LEFT)\s+)?JOIN\s+(?:(?!WHERE\b|ORDER\b|LIMIT\b).)+?))?(?:\s*WHERE\s+(.+?))?(?:\s*ORDER\s+BY\s+(.+?))?(?:\s*LIMIT\s+([0-9]+))?$/i);
+            const baseAlias = restMatch ? (restMatch[1] || table) : table;
+            const joinClause = restMatch ? restMatch[2] : null;
+            const whereStr = restMatch ? restMatch[3] : null;
+            const orderStr = restMatch ? restMatch[4] : null;
+            const limitVal = restMatch && restMatch[5] ? parseInt(restMatch[5], 10) : undefined;
 
             let list = (tables[table] || []).map(r => ({ ...r }));
 
@@ -344,6 +390,17 @@ function createInMemoryDatabase(storageFilePath) {
               const orderParts = orderStr.split(',').map(s => s.trim());
               list.sort((a, b) => {
                 for (const part of orderParts) {
+                  if (part.toUpperCase().includes('CASE') && part.toUpperCase().includes('ROLE')) {
+                    const getRoleScore = (r) => {
+                      if (r === 'ADMIN') return 1;
+                      if (r === 'MODERATOR') return 2;
+                      return 3;
+                    };
+                    const sA = getRoleScore(a.role);
+                    const sB = getRoleScore(b.role);
+                    if (sA !== sB) return sA - sB;
+                    continue;
+                  }
                   const [colRaw, dir] = part.split(/\s+/);
                   const col = colRaw.replace(/^[a-zA-Z0-9_]+\./, '');
                   const isDesc = (dir || '').toUpperCase() === 'DESC';
@@ -371,7 +428,39 @@ function createInMemoryDatabase(storageFilePath) {
 
             return list.map(r => {
               const rowObj = {};
-              colsStr.split(',').forEach(c => {
+              const colParts = [];
+              let cur = '';
+              let depth = 0;
+              for (let i = 0; i < colsStr.length; i++) {
+                if (colsStr[i] === '(') depth++;
+                else if (colsStr[i] === ')') depth--;
+                if (colsStr[i] === ',' && depth === 0) {
+                  colParts.push(cur.trim());
+                  cur = '';
+                } else {
+                  cur += colsStr[i];
+                }
+              }
+              if (cur.trim()) colParts.push(cur.trim());
+
+              colParts.forEach(c => {
+                const subM = c.match(/^\(SELECT\s+COUNT\(\*\)\s+FROM\s+([a-zA-Z0-9_]+)\s+WHERE\s+(.+?)\)(?:\s+AS\s+([a-zA-Z0-9_]+))?$/i);
+                if (subM) {
+                  const subTable = subM[1];
+                  const subWhere = subM[2];
+                  const targetCol = subM[3] || 'count';
+                  const subList = tables[subTable] || [];
+                  const count = subList.filter(sr => {
+                    const cleanWhere = subWhere
+                      .replace(/\bg\.id\b/g, `'${r.id}'`)
+                      .replace(/\bt\.id\b/g, `'${r.id}'`)
+                      .replace(/\bu\.id\b/g, `'${r.id}'`);
+                    return matchCondition(sr, cleanWhere, params, { i: 0 }, tables);
+                  }).length;
+                  rowObj[targetCol] = count;
+                  return;
+                }
+
                 const asMatch = c.trim().match(/(?:[a-zA-Z0-9_]+\.)?([a-zA-Z0-9_]+)(?:\s+AS\s+([a-zA-Z0-9_]+))?/i);
                 if (asMatch) {
                   const origCol = asMatch[1];

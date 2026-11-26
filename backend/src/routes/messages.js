@@ -163,7 +163,8 @@ function setupMessageRoutes(router, db) {
       return res.status(403).json({ error: 'Your account is suspended. You cannot send messages.' });
     }
 
-    const { recipientId, content } = req.body || {};
+    const recipientId = req.body?.recipientId || req.body?.recipient_id;
+    const content = req.body?.content;
     if (!recipientId || !content || typeof content !== 'string' || content.trim().length === 0) {
       return res.status(400).json({ error: 'Recipient and content are required.' });
     }
