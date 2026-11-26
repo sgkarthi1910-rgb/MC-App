@@ -403,10 +403,10 @@ function seedInitialData(db) {
     { key: 'minecraft_plugin_api_key', value: process.env.MINECRAFT_PLUGIN_API_KEY || 'tgz_plugin_sec_99a8b7c6d5e4f3a2' },
     { key: 'allow_member_team_creation', value: 'true' },
     { key: 'motd', value: 'Welcome to TGZ Lifestyle SMP!' },
-    { key: 'app_version_code', value: process.env.APP_VERSION_CODE || '2' },
-    { key: 'app_version_name', value: process.env.APP_VERSION_NAME || '1.1' },
-    { key: 'app_apk_url', value: process.env.APP_APK_URL || 'https://github.com/sgkarthi1910-rgb/MC-App/releases/download/v1.1/TGZ-Lifestyle-v1.1.apk' },
-    { key: 'app_changelog', value: 'Critical update: in-app updater, permanent admin password persistence, session stability, and performance improvements.' },
+    { key: 'app_version_code', value: process.env.APP_VERSION_CODE || '3' },
+    { key: 'app_version_name', value: process.env.APP_VERSION_NAME || '1.2' },
+    { key: 'app_apk_url', value: process.env.APP_APK_URL || 'https://github.com/sgkarthi1910-rgb/MC-App/releases/download/v1.2/TGZ-Lifestyle-v1.2.apk' },
+    { key: 'app_changelog', value: 'Release v1.2: In-app direct OTA updater, permanent admin credentials, session restoration and stability enhancements.' },
     { key: 'app_force_update', value: 'false' },
     { key: 'app_min_supported_version_code', value: '1' }
   ];
@@ -418,15 +418,15 @@ function seedInitialData(db) {
     }
   }
 
-  // Ensure version code is at least 2 for live in-app OTA update rollout
+  // Ensure version code is at least 3 for live in-app OTA update rollout
   try {
     const curCodeRow = db.prepare("SELECT value FROM app_settings WHERE key = 'app_version_code'").get();
     const curApkRow = db.prepare("SELECT value FROM app_settings WHERE key = 'app_apk_url'").get();
-    if (!curCodeRow || parseInt(curCodeRow.value, 10) < 2 || !curApkRow || curApkRow.value.includes('releases/latest')) {
-      db.prepare("INSERT INTO app_settings (key, value) VALUES ('app_version_code', '2') ON CONFLICT(key) DO UPDATE SET value = '2'").run();
-      db.prepare("INSERT INTO app_settings (key, value) VALUES ('app_version_name', '1.1') ON CONFLICT(key) DO UPDATE SET value = '1.1'").run();
-      db.prepare("INSERT INTO app_settings (key, value) VALUES ('app_apk_url', 'https://github.com/sgkarthi1910-rgb/MC-App/releases/download/v1.1/TGZ-Lifestyle-v1.1.apk') ON CONFLICT(key) DO UPDATE SET value = 'https://github.com/sgkarthi1910-rgb/MC-App/releases/download/v1.1/TGZ-Lifestyle-v1.1.apk'").run();
-      db.prepare("INSERT INTO app_settings (key, value) VALUES ('app_changelog', 'Critical update: in-app updater, permanent admin password persistence, session stability, and performance improvements.') ON CONFLICT(key) DO UPDATE SET value = 'Critical update: in-app updater, permanent admin password persistence, session stability, and performance improvements.'").run();
+    if (!curCodeRow || parseInt(curCodeRow.value, 10) < 3 || !curApkRow || curApkRow.value.includes('v1.1') || curApkRow.value.includes('releases/latest')) {
+      db.prepare("INSERT INTO app_settings (key, value) VALUES ('app_version_code', '3') ON CONFLICT(key) DO UPDATE SET value = '3'").run();
+      db.prepare("INSERT INTO app_settings (key, value) VALUES ('app_version_name', '1.2') ON CONFLICT(key) DO UPDATE SET value = '1.2'").run();
+      db.prepare("INSERT INTO app_settings (key, value) VALUES ('app_apk_url', 'https://github.com/sgkarthi1910-rgb/MC-App/releases/download/v1.2/TGZ-Lifestyle-v1.2.apk') ON CONFLICT(key) DO UPDATE SET value = 'https://github.com/sgkarthi1910-rgb/MC-App/releases/download/v1.2/TGZ-Lifestyle-v1.2.apk'").run();
+      db.prepare("INSERT INTO app_settings (key, value) VALUES ('app_changelog', 'Release v1.2: In-app direct OTA updater, permanent admin credentials, session restoration and stability enhancements.') ON CONFLICT(key) DO UPDATE SET value = 'Release v1.2: In-app direct OTA updater, permanent admin credentials, session restoration and stability enhancements.'").run();
     }
   } catch(e) {}
 

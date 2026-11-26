@@ -107,9 +107,9 @@ fun SettingsScreen(
     var showServerConfigDialog by remember { mutableStateOf(false) }
     var customBackendInput by remember(currentBackendUrl) { mutableStateOf(currentBackendUrl) }
 
-    var otaVersionCode by remember(adminSettings) { mutableStateOf(adminSettings["app_version_code"] ?: "2") }
-    var otaVersionName by remember(adminSettings) { mutableStateOf(adminSettings["app_version_name"] ?: "1.1") }
-    var otaApkUrl by remember(adminSettings) { mutableStateOf(adminSettings["app_apk_url"] ?: "https://github.com/sgkarthi1910-rgb/MC-App/releases/download/v1.1/TGZ-Lifestyle-v1.1.apk") }
+    var otaVersionCode by remember(adminSettings) { mutableStateOf(adminSettings["app_version_code"] ?: "3") }
+    var otaVersionName by remember(adminSettings) { mutableStateOf(adminSettings["app_version_name"] ?: "1.2") }
+    var otaApkUrl by remember(adminSettings) { mutableStateOf(adminSettings["app_apk_url"] ?: "https://github.com/sgkarthi1910-rgb/MC-App/releases/download/v1.2/TGZ-Lifestyle-v1.2.apk") }
     var otaChangelog by remember(adminSettings) { mutableStateOf(adminSettings["app_changelog"] ?: "New features and bug fixes.") }
     var otaForceUpdate by remember(adminSettings) { mutableStateOf(adminSettings["app_force_update"] == "true") }
 

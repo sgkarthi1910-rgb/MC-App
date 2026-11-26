@@ -883,8 +883,8 @@ test('TGZ Lifesteal Complete Backend Test Suite', async (t) => {
       path: '/api/app/version'
     });
     assert.equal(initialVersion.statusCode, 200);
-    assert.equal(initialVersion.body.versionCode, 2);
-    assert.equal(initialVersion.body.versionName, '1.1');
+    assert.equal(initialVersion.body.versionCode, 3);
+    assert.equal(initialVersion.body.versionName, '1.2');
     assert.ok(initialVersion.body.apkUrl);
     assert.equal(initialVersion.body.forceUpdate, false);
 
@@ -895,12 +895,12 @@ test('TGZ Lifesteal Complete Backend Test Suite', async (t) => {
       headers: { Authorization: `Bearer ${adminToken}` }
     }, {
       settings: {
-        app_version_code: 3,
-        app_version_name: '1.2.0',
-        app_apk_url: 'https://github.com/sgkarthi1910-rgb/MC-App/releases/download/v1.2.0/TGZ-Lifestyle-v1.2.apk',
+        app_version_code: 4,
+        app_version_name: '1.3.0',
+        app_apk_url: 'https://github.com/sgkarthi1910-rgb/MC-App/releases/download/v1.3.0/TGZ-Lifestyle-v1.3.apk',
         app_changelog: 'Added in-app auto updates and performance enhancements.',
         app_force_update: 'true',
-        app_min_supported_version_code: 2
+        app_min_supported_version_code: 3
       }
     });
     assert.equal(updateRes.statusCode, 200);
@@ -911,12 +911,12 @@ test('TGZ Lifesteal Complete Backend Test Suite', async (t) => {
       path: '/api/app/version'
     });
     assert.equal(newVersion.statusCode, 200);
-    assert.equal(newVersion.body.versionCode, 3);
-    assert.equal(newVersion.body.versionName, '1.2.0');
-    assert.equal(newVersion.body.apkUrl, 'https://github.com/sgkarthi1910-rgb/MC-App/releases/download/v1.2.0/TGZ-Lifestyle-v1.2.apk');
+    assert.equal(newVersion.body.versionCode, 4);
+    assert.equal(newVersion.body.versionName, '1.3.0');
+    assert.equal(newVersion.body.apkUrl, 'https://github.com/sgkarthi1910-rgb/MC-App/releases/download/v1.3.0/TGZ-Lifestyle-v1.3.apk');
     assert.equal(newVersion.body.changelog, 'Added in-app auto updates and performance enhancements.');
     assert.equal(newVersion.body.forceUpdate, true);
-    assert.equal(newVersion.body.minSupportedVersionCode, 2);
+    assert.equal(newVersion.body.minSupportedVersionCode, 3);
   });
 
   await t.test('15. Admin default login without forced password change (mustChangePassword defaults to false)', async () => {

@@ -293,19 +293,19 @@
     },
     {
       "key": "app_version_code",
-      "value": "2"
+      "value": "3"
     },
     {
       "key": "app_version_name",
-      "value": "1.1"
+      "value": "1.2"
     },
     {
       "key": "app_apk_url",
-      "value": "https://github.com/sgkarthi1910-rgb/MC-App/releases/download/v1.1/TGZ-Lifestyle-v1.1.apk"
+      "value": "https://github.com/sgkarthi1910-rgb/MC-App/releases/download/v1.2/TGZ-Lifestyle-v1.2.apk"
     },
     {
       "key": "app_changelog",
-      "value": "Critical update: in-app updater, permanent admin password persistence, session stability, and performance improvements."
+      "value": "Release v1.2: In-app direct OTA updater, permanent admin credentials, session restoration and stability enhancements."
     },
     {
       "key": "app_force_update",
