@@ -168,14 +168,30 @@ function createServer(dbPath) {
     // 1. Immediately buffer request body for POST/PUT before ANY asynchronous I/O
     let parsedBody = null;
     if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
-      if (req.body !== undefined && req.body !== null && typeof req.body === 'object' && Object.keys(req.body).length > 0) {
-        parsedBody = req.body;
-      } else if (typeof req.body === 'string') {
-        try { parsedBody = JSON.parse(req.body); } catch (e) { parsedBody = {}; }
-      } else if (req.readableEnded) {
+      if (req.body !== undefined && req.body !== null) {
+        if (typeof req.body === 'object' && !Buffer.isBuffer(req.body)) {
+          parsedBody = req.body;
+        } else if (typeof req.body === 'string') {
+          try { parsedBody = JSON.parse(req.body); } catch (e) { parsedBody = {}; }
+        } else if (Buffer.isBuffer(req.body)) {
+          try { parsedBody = JSON.parse(req.body.toString('utf8')); } catch (e) { parsedBody = {}; }
+        } else {
+          parsedBody = {};
+        }
+      } else if (req.complete || req.readableEnded || req.destroyed || (req._readableState && req._readableState.ended)) {
         parsedBody = {};
       } else {
         parsedBody = await new Promise((resolve) => {
+          let resolved = false;
+          const finish = (val) => {
+            if (!resolved) {
+              resolved = true;
+              clearTimeout(timer);
+              resolve(val);
+            }
+          };
+          const timer = setTimeout(() => finish({}), 1500);
+
           let bodyData = '';
           req.on('data', chunk => {
             bodyData += chunk;
@@ -183,12 +199,13 @@ function createServer(dbPath) {
           });
           req.on('end', () => {
             try {
-              resolve(bodyData ? JSON.parse(bodyData) : {});
+              finish(bodyData ? JSON.parse(bodyData) : {});
             } catch (e) {
-              resolve({});
+              finish({});
             }
           });
-          req.on('error', () => resolve({}));
+          req.on('error', () => finish({}));
+          if (typeof req.resume === 'function') req.resume();
         });
       }
     }

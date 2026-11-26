@@ -72,9 +72,11 @@ function createInMemoryDatabase(storageFilePath) {
   async function syncFromCloudKV() {
     if (!kvUrl || !kvToken || typeof fetch !== 'function' || isPersisting) return;
     try {
+      const signal = typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(3000) : undefined;
       const res = await fetch(`${kvUrl}/get/tgz_store`, {
         headers: { Authorization: `Bearer ${kvToken}` },
-        cache: 'no-store'
+        cache: 'no-store',
+        signal
       });
       if (res.ok) {
         const json = await res.json();
@@ -120,13 +122,15 @@ function createInMemoryDatabase(storageFilePath) {
       pendingPersistPromise = pendingPersistPromise.then(async () => {
         try {
           const payload = JSON.stringify(tables);
+          const signal = typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(3000) : undefined;
           const res = await fetch(`${kvUrl}/set/tgz_store`, {
             method: 'POST',
             headers: {
               Authorization: `Bearer ${kvToken}`,
               'Content-Type': 'text/plain; charset=utf-8'
             },
-            body: payload
+            body: payload,
+            signal
           });
           if (res.ok) {
             lastSyncTime = Date.now();
