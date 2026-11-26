@@ -24,6 +24,7 @@ function setupAuthRoutes(router, db) {
       status: dbConnected ? 'ok' : 'error',
       databaseConnected: dbConnected,
       databaseType: process.env.VERCEL ? 'persisted-serverless-store' : 'sqlite-file',
+      cloudSyncStatus: typeof db.getLastSyncStatus === 'function' ? db.getLastSyncStatus() : 'LOCAL_SQLITE',
       adminProvisioned,
       adminMustChangePassword,
       adminUserIds: getAdminUserIds(),
