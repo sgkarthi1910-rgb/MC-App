@@ -290,6 +290,26 @@
     {
       "key": "minecraft_bedrock_port",
       "value": "10011"
+    },
+    {
+      "key": "app_version_code",
+      "value": "2"
+    },
+    {
+      "key": "app_version_name",
+      "value": "1.1"
+    },
+    {
+      "key": "app_apk_url",
+      "value": "https://github.com/sgkarthi1910-rgb/MC-App/releases/latest"
+    },
+    {
+      "key": "app_changelog",
+      "value": "Critical update: permanent admin password persistence, session stability, and performance improvements."
+    },
+    {
+      "key": "app_force_update",
+      "value": "false"
     }
   ],
   "groups": [],
