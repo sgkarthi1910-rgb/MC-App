@@ -367,8 +367,10 @@ function setupSettingsRoutes(router, db) {
     const settings = {};
     for (const r of rows) settings[r.key] = r.value;
 
-    const versionCode = parseInt(settings.app_version_code || process.env.APP_VERSION_CODE || '2', 10);
-    const versionName = settings.app_version_name || process.env.APP_VERSION_NAME || '1.1';
+    let versionCode = parseInt(settings.app_version_code || process.env.APP_VERSION_CODE || '2', 10);
+    if (isNaN(versionCode) || versionCode < 2) versionCode = 2;
+    let versionName = settings.app_version_name || process.env.APP_VERSION_NAME || '1.1';
+    if (versionName === '1.0') versionName = '1.1';
     const apkUrl = settings.app_apk_url || process.env.APP_APK_URL || 'https://github.com/sgkarthi1910-rgb/MC-App/releases/latest';
     const changelog = settings.app_changelog || 'Critical update: permanent admin password persistence, session stability, and performance improvements.';
     const forceUpdate = (settings.app_force_update === 'true' || settings.app_force_update === '1');
