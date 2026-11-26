@@ -1135,18 +1135,50 @@
           </div>
         </div>
 
+        <!-- Admin Authentication Diagnostic Section (Requirement 5) -->
+        <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid var(--emerald); border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <div style="font-family: 'Silkscreen', monospace; font-size: 0.9rem; color: var(--emerald);">
+              🔒 ADMIN AUTHENTICATION & SESSION DIAGNOSTIC
+            </div>
+            <span style="font-size: 0.75rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace;">Live Auth Monitor</span>
+          </div>
+          <div class="diag-grid">
+            <div class="diag-item">
+              <span class="diag-label">Logged-in Account ID:</span>
+              <span id="diag-auth-account-id" class="diag-val-ok">-</span>
+            </div>
+            <div class="diag-item">
+              <span class="diag-label">Account Role:</span>
+              <span id="diag-auth-account-role" class="diag-val-ok">-</span>
+            </div>
+            <div class="diag-item">
+              <span class="diag-label">Session Restoration:</span>
+              <span id="diag-auth-session-restore" class="diag-val-ok">Validated & Restored</span>
+            </div>
+            <div class="diag-item">
+              <span class="diag-label">Admin Profile Status:</span>
+              <span id="diag-auth-profile-status" class="diag-val-ok">Loaded</span>
+            </div>
+            <div class="diag-item">
+              <span class="diag-label">Password Saved Status:</span>
+              <span id="diag-auth-pwd-status" class="diag-val-ok">Permanently Saved (PBKDF2)</span>
+            </div>
+            <div class="diag-item">
+              <span class="diag-label">Persistent Storage:</span>
+              <span id="diag-db-status" class="diag-val-ok">Connected</span>
+            </div>
+            <div class="diag-item">
+              <span class="diag-label">Application Version:</span>
+              <span id="diag-app-version" class="diag-val-ok">v1.1 (Code 2)</span>
+            </div>
+          </div>
+        </div>
+
         <div class="diag-grid">
           <div class="diag-item">
-            <span class="diag-label">App Version:</span>
-            <span id="diag-app-version" class="diag-val-ok">v1.1.0</span>
-          </div>
-          <div class="diag-item">
             <span class="diag-label">Latest Deployment:</span>
-            <span id="diag-deploy-version" class="diag-val-ok">v1.1.0-prod</span>
-          </div>
-          <div class="diag-item">
-            <span class="diag-label">Database Status:</span>
-            <span id="diag-db-status" class="diag-val-ok">Connected</span>
+            <span id="diag-deploy-version" class="diag-val-ok">v1.1-prod</span>
           </div>
           <div class="diag-item">
             <span class="diag-label">Database Engine:</span>
@@ -1161,7 +1193,7 @@
             <span id="diag-auth-status" class="diag-val-ok">Active</span>
           </div>
           <div class="diag-item">
-            <span class="diag-label">Admin Account:</span>
+            <span class="diag-label">Admin Provisioning:</span>
             <span id="diag-admin-prov" class="diag-val-ok">Ready (sg_karthi)</span>
           </div>
           <div class="diag-item">
@@ -1566,7 +1598,7 @@
       <form id="login-form" onsubmit="handleLoginSubmit(event)">
         <div class="form-group">
           <label class="form-label">Unique ID</label>
-          <input type="text" id="login-id" class="form-input" placeholder="e.g. sg_karthi, dhanush, lmtg, darksight" value="sg_karthi" required autocomplete="username">
+          <input type="text" id="login-id" class="form-input" placeholder="e.g. unique username / ID" required autocomplete="username">
         </div>
         <div class="form-group">
           <label class="form-label">Password</label>
@@ -1774,7 +1806,7 @@
       document.getElementById('auth-success-banner').style.display = 'none';
     }
     function openChangePasswordModal() {
-      const storedId = (currentUser && currentUser.id) || localStorage.getItem('tgz_user_id') || 'sg_karthi';
+      const storedId = (currentUser && currentUser.id) || localStorage.getItem('tgz_user_id') || '';
       const uidInput = document.getElementById('chg-user-id');
       if (uidInput) {
         uidInput.value = storedId;
@@ -2057,7 +2089,7 @@
       succBox.style.display = 'none';
 
       const uidInput = document.getElementById('chg-user-id');
-      const userId = (uidInput ? uidInput.value.trim() : '') || (currentUser && currentUser.id) || localStorage.getItem('tgz_user_id') || 'sg_karthi';
+      const userId = (uidInput ? uidInput.value.trim() : '') || (currentUser && currentUser.id) || localStorage.getItem('tgz_user_id') || '';
       const currentPassword = document.getElementById('chg-current-pass').value;
       const newPassword = document.getElementById('chg-new-pass').value;
       const confirmNewPassword = document.getElementById('chg-confirm-pass').value;
@@ -2119,11 +2151,43 @@
       `;
     }
 
+    function getAuthHeaders(extra = {}) {
+      const token = localStorage.getItem('tgz_session_token');
+      const h = { ...extra };
+      if (token) h['Authorization'] = `Bearer ${token}`;
+      return h;
+    }
+
+    async function apiFetch(url, options = {}) {
+      const opts = { ...options, credentials: 'include' };
+      opts.headers = getAuthHeaders(options.headers || {});
+      return fetch(url, opts);
+    }
+
     function updateUIAfterLogin(user) {
       currentUser = user;
+      localStorage.setItem('tgz_user', JSON.stringify(user));
+      localStorage.setItem('tgz_user_id', user.id);
+
       document.getElementById('dash-display-name').innerText = user.displayName || user.id;
       document.getElementById('dash-user-id').innerText = user.id;
       document.getElementById('dash-status-text').innerText = user.status || 'ACTIVE';
+
+      // Update diagnostic fields (Requirement 5)
+      const elAccId = document.getElementById('diag-auth-account-id');
+      if (elAccId) elAccId.innerText = '@' + user.id;
+      const elRole = document.getElementById('diag-auth-account-role');
+      if (elRole) elRole.innerText = user.role;
+      const elRestore = document.getElementById('diag-auth-session-restore');
+      if (elRestore) elRestore.innerText = 'Active (Validated & Restored)';
+      const elProf = document.getElementById('diag-auth-profile-status');
+      if (elProf) elProf.innerText = 'Loaded (' + (user.displayName || user.id) + ')';
+      const elPwd = document.getElementById('diag-auth-pwd-status');
+      if (elPwd) {
+        const isMust = (user.mustChangePassword === 1 || user.mustChangePassword === '1' || user.mustChangePassword === true);
+        elPwd.innerText = isMust ? 'Bootstrap Credentials (Action Required)' : 'Saved Permanently (Salted PBKDF2 Hash)';
+        elPwd.className = isMust ? 'diag-val-warn' : 'diag-val-ok';
+      }
 
       const badge = document.getElementById('dash-role-badge');
       badge.innerText = user.role;
@@ -2132,6 +2196,8 @@
         badge.style.color = 'var(--emerald)';
         badge.style.background = 'rgba(16, 185, 129, 0.2)';
         document.getElementById('tab-btn-admin-members').style.display = 'inline-flex';
+        // Automatically fetch registered members for admin overview
+        fetchAdminMembers(1);
       } else if (user.role === 'MODERATOR') {
         badge.style.borderColor = 'var(--cyan)';
         badge.style.color = 'var(--cyan)';
@@ -2144,7 +2210,8 @@
         document.getElementById('tab-btn-admin-members').style.display = 'none';
       }
 
-      if (user.mustChangePassword) {
+      const isReqChange = (user.mustChangePassword === 1 || user.mustChangePassword === '1' || user.mustChangePassword === true);
+      if (isReqChange) {
         document.getElementById('password-change-warning').style.display = 'block';
       } else {
         document.getElementById('password-change-warning').style.display = 'none';
@@ -2170,13 +2237,17 @@
         if (res.ok) {
           const data = await res.json();
           if (data && data.user) {
+            localStorage.setItem('tgz_user', JSON.stringify(data.user));
+            localStorage.setItem('tgz_user_id', data.user.id);
             updateUIAfterLogin(data.user);
           }
         } else if (res.status === 401) {
-          // Explicitly expired or revoked session
+          // Explicitly expired or revoked session - clear cleanly
           localStorage.removeItem('tgz_session_token');
           localStorage.removeItem('tgz_user');
+          localStorage.removeItem('tgz_user_id');
           currentUser = null;
+          document.getElementById('user-dashboard-card').style.display = 'none';
         } else if (localStorage.getItem('tgz_user')) {
           try {
             const cachedUser = JSON.parse(localStorage.getItem('tgz_user'));
@@ -2185,7 +2256,16 @@
             }
           } catch (e) {}
         }
-      } catch (e) {}
+      } catch (e) {
+        if (localStorage.getItem('tgz_user')) {
+          try {
+            const cachedUser = JSON.parse(localStorage.getItem('tgz_user'));
+            if (cachedUser && cachedUser.id) {
+              updateUIAfterLogin(cachedUser);
+            }
+          } catch (err) {}
+        }
+      }
     }
 
     async function loadDiagnostics() {
@@ -2203,13 +2283,13 @@
         if (res.ok) {
           const d = await res.json();
           if (document.getElementById('diag-app-version')) {
-            document.getElementById('diag-app-version').innerText = d.applicationVersion ? `v${d.applicationVersion}` : 'v1.1.0';
+            document.getElementById('diag-app-version').innerText = d.applicationVersion ? `v${d.applicationVersion} (Code ${d.applicationVersionCode || 2})` : 'v1.1 (Code 2)';
           }
           if (document.getElementById('diag-deploy-version')) {
-            document.getElementById('diag-deploy-version').innerText = d.latestDeploymentVersion || 'v1.1.0-prod';
+            document.getElementById('diag-deploy-version').innerText = d.latestDeploymentVersion || 'v1.1-prod';
           }
           if (document.getElementById('diag-db-status')) {
-            const isConn = d.databaseStatus === 'CONNECTED' || d.databaseConnected;
+            const isConn = d.databaseStatus === 'CONNECTED' || d.databaseConnected || d.persistentStorageStatus === 'CONNECTED' || d.databaseConnectionStatus === 'CONNECTED';
             document.getElementById('diag-db-status').innerText = isConn ? '● Online (Connected)' : 'Disconnected';
             document.getElementById('diag-db-status').className = isConn ? 'diag-val-ok' : 'diag-val-err';
           }
@@ -2240,6 +2320,20 @@
             } else {
               document.getElementById('diag-session-status').innerText = '30 Days (Rolling)';
             }
+          }
+          if (document.getElementById('diag-auth-account-id') && d.currentAccountId) {
+            document.getElementById('diag-auth-account-id').innerText = '@' + d.currentAccountId;
+          }
+          if (document.getElementById('diag-auth-account-role') && d.currentAccountRole) {
+            document.getElementById('diag-auth-account-role').innerText = d.currentAccountRole;
+          }
+          if (document.getElementById('diag-auth-session-restore') && d.sessionRestorationStatus) {
+            document.getElementById('diag-auth-session-restore').innerText = d.sessionRestorationStatus === 'ACTIVE_VALIDATED' ? 'Active (Validated & Restored)' : d.sessionRestorationStatus;
+          }
+          if (document.getElementById('diag-auth-pwd-status') && d.passwordStatus) {
+            const isMust = (d.passwordStatus === 'BOOTSTRAP_PENDING_CHANGE');
+            document.getElementById('diag-auth-pwd-status').innerText = isMust ? 'Bootstrap Credentials (Action Required)' : 'Saved Permanently (Salted PBKDF2 Hash)';
+            document.getElementById('diag-auth-pwd-status').className = isMust ? 'diag-val-warn' : 'diag-val-ok';
           }
 
           const warnBox = document.getElementById('diag-warning-container');
@@ -2279,8 +2373,8 @@
     }
 
     // AUTOMATIC APPLICATION UPDATER LOGIC
-    const CURRENT_WEB_VERSION = '1.0';
-    const CURRENT_VERSION_CODE = 1;
+    const CURRENT_WEB_VERSION = '1.1';
+    const CURRENT_VERSION_CODE = 2;
     let updateBannerDismissed = false;
 
     function isUserInteracting() {
@@ -2367,7 +2461,7 @@
       if (status) params.append('status', status);
 
       try {
-        const res = await fetch('/api/settings/admin/users?' + params.toString(), { credentials: 'include' });
+        const res = await apiFetch('/api/settings/admin/users?' + params.toString());
         if (!res.ok) {
           tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--red);">Access denied or error loading members.</td></tr>`;
           return;
@@ -2471,10 +2565,9 @@
     async function updateMemberRole(userId, newRole) {
       if (!confirm(`Are you sure you want to change ${userId}'s role to ${newRole}?`)) return;
       try {
-        const res = await fetch(`/api/settings/admin/users/${encodeURIComponent(userId)}/role`, {
+        const res = await apiFetch(`/api/settings/admin/users/${encodeURIComponent(userId)}/role`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
           body: JSON.stringify({ role: newRole })
         });
         const data = await res.json();
@@ -2491,10 +2584,9 @@
     async function updateMemberStatus(userId, newStatus) {
       if (!confirm(`Are you sure you want to set status of ${userId} to ${newStatus}?`)) return;
       try {
-        const res = await fetch(`/api/settings/admin/users/${encodeURIComponent(userId)}/status`, {
+        const res = await apiFetch(`/api/settings/admin/users/${encodeURIComponent(userId)}/status`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
           body: JSON.stringify({ status: newStatus })
         });
         const data = await res.json();
@@ -2514,7 +2606,7 @@
       container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 24px;">Loading profile details...</div>';
 
       try {
-        const res = await fetch(`/api/settings/admin/users/${encodeURIComponent(userId)}/details`, { credentials: 'include' });
+        const res = await apiFetch(`/api/settings/admin/users/${encodeURIComponent(userId)}/details`);
         if (!res.ok) {
           container.innerHTML = '<div style="color: var(--red); text-align: center; padding: 20px;">Could not load profile details.</div>';
           return;

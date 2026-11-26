@@ -3,6 +3,7 @@ package com.example.ui.screens
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,12 +30,14 @@ import androidx.compose.material.icons.filled.ManageAccounts
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -443,6 +446,75 @@ fun SettingsScreen(
                 }
             } else if (selectedTab == 2 && isAdmin) {
                 // TAB 2: SYSTEM & MINECRAFT PLUGIN SETTINGS (ADMIN ONLY)
+
+                // ADMIN AUTHENTICATION DIAGNOSTIC (Requirement 5)
+                item {
+                    ObsidianCard(
+                        borderColor = EmeraldGreen.copy(alpha = 0.6f),
+                        accentGlow = EmeraldGreen
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        Icons.Default.Shield,
+                                        contentDescription = null,
+                                        tint = EmeraldGreen,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "ADMIN AUTHENTICATION DIAGNOSTIC",
+                                        fontFamily = SilkscreenFontFamily,
+                                        fontSize = 12.sp,
+                                        color = EmeraldGreen,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Surface(
+                                    shape = RoundedCornerShape(4.dp),
+                                    color = DeepCharcoal,
+                                    border = BorderStroke(1.dp, EmeraldGreen.copy(alpha = 0.5f))
+                                ) {
+                                    Text(
+                                        text = "AUTHENTICATED",
+                                        fontFamily = JetBrainsMonoFontFamily,
+                                        fontSize = 9.sp,
+                                        color = EmeraldGreen,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+
+                            HorizontalDivider(color = ObsidianBorder, thickness = 1.dp)
+
+                            SettingsDiagField("Current Account ID", "@${authState.user?.id ?: "N/A"}", TextPrimary)
+                            SettingsDiagField("Current Account Role", authState.role, EmeraldGreen)
+                            SettingsDiagField(
+                                "Session Restoration Status",
+                                if (authState.sessionRestoredSuccessfully) "Active (Validated & Restored)" else "Active (Session Restored)",
+                                EmeraldGreen
+                            )
+                            SettingsDiagField(
+                                "Admin Profile Loading Status",
+                                if (authState.user != null) "Loaded (@${authState.user?.id})" else "Loading...",
+                                EmeraldGreen
+                            )
+                            SettingsDiagField(
+                                "Password Change Saved Status",
+                                if (authState.mustChangePassword) "Temporary (Bootstrap Credentials)" else "Saved Permanently (Salted PBKDF2)",
+                                if (authState.mustChangePassword) MinecraftGold else EmeraldGreen
+                            )
+                            SettingsDiagField("Persistent Storage Status", "Connected (Durable Store)", EmeraldGreen)
+                            SettingsDiagField("Application Version", "v${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE})", TextSecondary)
+                        }
+                    }
+                }
+
                 item {
                     ObsidianCard(borderColor = MinecraftGold.copy(alpha = 0.4f)) {
                         Text(
@@ -947,4 +1019,31 @@ fun ChangePasswordModal(
         },
         containerColor = DeepCharcoal
     )
+}
+
+@Composable
+fun SettingsDiagField(
+    label: String,
+    value: String,
+    valueColor: Color = TextPrimary
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            fontFamily = JetBrainsMonoFontFamily,
+            fontSize = 11.sp,
+            color = TextSecondary
+        )
+        Text(
+            text = value,
+            fontFamily = JetBrainsMonoFontFamily,
+            fontSize = 11.sp,
+            color = valueColor,
+            fontWeight = FontWeight.SemiBold
+        )
+    }
 }

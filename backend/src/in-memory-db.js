@@ -395,7 +395,16 @@ function createInMemoryDatabase(storageFilePath) {
               if (valExpr === '?') {
                 updates[col] = params[paramIndexRef.i++];
               } else {
-                updates[col] = valExpr.replace(/^'|'$/g, '');
+                const cleaned = valExpr.replace(/^'|'$/g, '');
+                if (/^-?\d+$/.test(cleaned)) {
+                  updates[col] = parseInt(cleaned, 10);
+                } else if (/^-?\d+\.\d+$/.test(cleaned)) {
+                  updates[col] = parseFloat(cleaned);
+                } else if (cleaned.toLowerCase() === 'null') {
+                  updates[col] = null;
+                } else {
+                  updates[col] = cleaned;
+                }
               }
             });
 

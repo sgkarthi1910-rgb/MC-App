@@ -43,6 +43,17 @@ class SessionManager(context: Context) {
             .apply()
     }
 
+    fun saveUser(user: StoredUser) {
+        prefs.edit()
+            .putString(KEY_USER_ID, user.id)
+            .putString(KEY_DISPLAY_NAME, user.displayName)
+            .putString(KEY_ROLE, user.role)
+            .putBoolean(KEY_MUST_CHANGE_PASSWORD, user.mustChangePassword)
+            .putString(KEY_STATUS, user.status)
+            .putLong(KEY_CREATED_AT, user.createdAt)
+            .apply()
+    }
+
     fun updatePasswordChanged() {
         prefs.edit().putBoolean(KEY_MUST_CHANGE_PASSWORD, false).apply()
     }

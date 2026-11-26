@@ -164,22 +164,22 @@ fun MemberDashboardScreen(
                     ) {
                         SummaryMiniStat(
                             label = "PLAYTIME",
-                            value = summary?.playtime?.formatted ?: "0h 0m",
+                            value = summary?.playtime?.formatted ?: if (isLoading) "..." else "0h 0m",
                             color = MinecraftGold
                         )
                         SummaryMiniStat(
                             label = "HEARTS",
-                            value = "${summary?.hearts ?: 10} ♥",
+                            value = summary?.hearts?.let { "$it ♥" } ?: if (isLoading) "..." else "10 ♥",
                             color = NetherRed
                         )
                         SummaryMiniStat(
                             label = "KILLS",
-                            value = "${summary?.kills ?: 0}",
+                            value = summary?.kills?.let { "$it" } ?: if (isLoading) "..." else "0",
                             color = EmeraldGreen
                         )
                         SummaryMiniStat(
                             label = "RANK",
-                            value = summary?.leaderboardRank?.let { "#$it" } ?: "-",
+                            value = summary?.leaderboardRank?.let { "#$it" } ?: if (isLoading) "..." else "-",
                             color = Color(0xFF38BDF8)
                         )
                     }

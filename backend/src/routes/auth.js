@@ -229,7 +229,7 @@ function setupAuthRoutes(router, db) {
           id: user.id,
           displayName: user.display_name,
           role: user.role,
-          mustChangePassword: Boolean(user.must_change_password),
+          mustChangePassword: (user.must_change_password === 1 || user.must_change_password === '1' || user.must_change_password === true),
           status: user.status,
           createdAt: user.created_at
         }
@@ -272,7 +272,7 @@ function setupAuthRoutes(router, db) {
         id: req.user.id,
         displayName: req.user.display_name,
         role: req.user.role,
-        mustChangePassword: Boolean(req.user.must_change_password),
+        mustChangePassword: (req.user.must_change_password === 1 || req.user.must_change_password === '1' || req.user.must_change_password === true),
         status: req.user.status,
         createdAt: req.user.created_at,
         minecraftUuid: req.user.minecraft_uuid,

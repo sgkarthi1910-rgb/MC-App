@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -45,6 +46,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
@@ -86,6 +88,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -691,12 +694,64 @@ fun TgzLifestealApp(
                         }
                     }
 
-                    // Main App NavHost
-                    NavHost(
-                        navController = navController,
-                        startDestination = if (authState.isLoggedIn) TgzDestination.DASHBOARD.route else TgzDestination.HOME.route,
-                        modifier = Modifier.fillMaxSize()
-                    ) {
+                    if (authState.isRestoringSession) {
+                        // Secure Session Restoration Loading View (Requirement 2 & 3)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(ObsidianBlack),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center,
+                                modifier = Modifier.padding(24.dp)
+                            ) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = DeepCharcoal,
+                                    border = BorderStroke(2.dp, EmeraldGreen),
+                                    modifier = Modifier.size(72.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            Icons.Default.Shield,
+                                            contentDescription = null,
+                                            tint = EmeraldGreen,
+                                            modifier = Modifier.size(38.dp)
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(20.dp))
+                                Text(
+                                    text = "RESTORING SECURE SESSION",
+                                    fontFamily = SilkscreenFontFamily,
+                                    fontSize = 15.sp,
+                                    color = EmeraldGreen,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Validating session & loading admin profile...",
+                                    fontFamily = JetBrainsMonoFontFamily,
+                                    fontSize = 12.sp,
+                                    color = TextSecondary
+                                )
+                                Spacer(modifier = Modifier.height(24.dp))
+                                CircularProgressIndicator(
+                                    color = EmeraldGreen,
+                                    modifier = Modifier.size(32.dp),
+                                    strokeWidth = 3.dp
+                                )
+                            }
+                        }
+                    } else {
+                        // Main App NavHost
+                        NavHost(
+                            navController = navController,
+                            startDestination = if (authState.isLoggedIn) TgzDestination.DASHBOARD.route else TgzDestination.HOME.route,
+                            modifier = Modifier.fillMaxSize()
+                        ) {
                         // 1. HOME
                         composable(TgzDestination.HOME.route) {
                             HomeScreen(
@@ -853,6 +908,7 @@ fun TgzLifestealApp(
                         }
                     }
                 }
+            }
             }
         }
     }

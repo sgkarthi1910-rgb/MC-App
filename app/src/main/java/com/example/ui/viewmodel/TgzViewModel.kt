@@ -16,6 +16,8 @@ import kotlinx.coroutines.sync.Mutex
 
 data class AuthUiState(
     val isLoggedIn: Boolean = false,
+    val isRestoringSession: Boolean = false,
+    val sessionRestoredSuccessfully: Boolean = false,
     val user: StoredUser? = null,
     val role: String = "MEMBER",
     val mustChangePassword: Boolean = false,
@@ -61,9 +63,11 @@ class TgzViewModel(
     val expandedFaqIds: StateFlow<Set<String>> = _expandedFaqIds.asStateFlow()
 
     // 2. AUTHENTICATION STATE
+    private val hasSessionOnLaunch = sessionManager?.hasActiveSession() ?: false
     private val _authState = MutableStateFlow(
         AuthUiState(
-            isLoggedIn = sessionManager?.hasActiveSession() ?: false,
+            isLoggedIn = hasSessionOnLaunch,
+            isRestoringSession = hasSessionOnLaunch,
             user = sessionManager?.getUser(),
             role = sessionManager?.getUser()?.role ?: "MEMBER",
             mustChangePassword = sessionManager?.getUser()?.mustChangePassword ?: false
@@ -242,11 +246,8 @@ class TgzViewModel(
         fetchJavaServerStatus()
         fetchBedrockServerStatus()
         checkForAppUpdate()
-        if (sessionManager?.hasActiveSession() == true) {
-            refreshSessionUser()
-            loadDashboardSummary()
-            loadUnreadMessagesCount()
-            loadGroups()
+        if (hasSessionOnLaunch) {
+            restoreSessionOnStartup()
         }
     }
 
@@ -446,6 +447,101 @@ class TgzViewModel(
         _authState.update { it.copy(errorMessage = null, successMessage = null) }
     }
 
+    fun restoreSessionOnStartup() {
+        viewModelScope.launch {
+            _isDashboardLoading.value = true
+            val repo = backendRepository
+            if (repo == null) {
+                _authState.update { it.copy(isRestoringSession = false) }
+                _isDashboardLoading.value = false
+                return@launch
+            }
+
+            repo.refreshCurrentUser().onSuccess { resp ->
+                if (resp.user != null) {
+                    val user = StoredUser(
+                        id = resp.user.id,
+                        displayName = resp.user.displayName,
+                        role = resp.user.role,
+                        mustChangePassword = resp.user.mustChangePassword,
+                        status = resp.user.status,
+                        createdAt = resp.user.createdAt
+                    )
+                    sessionManager?.saveUser(user)
+                    _authState.update {
+                        it.copy(
+                            isLoggedIn = true,
+                            isRestoringSession = false,
+                            sessionRestoredSuccessfully = true,
+                            user = user,
+                            role = user.role,
+                            mustChangePassword = user.mustChangePassword,
+                            errorMessage = null
+                        )
+                    }
+                    loadDashboardSummary()
+                    loadUnreadMessagesCount()
+                    loadGroups()
+                    loadAnnouncements()
+                    if (user.role == "ADMIN") {
+                        loadAdminRegisteredMembers()
+                    }
+                } else {
+                    sessionManager?.clearSession()
+                    _authState.update {
+                        it.copy(
+                            isLoggedIn = false,
+                            isRestoringSession = false,
+                            sessionRestoredSuccessfully = false,
+                            user = null,
+                            role = "MEMBER",
+                            mustChangePassword = false
+                        )
+                    }
+                    _isDashboardLoading.value = false
+                }
+            }.onFailure { err ->
+                val msg = err.message ?: ""
+                if (msg.contains("401") || msg.contains("Unauthorized") || msg.contains("revoked")) {
+                    sessionManager?.clearSession()
+                    _authState.update {
+                        it.copy(
+                            isLoggedIn = false,
+                            isRestoringSession = false,
+                            sessionRestoredSuccessfully = false,
+                            user = null,
+                            role = "MEMBER",
+                            mustChangePassword = false
+                        )
+                    }
+                    _isDashboardLoading.value = false
+                } else {
+                    val cachedUser = sessionManager?.getUser()
+                    if (cachedUser != null) {
+                        _authState.update {
+                            it.copy(
+                                isLoggedIn = true,
+                                isRestoringSession = false,
+                                sessionRestoredSuccessfully = true,
+                                user = cachedUser,
+                                role = cachedUser.role,
+                                mustChangePassword = cachedUser.mustChangePassword
+                            )
+                        }
+                        loadDashboardSummary()
+                        loadAnnouncements()
+                        if (cachedUser.role == "ADMIN") {
+                            loadAdminRegisteredMembers()
+                        }
+                    } else {
+                        _authState.update { it.copy(isRestoringSession = false) }
+                        _isDashboardLoading.value = false
+                    }
+                }
+            }
+        }
+    }
+
     private fun refreshSessionUser() {
         viewModelScope.launch {
             backendRepository?.refreshCurrentUser()?.onSuccess { resp ->
@@ -458,6 +554,7 @@ class TgzViewModel(
                         status = resp.user.status,
                         createdAt = resp.user.createdAt
                     )
+                    sessionManager?.saveUser(user)
                     _authState.update {
                         it.copy(
                             isLoggedIn = true,

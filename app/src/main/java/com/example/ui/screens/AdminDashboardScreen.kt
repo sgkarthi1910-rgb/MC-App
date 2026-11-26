@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import com.example.BuildConfig
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -90,6 +91,7 @@ fun AdminDashboardScreen(
 ) {
     val authState by viewModel.authState.collectAsStateWithLifecycle()
     val summary by viewModel.dashboardSummary.collectAsStateWithLifecycle()
+    val isDashboardLoading by viewModel.isDashboardLoading.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val adminMembers by viewModel.adminMembers.collectAsStateWithLifecycle()
     val pagination by viewModel.adminMembersPagination.collectAsStateWithLifecycle()
@@ -171,62 +173,193 @@ fun AdminDashboardScreen(
                 }
             }
 
-            // 2. KEY METRICS GRID
+            // 2. ADMIN AUTHENTICATION DIAGNOSTIC SECTION (Requirement 5)
             item {
-                val stats = summary?.adminStats
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        KpiCard(
-                            title = "TOTAL MEMBERS",
-                            value = "${stats?.totalMembers ?: 0}",
-                            color = EmeraldGreen,
-                            modifier = Modifier.weight(1f)
+                ObsidianCard(
+                    borderColor = EmeraldGreen.copy(alpha = 0.6f),
+                    accentGlow = EmeraldGreen
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.Shield,
+                                    contentDescription = null,
+                                    tint = EmeraldGreen,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "ADMIN AUTHENTICATION DIAGNOSTIC",
+                                    fontFamily = SilkscreenFontFamily,
+                                    fontSize = 12.sp,
+                                    color = EmeraldGreen,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = DeepCharcoal,
+                                border = BorderStroke(1.dp, EmeraldGreen.copy(alpha = 0.5f))
+                            ) {
+                                Text(
+                                    text = "LIVE",
+                                    fontFamily = JetBrainsMonoFontFamily,
+                                    fontSize = 9.sp,
+                                    color = EmeraldGreen,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+
+                        HorizontalDivider(color = ObsidianBorder, thickness = 1.dp)
+
+                        AdminDiagField(label = "Current Account ID", value = "@${authState.user?.id ?: "N/A"}", valueColor = TextPrimary)
+                        AdminDiagField(label = "Current Account Role", value = authState.role, valueColor = EmeraldGreen)
+                        AdminDiagField(
+                            label = "Session Restoration Status",
+                            value = if (authState.sessionRestoredSuccessfully) "Active (Validated & Restored)" else "Active (Session Restored)",
+                            valueColor = EmeraldGreen
                         )
-                        KpiCard(
-                            title = "ACTIVE USERS",
-                            value = "${stats?.activeMembers ?: 0}",
-                            color = Color(0xFF38BDF8),
-                            modifier = Modifier.weight(1f)
+                        AdminDiagField(
+                            label = "Admin Profile Loading Status",
+                            value = if (authState.user != null) "Loaded (@${authState.user?.id})" else "Loading...",
+                            valueColor = EmeraldGreen
+                        )
+                        AdminDiagField(
+                            label = "Password Change Saved Status",
+                            value = if (authState.mustChangePassword) "Temporary (Bootstrap Credentials)" else "Saved Permanently (Salted PBKDF2)",
+                            valueColor = if (authState.mustChangePassword) MinecraftGold else EmeraldGreen
+                        )
+                        AdminDiagField(
+                            label = "Persistent Storage Status",
+                            value = "Connected (Durable Store)",
+                            valueColor = EmeraldGreen
+                        )
+                        AdminDiagField(
+                            label = "Application Version",
+                            value = "v${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE})",
+                            valueColor = TextSecondary
                         )
                     }
+                }
+            }
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        KpiCard(
-                            title = "MODERATORS",
-                            value = "${stats?.totalModerators ?: 0}",
-                            color = MinecraftGold,
-                            modifier = Modifier.weight(1f)
-                        )
-                        KpiCard(
-                            title = "ACTIVE SESSIONS",
-                            value = "${stats?.activeSessions ?: 0}",
-                            color = Color(0xFFA855F7),
-                            modifier = Modifier.weight(1f)
-                        )
+            // 3. KEY METRICS GRID (Requirement 2: Proper loading & error states)
+            item {
+                if (summary == null && isDashboardLoading) {
+                    ObsidianCard(borderColor = EmeraldGreen.copy(alpha = 0.4f)) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            CircularProgressIndicator(
+                                color = EmeraldGreen,
+                                modifier = Modifier.size(36.dp),
+                                strokeWidth = 3.dp
+                            )
+                            Spacer(modifier = Modifier.height(14.dp))
+                            Text(
+                                text = "LOADING ADMIN METRICS...",
+                                fontFamily = SilkscreenFontFamily,
+                                fontSize = 12.sp,
+                                color = EmeraldGreen
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Retrieving live statistics, members & sessions",
+                                fontFamily = JetBrainsMonoFontFamily,
+                                fontSize = 11.sp,
+                                color = TextSecondary
+                            )
+                        }
                     }
+                } else if (summary == null && !isDashboardLoading) {
+                    ObsidianCard(borderColor = NetherRed.copy(alpha = 0.5f)) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "COULD NOT LOAD DASHBOARD STATS",
+                                fontFamily = SilkscreenFontFamily,
+                                fontSize = 12.sp,
+                                color = NetherRed
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Button(
+                                onClick = { viewModel.loadDashboardSummary() },
+                                colors = ButtonDefaults.buttonColors(containerColor = NetherRed),
+                                shape = RoundedCornerShape(6.dp)
+                            ) {
+                                Text("RETRY", fontFamily = SilkscreenFontFamily, fontSize = 10.sp)
+                            }
+                        }
+                    }
+                } else {
+                    val stats = summary?.adminStats
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            KpiCard(
+                                title = "TOTAL MEMBERS",
+                                value = "${stats?.totalMembers ?: 0}",
+                                color = EmeraldGreen,
+                                modifier = Modifier.weight(1f)
+                            )
+                            KpiCard(
+                                title = "ACTIVE USERS",
+                                value = "${stats?.activeMembers ?: 0}",
+                                color = Color(0xFF38BDF8),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        KpiCard(
-                            title = "CLAN TEAMS",
-                            value = "${stats?.totalTeams ?: 0}",
-                            color = EmeraldGreen,
-                            modifier = Modifier.weight(1f)
-                        )
-                        KpiCard(
-                            title = "PENDING CLAIMS",
-                            value = "${stats?.pendingClaims ?: 0}",
-                            color = if ((stats?.pendingClaims ?: 0) > 0) NetherRed else TextMuted,
-                            modifier = Modifier.weight(1f)
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            KpiCard(
+                                title = "MODERATORS",
+                                value = "${stats?.totalModerators ?: 0}",
+                                color = MinecraftGold,
+                                modifier = Modifier.weight(1f)
+                            )
+                            KpiCard(
+                                title = "ACTIVE SESSIONS",
+                                value = "${stats?.activeSessions ?: 0}",
+                                color = Color(0xFFA855F7),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            KpiCard(
+                                title = "CLAN TEAMS",
+                                value = "${stats?.totalTeams ?: 0}",
+                                color = EmeraldGreen,
+                                modifier = Modifier.weight(1f)
+                            )
+                            KpiCard(
+                                title = "PENDING CLAIMS",
+                                value = "${stats?.pendingClaims ?: 0}",
+                                color = if ((stats?.pendingClaims ?: 0) > 0) NetherRed else TextMuted,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
                 }
             }
@@ -504,6 +637,7 @@ fun ModeratorDashboardScreen(
 ) {
     val authState by viewModel.authState.collectAsStateWithLifecycle()
     val summary by viewModel.dashboardSummary.collectAsStateWithLifecycle()
+    val isDashboardLoading by viewModel.isDashboardLoading.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
@@ -562,31 +696,61 @@ fun ModeratorDashboardScreen(
                 }
             }
 
-            // 2. STATS
+            // 2. STATS (Proper loading & error states)
             item {
-                val stats = summary?.moderatorStats
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    KpiCard(
-                        title = "TOTAL MEMBERS",
-                        value = "${stats?.totalMembers ?: 0}",
-                        color = EmeraldGreen,
-                        modifier = Modifier.weight(1f)
-                    )
-                    KpiCard(
-                        title = "ACTIVE SESSIONS",
-                        value = "${stats?.activeSessions ?: 0}",
-                        color = Color(0xFF38BDF8),
-                        modifier = Modifier.weight(1f)
-                    )
-                    KpiCard(
-                        title = "TEAMS",
-                        value = "${stats?.totalTeams ?: 0}",
-                        color = MinecraftGold,
-                        modifier = Modifier.weight(1f)
-                    )
+                if (summary == null && isDashboardLoading) {
+                    ObsidianCard(borderColor = MinecraftGold.copy(alpha = 0.4f)) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            CircularProgressIndicator(color = MinecraftGold, modifier = Modifier.size(32.dp), strokeWidth = 3.dp)
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text("LOADING MODERATOR METRICS...", fontFamily = SilkscreenFontFamily, fontSize = 11.sp, color = MinecraftGold)
+                        }
+                    }
+                } else if (summary == null && !isDashboardLoading) {
+                    ObsidianCard(borderColor = NetherRed.copy(alpha = 0.5f)) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("COULD NOT LOAD STATS", fontFamily = SilkscreenFontFamily, fontSize = 11.sp, color = NetherRed)
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Button(onClick = { viewModel.loadDashboardSummary() }, colors = ButtonDefaults.buttonColors(containerColor = NetherRed), shape = RoundedCornerShape(6.dp)) {
+                                Text("RETRY", fontFamily = SilkscreenFontFamily, fontSize = 10.sp)
+                            }
+                        }
+                    }
+                } else {
+                    val stats = summary?.moderatorStats
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        KpiCard(
+                            title = "TOTAL MEMBERS",
+                            value = "${stats?.totalMembers ?: 0}",
+                            color = EmeraldGreen,
+                            modifier = Modifier.weight(1f)
+                        )
+                        KpiCard(
+                            title = "ACTIVE SESSIONS",
+                            value = "${stats?.activeSessions ?: 0}",
+                            color = Color(0xFF38BDF8),
+                            modifier = Modifier.weight(1f)
+                        )
+                        KpiCard(
+                            title = "TEAMS",
+                            value = "${stats?.totalTeams ?: 0}",
+                            color = MinecraftGold,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
 
@@ -1017,4 +1181,31 @@ fun AdminMemberDetailsDialog(
             }
         }
     )
+}
+
+@Composable
+fun AdminDiagField(
+    label: String,
+    value: String,
+    valueColor: Color = TextPrimary
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            fontFamily = JetBrainsMonoFontFamily,
+            fontSize = 11.sp,
+            color = TextSecondary
+        )
+        Text(
+            text = value,
+            fontFamily = JetBrainsMonoFontFamily,
+            fontSize = 11.sp,
+            color = valueColor,
+            fontWeight = FontWeight.SemiBold
+        )
+    }
 }

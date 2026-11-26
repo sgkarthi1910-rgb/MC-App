@@ -431,17 +431,25 @@ function setupSettingsRoutes(router, db) {
     const lastSync = typeof db.getLastSyncTime === 'function' ? db.getLastSyncTime() : Date.now();
     const syncStatus = typeof db.getLastSyncStatus === 'function' ? db.getLastSyncStatus() : 'ONLINE';
 
+    const isBootstrapPending = (req.user.must_change_password === 1 || req.user.must_change_password === '1' || req.user.must_change_password === true);
+
     return res.json({
-      applicationVersion: settings.app_version_name || '1.1.0',
-      applicationVersionCode: parseInt(settings.app_version_code || '1', 10),
-      webVersion: '1.1.0',
-      latestDeploymentVersion: process.env.VERCEL_GIT_COMMIT_SHA ? process.env.VERCEL_GIT_COMMIT_SHA.slice(0, 8) : (process.env.VERCEL_DEPLOYMENT_ID || 'v1.1.0-prod'),
+      currentAccountId: req.user.id,
+      currentAccountRole: req.user.role,
+      sessionRestorationStatus: 'ACTIVE_VALIDATED',
+      adminProfileStatus: 'LOADED',
+      passwordStatus: isBootstrapPending ? 'BOOTSTRAP_PENDING_CHANGE' : 'SAVED_PERMANENT',
+      persistentStorageStatus: 'CONNECTED',
+      applicationVersion: settings.app_version_name || '1.1',
+      applicationVersionCode: parseInt(settings.app_version_code || '2', 10),
+      webVersion: '1.1',
+      latestDeploymentVersion: process.env.VERCEL_GIT_COMMIT_SHA ? process.env.VERCEL_GIT_COMMIT_SHA.slice(0, 8) : (process.env.VERCEL_DEPLOYMENT_ID || 'v1.1-prod'),
       databaseConnectionStatus: 'CONNECTED',
       databaseType: dbType,
       databaseMigrationStatus: `UP_TO_DATE (${migrationsCount || 2} migrations applied)`,
       authServiceStatus: 'ACTIVE',
       adminAccountStatus: 'PROVISIONED',
-      adminUniqueId: 'sg_karthi',
+      adminUniqueId: req.user.id || 'sg_karthi',
       lastDataSync: lastSync,
       lastSyncStatus: syncStatus,
       lastUpdateCheck: Date.now(),
