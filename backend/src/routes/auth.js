@@ -97,6 +97,8 @@ function setupAuthRoutes(router, db) {
       const secureFlag = isHttps ? '; Secure' : '';
       res.setHeader('Set-Cookie', `tgz_session=${rawToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${expirationDays * 86400}${secureFlag}`);
 
+      if (typeof db.flushSync === 'function') await db.flushSync();
+
       return res.status(201).json({
         success: true,
         message: 'Registration successful',
@@ -218,6 +220,8 @@ function setupAuthRoutes(router, db) {
       const secureFlag = isHttps ? '; Secure' : '';
       const expirationDays = parseInt(process.env.SESSION_EXPIRATION_DAYS || '30', 10);
       res.setHeader('Set-Cookie', `tgz_session=${rawToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${expirationDays * 86400}${secureFlag}`);
+
+      if (typeof db.flushSync === 'function') await db.flushSync();
 
       return res.json({
         success: true,
@@ -365,6 +369,7 @@ function setupAuthRoutes(router, db) {
 
       // Invalidate all active sessions so the user must log in again with the new password
       db.prepare('UPDATE sessions SET is_revoked = 1 WHERE user_id = ?').run(user.id);
+      if (typeof db.flushSync === 'function') await db.flushSync();
 
       const isHttps = req.headers['x-forwarded-proto'] === 'https' || !!process.env.VERCEL;
       const secureFlag = isHttps ? '; Secure' : '';
@@ -451,6 +456,7 @@ function setupAuthRoutes(router, db) {
         clientIp,
         now
       );
+      if (typeof db.flushSync === 'function') await db.flushSync();
 
       return res.json({
         success: true,

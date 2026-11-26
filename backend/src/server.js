@@ -170,6 +170,10 @@ function createServer(dbPath) {
     req.query = Object.fromEntries(parsedUrl.searchParams.entries());
     req.cookies = parseCookies(req.headers.cookie);
 
+    if (typeof db.ensureSynced === 'function') {
+      await db.ensureSynced();
+    }
+
     // Rate Limiting on Login and Signup
     const clientIp = req.socket?.remoteAddress || 'unknown';
     if ((req.pathname === '/api/auth/login' || req.pathname === '/api/auth/signup') && req.method === 'POST') {

@@ -64,6 +64,9 @@ function createInMemoryDatabase(storageFilePath) {
   // Cloud KV / Upstash sync if configured
   const kvUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
   const kvToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+  let initialSyncPromise = null;
+  let pendingPersistPromise = Promise.resolve();
+  let lastCloudPullAt = 0;
 
   async function syncFromCloudKV() {
     if (!kvUrl || !kvToken || typeof fetch !== 'function') return;
@@ -81,6 +84,7 @@ function createInMemoryDatabase(storageFilePath) {
             }
           });
           lastSyncTime = Date.now();
+          lastCloudPullAt = lastSyncTime;
           lastSyncStatus = 'SYNCED_FROM_CLOUD_KV';
           persistLocal();
         }
@@ -92,7 +96,7 @@ function createInMemoryDatabase(storageFilePath) {
 
   // Initial cloud fetch attempt
   if (kvUrl && kvToken) {
-    syncFromCloudKV().catch(() => {});
+    initialSyncPromise = syncFromCloudKV().catch(() => {});
   }
 
   function persistLocal() {
@@ -108,10 +112,10 @@ function createInMemoryDatabase(storageFilePath) {
 
   function persist() {
     persistLocal();
-    // Asynchronously push to cloud KV if configured
+    // Push to cloud KV if configured and track promise for flushSync()
     if (kvUrl && kvToken && typeof fetch === 'function') {
       const payload = JSON.stringify(tables);
-      fetch(`${kvUrl}/set/tgz_store`, {
+      pendingPersistPromise = fetch(`${kvUrl}/set/tgz_store`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${kvToken}`,
@@ -120,6 +124,7 @@ function createInMemoryDatabase(storageFilePath) {
         body: payload
       }).then(() => {
         lastSyncTime = Date.now();
+        lastCloudPullAt = lastSyncTime;
         lastSyncStatus = 'SYNCED_TO_CLOUD_KV';
       }).catch(err => {
         lastSyncStatus = 'CLOUD_KV_PUSH_FAILED: ' + (err?.message || 'Error');
@@ -513,6 +518,21 @@ function createInMemoryDatabase(storageFilePath) {
 
     getLastSyncStatus() {
       return lastSyncStatus;
+    },
+
+    async ensureSynced() {
+      if (initialSyncPromise) {
+        await initialSyncPromise;
+        initialSyncPromise = null;
+      } else if (kvUrl && kvToken && (Date.now() - lastCloudPullAt > 2000)) {
+        await syncFromCloudKV();
+      }
+    },
+
+    async flushSync() {
+      try {
+        await pendingPersistPromise;
+      } catch (e) {}
     },
 
     dumpData() {
