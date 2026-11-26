@@ -367,15 +367,15 @@ function setupSettingsRoutes(router, db) {
     const settings = {};
     for (const r of rows) settings[r.key] = r.value;
 
-    let versionCode = parseInt(settings.app_version_code || process.env.APP_VERSION_CODE || '4', 10);
-    if (isNaN(versionCode) || versionCode < 4) versionCode = 4;
-    let versionName = settings.app_version_name || process.env.APP_VERSION_NAME || '1.3';
-    if (versionName === '1.0' || versionName === '1.1' || versionName === '1.2') versionName = '1.3';
-    let apkUrl = settings.app_apk_url || process.env.APP_APK_URL || 'https://github.com/sgkarthi1910-rgb/MC-App/releases/download/v1.3/TGZ-Lifestyle-v1.3.apk';
-    if (!apkUrl || apkUrl.includes('releases/latest') || apkUrl.includes('v1.1') || apkUrl.includes('v1.2')) {
-      apkUrl = 'https://github.com/sgkarthi1910-rgb/MC-App/releases/download/v1.3/TGZ-Lifestyle-v1.3.apk';
+    let versionCode = parseInt(settings.app_version_code || process.env.APP_VERSION_CODE || '5', 10);
+    if (isNaN(versionCode) || versionCode < 5) versionCode = 5;
+    let versionName = settings.app_version_name || process.env.APP_VERSION_NAME || '1.4';
+    if (versionName === '1.0' || versionName === '1.1' || versionName === '1.2' || versionName === '1.3') versionName = '1.4';
+    let apkUrl = settings.app_apk_url || process.env.APP_APK_URL || 'https://github.com/sgkarthi1910-rgb/MC-App/releases/download/v1.4/TGZ-Lifestyle-v1.4.apk';
+    if (!apkUrl || apkUrl.includes('releases/latest') || apkUrl.includes('v1.1') || apkUrl.includes('v1.2') || apkUrl.includes('v1.3')) {
+      apkUrl = 'https://github.com/sgkarthi1910-rgb/MC-App/releases/download/v1.4/TGZ-Lifestyle-v1.4.apk';
     }
-    const changelog = settings.app_changelog || 'Release v1.3: Strict password-required login on every app open, no auto-login bypass, and dashboard loading improvements.';
+    const changelog = settings.app_changelog || 'Release v1.4: Persistent DB password updates, HTTP 401 session fixes, strict role-based password permissions, and login-every-open security.';
     const forceUpdate = (settings.app_force_update === 'true' || settings.app_force_update === '1');
     const minSupportedVersionCode = parseInt(settings.app_min_supported_version_code || '1', 10);
 
@@ -403,9 +403,9 @@ function setupSettingsRoutes(router, db) {
     const rows = db.prepare('SELECT key, value FROM app_settings').all();
     const settings = {};
     for (const r of rows) settings[r.key] = r.value;
-    let apkUrl = settings.app_apk_url || process.env.APP_APK_URL || 'https://github.com/sgkarthi1910-rgb/MC-App/releases/download/v1.3/TGZ-Lifestyle-v1.3.apk';
-    if (!apkUrl || apkUrl.includes('releases/latest') || apkUrl.includes('v1.1') || apkUrl.includes('v1.2')) {
-      apkUrl = 'https://github.com/sgkarthi1910-rgb/MC-App/releases/download/v1.3/TGZ-Lifestyle-v1.3.apk';
+    let apkUrl = settings.app_apk_url || process.env.APP_APK_URL || 'https://github.com/sgkarthi1910-rgb/MC-App/releases/download/v1.4/TGZ-Lifestyle-v1.4.apk';
+    if (!apkUrl || apkUrl.includes('releases/latest') || apkUrl.includes('v1.1') || apkUrl.includes('v1.2') || apkUrl.includes('v1.3')) {
+      apkUrl = 'https://github.com/sgkarthi1910-rgb/MC-App/releases/download/v1.4/TGZ-Lifestyle-v1.4.apk';
     }
     return res.redirect(302, apkUrl);
   });
@@ -453,8 +453,8 @@ function setupSettingsRoutes(router, db) {
       adminProfileStatus: 'LOADED',
       passwordStatus: isBootstrapPending ? 'BOOTSTRAP_PENDING_CHANGE' : 'SAVED_PERMANENT',
       persistentStorageStatus: 'CONNECTED',
-      applicationVersion: settings.app_version_name || '1.3',
-      applicationVersionCode: parseInt(settings.app_version_code || '4', 10),
+      applicationVersion: settings.app_version_name || '1.4',
+      applicationVersionCode: parseInt(settings.app_version_code || '5', 10),
       webVersion: '1.2',
       latestDeploymentVersion: process.env.VERCEL_GIT_COMMIT_SHA ? process.env.VERCEL_GIT_COMMIT_SHA.slice(0, 8) : (process.env.VERCEL_DEPLOYMENT_ID || 'v1.1-prod'),
       databaseConnectionStatus: 'CONNECTED',

@@ -414,10 +414,10 @@ function seedInitialData(db) {
     { key: 'minecraft_plugin_api_key', value: process.env.MINECRAFT_PLUGIN_API_KEY || 'tgz_plugin_sec_99a8b7c6d5e4f3a2' },
     { key: 'allow_member_team_creation', value: 'true' },
     { key: 'motd', value: 'Welcome to TGZ Lifestyle SMP!' },
-    { key: 'app_version_code', value: process.env.APP_VERSION_CODE || '4' },
-    { key: 'app_version_name', value: process.env.APP_VERSION_NAME || '1.3' },
-    { key: 'app_apk_url', value: process.env.APP_APK_URL || 'https://github.com/sgkarthi1910-rgb/MC-App/releases/download/v1.3/TGZ-Lifestyle-v1.3.apk' },
-    { key: 'app_changelog', value: 'Release v1.3: Strict password-required login on every app open, no auto-login bypass, and dashboard loading improvements.' },
+    { key: 'app_version_code', value: process.env.APP_VERSION_CODE || '5' },
+    { key: 'app_version_name', value: process.env.APP_VERSION_NAME || '1.4' },
+    { key: 'app_apk_url', value: process.env.APP_APK_URL || 'https://github.com/sgkarthi1910-rgb/MC-App/releases/download/v1.4/TGZ-Lifestyle-v1.4.apk' },
+    { key: 'app_changelog', value: 'Release v1.4: Persistent DB password updates, HTTP 401 session fixes, strict role-based password permissions, and login-every-open security.' },
     { key: 'app_force_update', value: 'false' },
     { key: 'app_min_supported_version_code', value: '1' }
   ];
@@ -429,15 +429,15 @@ function seedInitialData(db) {
     }
   }
 
-  // Ensure version code is at least 4 for live in-app OTA update rollout
+  // Ensure version code is at least 5 for live in-app OTA update rollout
   try {
     const curCodeRow = db.prepare("SELECT value FROM app_settings WHERE key = 'app_version_code'").get();
     const curApkRow = db.prepare("SELECT value FROM app_settings WHERE key = 'app_apk_url'").get();
-    if (!curCodeRow || parseInt(curCodeRow.value, 10) < 4 || !curApkRow || curApkRow.value.includes('v1.1') || curApkRow.value.includes('v1.2') || curApkRow.value.includes('releases/latest')) {
-      db.prepare("INSERT INTO app_settings (key, value) VALUES ('app_version_code', '4') ON CONFLICT(key) DO UPDATE SET value = '4'").run();
-      db.prepare("INSERT INTO app_settings (key, value) VALUES ('app_version_name', '1.3') ON CONFLICT(key) DO UPDATE SET value = '1.3'").run();
-      db.prepare("INSERT INTO app_settings (key, value) VALUES ('app_apk_url', 'https://github.com/sgkarthi1910-rgb/MC-App/releases/download/v1.3/TGZ-Lifestyle-v1.3.apk') ON CONFLICT(key) DO UPDATE SET value = 'https://github.com/sgkarthi1910-rgb/MC-App/releases/download/v1.3/TGZ-Lifestyle-v1.3.apk'").run();
-      db.prepare("INSERT INTO app_settings (key, value) VALUES ('app_changelog', 'Release v1.3: Strict password-required login on every app open, no auto-login bypass, and dashboard loading improvements.') ON CONFLICT(key) DO UPDATE SET value = 'Release v1.3: Strict password-required login on every app open, no auto-login bypass, and dashboard loading improvements.'").run();
+    if (!curCodeRow || parseInt(curCodeRow.value, 10) < 5 || !curApkRow || curApkRow.value.includes('v1.1') || curApkRow.value.includes('v1.2') || curApkRow.value.includes('v1.3') || curApkRow.value.includes('releases/latest')) {
+      db.prepare("INSERT INTO app_settings (key, value) VALUES ('app_version_code', '5') ON CONFLICT(key) DO UPDATE SET value = '5'").run();
+      db.prepare("INSERT INTO app_settings (key, value) VALUES ('app_version_name', '1.4') ON CONFLICT(key) DO UPDATE SET value = '1.4'").run();
+      db.prepare("INSERT INTO app_settings (key, value) VALUES ('app_apk_url', 'https://github.com/sgkarthi1910-rgb/MC-App/releases/download/v1.4/TGZ-Lifestyle-v1.4.apk') ON CONFLICT(key) DO UPDATE SET value = 'https://github.com/sgkarthi1910-rgb/MC-App/releases/download/v1.4/TGZ-Lifestyle-v1.4.apk'").run();
+      db.prepare("INSERT INTO app_settings (key, value) VALUES ('app_changelog', 'Release v1.4: Persistent DB password updates, HTTP 401 session fixes, strict role-based password permissions, and login-every-open security.') ON CONFLICT(key) DO UPDATE SET value = 'Release v1.4: Persistent DB password updates, HTTP 401 session fixes, strict role-based password permissions, and login-every-open security.'").run();
     }
   } catch(e) {}
 
