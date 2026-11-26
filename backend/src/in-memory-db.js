@@ -8,6 +8,13 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
+let postgresAdapter = null;
+try {
+  postgresAdapter = require('./postgres-adapter');
+} catch (e) {
+  postgresAdapter = null;
+}
+
 function createInMemoryDatabase(storageFilePath) {
   let tables = {
     schema_migrations: [],
@@ -61,6 +68,10 @@ function createInMemoryDatabase(storageFilePath) {
     }
   }
 
+  // Managed PostgreSQL / Supabase / Neon sync if configured
+  const isPostgres = !!(postgresAdapter && postgresAdapter.isPostgresConfigured());
+  let postgresPool = isPostgres ? postgresAdapter.getPostgresPool() : null;
+
   // Cloud KV / Upstash sync if configured
   const kvUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
   const kvToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -68,6 +79,28 @@ function createInMemoryDatabase(storageFilePath) {
   let pendingPersistPromise = Promise.resolve();
   let lastCloudPullAt = 0;
   let isPersisting = false;
+
+  async function syncFromPostgres() {
+    if (!postgresPool || isPersisting) return;
+    try {
+      await postgresAdapter.initPostgresSchema(postgresPool);
+      await postgresAdapter.migrateDataToPostgres(postgresPool, tables);
+      const remoteData = await postgresAdapter.loadAllFromPostgres(postgresPool);
+      if (remoteData && typeof remoteData === 'object') {
+        Object.keys(tables).forEach(t => {
+          if (Array.isArray(remoteData[t]) && remoteData[t].length > 0) {
+            tables[t] = remoteData[t];
+          }
+        });
+        lastSyncTime = Date.now();
+        lastCloudPullAt = lastSyncTime;
+        lastSyncStatus = 'SYNCED_FROM_POSTGRES';
+        persistLocal();
+      }
+    } catch (e) {
+      lastSyncStatus = 'POSTGRES_SYNC_FAILED: ' + (e?.message || 'Error');
+    }
+  }
 
   async function syncFromCloudKV() {
     if (!kvUrl || !kvToken || typeof fetch !== 'function' || isPersisting) return;
@@ -98,8 +131,10 @@ function createInMemoryDatabase(storageFilePath) {
     }
   }
 
-  // Initial cloud fetch attempt
-  if (kvUrl && kvToken) {
+  // Initial cloud / database fetch attempt
+  if (isPostgres && postgresPool) {
+    initialSyncPromise = syncFromPostgres().catch(() => {});
+  } else if (kvUrl && kvToken) {
     initialSyncPromise = syncFromCloudKV().catch(() => {});
   }
 
@@ -114,8 +149,29 @@ function createInMemoryDatabase(storageFilePath) {
     }
   }
 
-  function persist() {
+  function persist(modifiedTable) {
     persistLocal();
+    if (isPostgres && postgresPool) {
+      isPersisting = true;
+      pendingPersistPromise = pendingPersistPromise.then(async () => {
+        try {
+          if (modifiedTable && tables[modifiedTable]) {
+            await postgresAdapter.syncTableToPostgres(postgresPool, modifiedTable, tables[modifiedTable]);
+          } else {
+            for (const t of Object.keys(tables)) {
+              await postgresAdapter.syncTableToPostgres(postgresPool, t, tables[t]);
+            }
+          }
+          lastSyncTime = Date.now();
+          lastSyncStatus = 'SYNCED_TO_POSTGRES';
+        } catch (err) {
+          lastSyncStatus = 'POSTGRES_PUSH_FAILED: ' + (err?.message || 'Error');
+        }
+      }).finally(() => {
+        isPersisting = false;
+      });
+    }
+
     // Strictly serialize Cloud KV pushes so concurrent writes never arrive out of order
     if (kvUrl && kvToken && typeof fetch === 'function') {
       isPersisting = true;
@@ -625,10 +681,21 @@ function createInMemoryDatabase(storageFilePath) {
       return lastSyncStatus;
     },
 
+    getDatabaseType() {
+      if (isPostgres) return 'Cloud PostgreSQL (Managed Production DB)';
+      if (kvUrl && kvToken) return 'Upstash/Vercel KV (Managed Production DB)';
+      if (process.env.TURSO_DATABASE_URL) return 'Turso Cloud SQLite (Managed Production DB)';
+      if (process.env.VERCEL) return 'Ephemeral Serverless Store (/tmp fallback - Configure DATABASE_URL in Vercel)';
+      return 'SQLite Local File';
+    },
+
     async ensureSynced(force = false) {
       if (initialSyncPromise) {
         await initialSyncPromise;
         initialSyncPromise = null;
+      }
+      if (isPostgres && postgresPool && (force || process.env.VERCEL || (Date.now() - lastCloudPullAt > 2000))) {
+        await syncFromPostgres();
       } else if (kvUrl && kvToken && (force || process.env.VERCEL || (Date.now() - lastCloudPullAt > 2000))) {
         await syncFromCloudKV();
       }

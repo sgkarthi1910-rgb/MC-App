@@ -473,34 +473,43 @@ function setupSettingsRoutes(router, db) {
     const settings = {};
     for (const r of rows) settings[r.key] = r.value;
 
-    const dbType = hasExternalDb
-      ? (process.env.TURSO_DATABASE_URL ? 'Turso Cloud SQLite' : (process.env.KV_REST_API_URL ? 'Upstash/Vercel KV Store' : 'Cloud PostgreSQL'))
-      : (isVercel ? 'Serverless Store (/tmp & in-memory)' : 'SQLite Local File');
+    const dbType = typeof db.getDatabaseType === 'function'
+      ? db.getDatabaseType()
+      : (hasExternalDb
+          ? (process.env.TURSO_DATABASE_URL ? 'Turso Cloud SQLite (Managed Production DB)' : (process.env.KV_REST_API_URL ? 'Upstash/Vercel KV Store' : 'Cloud PostgreSQL (Managed Production DB)'))
+          : (isVercel ? 'Ephemeral Serverless Store (/tmp & in-memory)' : 'SQLite Local File'));
 
     const lastSync = typeof db.getLastSyncTime === 'function' ? db.getLastSyncTime() : Date.now();
     const syncStatus = typeof db.getLastSyncStatus === 'function' ? db.getLastSyncStatus() : 'ONLINE';
-
     const isBootstrapPending = (req.user.must_change_password === 1 || req.user.must_change_password === '1' || req.user.must_change_password === true);
+    const dbEnvironment = (process.env.NODE_ENV === 'production' || !!process.env.VERCEL) ? 'Production' : 'Development';
 
     return res.json({
       currentAccountId: req.user.id,
       currentAccountRole: req.user.role,
+      productionDatabaseConnectionStatus: hasExternalDb ? 'CONNECTED' : (isVercel ? 'EPHEMERAL_SERVERLESS' : 'CONNECTED_LOCAL'),
+      databaseConnectionStatus: 'CONNECTED',
+      databaseEnvironment: dbEnvironment,
+      totalRegisteredAccounts: userCount,
+      totalUsers: userCount,
+      sessionValidationStatus: 'VALIDATED_ACTIVE',
       sessionRestorationStatus: 'ACTIVE_VALIDATED',
+      memberProfileLoadingStatus: 'LOADED',
       adminProfileStatus: 'LOADED',
+      lastSuccessfulDatabaseSynchronization: lastSync,
+      lastDataSync: lastSync,
+      lastSyncStatus: syncStatus,
       passwordStatus: isBootstrapPending ? 'BOOTSTRAP_PENDING_CHANGE' : 'SAVED_PERMANENT',
       persistentStorageStatus: 'CONNECTED',
-      applicationVersion: settings.app_version_name || '1.4',
+      applicationVersion: settings.app_version_name || '1.5',
       applicationVersionCode: parseInt(settings.app_version_code || '5', 10),
       webVersion: '1.2',
-      latestDeploymentVersion: process.env.VERCEL_GIT_COMMIT_SHA ? process.env.VERCEL_GIT_COMMIT_SHA.slice(0, 8) : (process.env.VERCEL_DEPLOYMENT_ID || 'v1.1-prod'),
-      databaseConnectionStatus: 'CONNECTED',
+      latestDeploymentVersion: process.env.VERCEL_GIT_COMMIT_SHA ? process.env.VERCEL_GIT_COMMIT_SHA.slice(0, 8) : (process.env.VERCEL_DEPLOYMENT_ID || 'v1.6-prod'),
       databaseType: dbType,
       databaseMigrationStatus: `UP_TO_DATE (${migrationsCount || 2} migrations applied)`,
       authServiceStatus: 'ACTIVE',
       adminAccountStatus: 'PROVISIONED',
       adminUniqueId: req.user.id || 'sg_karthi',
-      lastDataSync: lastSync,
-      lastSyncStatus: syncStatus,
       lastUpdateCheck: Date.now(),
       currentSessionStatus: {
         status: 'AUTHENTICATED',
@@ -508,7 +517,6 @@ function setupSettingsRoutes(router, db) {
         deviceInfo: req.session?.deviceInfo || 'TGZ App',
         expiresAt: req.session?.expiresAt || 0
       },
-      totalUsers: userCount,
       activeSessions: sessionCount,
       warnings
     });

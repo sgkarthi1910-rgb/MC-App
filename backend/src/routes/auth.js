@@ -20,15 +20,23 @@ function setupAuthRoutes(router, db) {
       dbConnected = false;
     }
 
+    const dbType = typeof db.getDatabaseType === 'function'
+      ? db.getDatabaseType()
+      : (process.env.VERCEL ? 'persisted-serverless-store' : 'sqlite-file');
+
     return res.json({
       status: dbConnected ? 'ok' : 'error',
       databaseConnected: dbConnected,
-      databaseType: process.env.VERCEL ? 'persisted-serverless-store' : 'sqlite-file',
+      databaseType: dbType,
+      databaseEnvironment: (process.env.NODE_ENV === 'production' || !!process.env.VERCEL) ? 'Production' : 'Development',
       cloudSyncStatus: typeof db.getLastSyncStatus === 'function' ? db.getLastSyncStatus() : 'LOCAL_SQLITE',
+      lastSyncStatus: typeof db.getLastSyncStatus === 'function' ? db.getLastSyncStatus() : 'ONLINE',
+      lastSyncTime: typeof db.getLastSyncTime === 'function' ? db.getLastSyncTime() : Date.now(),
       adminProvisioned,
       adminMustChangePassword,
       adminUserIds: getAdminUserIds(),
       totalUsers: userCount,
+      totalRegisteredAccounts: userCount,
       serverTime: Date.now()
     });
   });
@@ -93,10 +101,11 @@ function setupAuthRoutes(router, db) {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
       `).run(sessionId, cleanId, tokenHash, deviceInfo || 'TGZ App', clientIp, now, now, expiresAt);
 
-      // Set HttpOnly cookie
+      // Set HttpOnly persistent cookie
       const isHttps = req.headers['x-forwarded-proto'] === 'https' || !!process.env.VERCEL;
       const secureFlag = isHttps ? '; Secure' : '';
-      res.setHeader('Set-Cookie', `tgz_session=${rawToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${expirationDays * 86400}${secureFlag}`);
+      const expiresDate = new Date(expiresAt).toUTCString();
+      res.setHeader('Set-Cookie', `tgz_session=${rawToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${expirationDays * 86400}; Expires=${expiresDate}${secureFlag}`);
 
       if (typeof db.flushSync === 'function') await db.flushSync();
 
@@ -220,7 +229,8 @@ function setupAuthRoutes(router, db) {
       const isHttps = req.headers['x-forwarded-proto'] === 'https' || !!process.env.VERCEL;
       const secureFlag = isHttps ? '; Secure' : '';
       const expirationDays = parseInt(process.env.SESSION_EXPIRATION_DAYS || '30', 10);
-      res.setHeader('Set-Cookie', `tgz_session=${rawToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${expirationDays * 86400}${secureFlag}`);
+      const expiresDate = new Date(expiresAt).toUTCString();
+      res.setHeader('Set-Cookie', `tgz_session=${rawToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${expirationDays * 86400}; Expires=${expiresDate}${secureFlag}`);
 
       if (typeof db.flushSync === 'function') await db.flushSync();
 
@@ -269,7 +279,7 @@ function setupAuthRoutes(router, db) {
     if (typeof db.flushSync === 'function') await db.flushSync();
     const isHttps = req.headers['x-forwarded-proto'] === 'https' || !!process.env.VERCEL;
     const secureFlag = isHttps ? '; Secure' : '';
-    res.setHeader('Set-Cookie', `tgz_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${secureFlag}`);
+    res.setHeader('Set-Cookie', `tgz_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT${secureFlag}`);
     return res.json({ success: true, message: 'Logged out successfully.' });
   });
 
@@ -388,7 +398,7 @@ function setupAuthRoutes(router, db) {
 
       const isHttps = req.headers['x-forwarded-proto'] === 'https' || !!process.env.VERCEL;
       const secureFlag = isHttps ? '; Secure' : '';
-      res.setHeader('Set-Cookie', `tgz_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${secureFlag}`);
+      res.setHeader('Set-Cookie', `tgz_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT${secureFlag}`);
 
       return res.json({
         success: true,

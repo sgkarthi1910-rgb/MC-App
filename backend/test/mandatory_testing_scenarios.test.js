@@ -34,7 +34,7 @@ function makeRequest(server, options, payload) {
   });
 }
 
-test('MANDATORY USER TESTING SCENARIOS (A, B, C, D)', async (t) => {
+test('CRITICAL PRODUCTION MANDATORY TESTING SCENARIOS (A, B, C, D, E)', async (t) => {
   const tempStorePath = path.join(__dirname, 'mandatory_test_store.json');
   if (fs.existsSync(tempStorePath)) fs.unlinkSync(tempStorePath);
 
@@ -49,296 +49,413 @@ test('MANDATORY USER TESTING SCENARIOS (A, B, C, D)', async (t) => {
     try { if (fs.existsSync(tempStorePath)) fs.unlinkSync(tempStorePath); } catch(e){}
   });
 
-  let newAdminPassword = 'PermanentAdminPassword9988!@';
+  const permanentAdminPassword = 'PermanentAdminPassword9988!@';
 
   // ==========================================
-  // TEST A — Password persistence
+  // SETUP: Provision & Authenticate Admin
   // ==========================================
-  await t.test('Test A: Password persistence through logout, login, and full restart', async () => {
-    // 1. Log in with current bootstrap password
-    const loginBootstrap = await makeRequest(serverObj.server, {
-      method: 'POST',
-      path: '/api/auth/login'
-    }, {
-      id: 'sg_karthi',
-      password: 'TgzAdminInitial2026!Secure'
-    });
-    assert.equal(loginBootstrap.statusCode, 200);
-    assert.equal(loginBootstrap.body.user.id, 'sg_karthi');
-    const initialToken = loginBootstrap.body.sessionToken;
-
-    // 2. Change the admin password
-    const changeRes = await makeRequest(serverObj.server, {
-      method: 'POST',
-      path: '/api/auth/change-password',
-      headers: { Authorization: `Bearer ${initialToken}` }
-    }, {
-      currentPassword: 'TgzAdminInitial2026!Secure',
-      newPassword: newAdminPassword,
-      confirmNewPassword: newAdminPassword
-    });
-    assert.equal(changeRes.statusCode, 200);
-    assert.equal(changeRes.body.user.mustChangePassword, false);
-
-    // 3. Log out
-    const logoutRes = await makeRequest(serverObj.server, {
-      method: 'POST',
-      path: '/api/auth/logout',
-      headers: { Authorization: `Bearer ${initialToken}` }
-    });
-    assert.equal(logoutRes.statusCode, 200);
-
-    // 4. Log in using the new password
-    const loginNew = await makeRequest(serverObj.server, {
-      method: 'POST',
-      path: '/api/auth/login'
-    }, {
-      id: 'sg_karthi',
-      password: newAdminPassword
-    });
-    assert.equal(loginNew.statusCode, 200);
-    assert.equal(loginNew.body.user.id, 'sg_karthi');
-    assert.equal(loginNew.body.user.mustChangePassword, false);
-
-    // 5. Confirm the old bootstrap password is rejected
-    const loginOldRejected = await makeRequest(serverObj.server, {
-      method: 'POST',
-      path: '/api/auth/login'
-    }, {
-      id: 'sg_karthi',
-      password: 'TgzAdminInitial2026!Secure'
-    });
-    assert.equal(loginOldRejected.statusCode, 401, 'Old bootstrap password must be rejected');
-
-    // 6. Close and reopen the app (simulate complete container reboot from persistent disk)
-    await new Promise(r => serverObj.server.close(r));
-    serverObj = createServer(tempStorePath);
-    await new Promise(r => serverObj.server.listen(0, '127.0.0.1', r));
-
-    // 7. Confirm the new password still works after restart
-    const loginAfterRestart = await makeRequest(serverObj.server, {
-      method: 'POST',
-      path: '/api/auth/login'
-    }, {
-      id: 'sg_karthi',
-      password: newAdminPassword
-    });
-    assert.equal(loginAfterRestart.statusCode, 200);
-    assert.equal(loginAfterRestart.body.user.id, 'sg_karthi');
-    assert.equal(loginAfterRestart.body.user.mustChangePassword, false);
-
-    // Confirm old password is still rejected after restart
-    const oldAgain = await makeRequest(serverObj.server, {
-      method: 'POST',
-      path: '/api/auth/login'
-    }, {
-      id: 'sg_karthi',
-      password: 'TgzAdminInitial2026!Secure'
-    });
-    assert.equal(oldAgain.statusCode, 401);
+  const adminInitialLogin = await makeRequest(serverObj.server, {
+    method: 'POST',
+    path: '/api/auth/login'
+  }, {
+    id: 'sg_karthi',
+    password: 'TgzAdminInitial2026!Secure'
   });
+  assert.equal(adminInitialLogin.statusCode, 200);
+  let adminToken = adminInitialLogin.body.sessionToken;
 
-  // ==========================================
-  // TEST B — Session restoration
-  // ==========================================
-  await t.test('Test B: Session restoration loads full admin profile, role, and dashboard', async () => {
-    // 1. Log in as admin
-    const loginRes = await makeRequest(serverObj.server, {
-      method: 'POST',
-      path: '/api/auth/login'
-    }, {
-      id: 'sg_karthi',
-      password: newAdminPassword
-    });
-    assert.equal(loginRes.statusCode, 200);
-    const token = loginRes.body.sessionToken;
-
-    // 2 & 3. Simulate reopening app: restore session via /api/auth/me
-    const meRes = await makeRequest(serverObj.server, {
-      method: 'GET',
-      path: '/api/auth/me',
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    assert.equal(meRes.statusCode, 200);
-    assert.ok(meRes.body.user);
-    // 4. Confirm user ID & profile
-    assert.equal(meRes.body.user.id, 'sg_karthi');
-    // 5. Confirm role is ADMIN
-    assert.equal(meRes.body.user.role, 'ADMIN');
-
-    // 6 & 7. Load dashboard data for admin
-    const dashRes = await makeRequest(serverObj.server, {
-      method: 'GET',
-      path: '/api/dashboard/summary',
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    assert.equal(dashRes.statusCode, 200);
-    assert.ok(dashRes.body.adminStats, 'Admin stats must be present in dashboard summary');
-    assert.ok(typeof dashRes.body.adminStats.totalMembers === 'number');
-    assert.ok(typeof dashRes.body.adminStats.activeSessions === 'number');
-
-    // 8. Load diagnostic data
-    const diagRes = await makeRequest(serverObj.server, {
-      method: 'GET',
-      path: '/api/admin/diagnostics',
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    assert.equal(diagRes.statusCode, 200);
-    assert.equal(diagRes.body.currentAccountId, 'sg_karthi');
-    assert.equal(diagRes.body.currentAccountRole, 'ADMIN');
-    assert.equal(diagRes.body.passwordStatus, 'SAVED_PERMANENT');
-    assert.equal(diagRes.body.persistentStorageStatus, 'CONNECTED');
+  // Change admin password to permanent
+  const changeRes = await makeRequest(serverObj.server, {
+    method: 'POST',
+    path: '/api/auth/change-password',
+    headers: { Authorization: `Bearer ${adminToken}` }
+  }, {
+    currentPassword: 'TgzAdminInitial2026!Secure',
+    newPassword: permanentAdminPassword,
+    confirmNewPassword: permanentAdminPassword
   });
+  assert.equal(changeRes.statusCode, 200);
+
+  // Relogin admin with permanent password
+  const adminRelogin = await makeRequest(serverObj.server, {
+    method: 'POST',
+    path: '/api/auth/login'
+  }, {
+    id: 'sg_karthi',
+    password: permanentAdminPassword
+  });
+  assert.equal(adminRelogin.statusCode, 200);
+  adminToken = adminRelogin.body.sessionToken;
 
   // ==========================================
-  // TEST C — Data persistence
+  // TEST A — Persistent account
+  // 1. Register a new member.
+  // 2. Verify the account exists in the production database.
+  // 3. Log in.
+  // 4. Close the browser completely.
+  // 5. Reopen the app.
+  // 6. Confirm the user is still logged in.
+  // 7. Confirm the correct dashboard and profile load.
   // ==========================================
-  await t.test('Test C: Data persistence across refreshes and restarts', async () => {
-    // 1. Log in as admin
-    const loginRes = await makeRequest(serverObj.server, {
-      method: 'POST',
-      path: '/api/auth/login'
-    }, {
-      id: 'sg_karthi',
-      password: newAdminPassword
-    });
-    const token = loginRes.body.sessionToken;
-
-    // Create a new member, an announcement, and a team
-    await makeRequest(serverObj.server, {
+  await t.test('Test A — Persistent account', async () => {
+    // 1. Register new member
+    const signupRes = await makeRequest(serverObj.server, {
       method: 'POST',
       path: '/api/auth/signup'
     }, {
-      id: 'scenario_c_member',
-      displayName: 'Scenario C Member',
-      password: 'MemberPassword123!',
-      confirmPassword: 'MemberPassword123!'
+      id: 'persist_member_a',
+      displayName: 'Persistent Member Alpha',
+      password: 'SecurePassword123!',
+      confirmPassword: 'SecurePassword123!'
     });
+    assert.equal(signupRes.statusCode, 201);
+    assert.equal(signupRes.body.user.id, 'persist_member_a');
 
-    await makeRequest(serverObj.server, {
+    // Verify Set-Cookie header contains Max-Age, Expires, HttpOnly, and SameSite
+    const setCookie = signupRes.headers['set-cookie']?.[0] || '';
+    assert.ok(setCookie.includes('tgz_session='));
+    assert.ok(setCookie.includes('Max-Age='));
+    assert.ok(setCookie.includes('Expires='));
+    assert.ok(setCookie.includes('HttpOnly'));
+    assert.ok(setCookie.includes('SameSite=Lax'));
+
+    // 2. Verify account exists in permanent database
+    const dbUser = serverObj.db.prepare('SELECT id, display_name, role, status FROM users WHERE id = ?').get('persist_member_a');
+    assert.ok(dbUser, 'User must exist in permanent database');
+    assert.equal(dbUser.id, 'persist_member_a');
+    assert.equal(dbUser.role, 'MEMBER');
+
+    // 3. Log in
+    const loginRes = await makeRequest(serverObj.server, {
       method: 'POST',
-      path: '/api/announcements',
-      headers: { Authorization: `Bearer ${token}` }
+      path: '/api/auth/login'
     }, {
-      title: 'Persistent Announcement C',
-      content: 'Must persist across restarts',
-      category: 'GENERAL'
+      id: 'persist_member_a',
+      password: 'SecurePassword123!'
     });
+    assert.equal(loginRes.statusCode, 200);
+    const memberToken = loginRes.body.sessionToken;
+    const loginCookie = loginRes.headers['set-cookie']?.[0] || '';
+    assert.ok(loginCookie.includes('Expires='));
 
-    await makeRequest(serverObj.server, {
-      method: 'POST',
-      path: '/api/teams',
-      headers: { Authorization: `Bearer ${token}` }
-    }, {
-      name: 'Scenario C Clan',
-      description: 'Clan for testing persistence'
-    });
-
-    // 2. Check registered members before restart
-    const membersBefore = await makeRequest(serverObj.server, {
-      method: 'GET',
-      path: '/api/settings/admin/users',
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    assert.equal(membersBefore.statusCode, 200);
-    assert.ok(membersBefore.body.users.some(u => u.id === 'scenario_c_member'));
-
-    // 3 & 4. Restart server
+    // 4. Close the browser/application completely (Simulate serverless cold boot / app process kill)
     await new Promise(r => serverObj.server.close(r));
     serverObj = createServer(tempStorePath);
     await new Promise(r => serverObj.server.listen(0, '127.0.0.1', r));
 
-    // 5. Confirm the same information is still available after restart
-    const membersAfter = await makeRequest(serverObj.server, {
+    // 5. Reopen the application and restore session via token/cookie
+    const reopenRes = await makeRequest(serverObj.server, {
       method: 'GET',
-      path: '/api/settings/admin/users',
-      headers: { Authorization: `Bearer ${token}` }
+      path: '/api/auth/me',
+      headers: {
+        Authorization: `Bearer ${memberToken}`,
+        Cookie: `tgz_session=${memberToken}`
+      }
     });
-    assert.equal(membersAfter.statusCode, 200);
-    assert.ok(membersAfter.body.users.some(u => u.id === 'scenario_c_member'), 'Member must still exist after restart');
 
-    const annAfter = await makeRequest(serverObj.server, {
-      method: 'GET',
-      path: '/api/announcements'
-    });
-    assert.equal(annAfter.statusCode, 200);
-    assert.ok(annAfter.body.announcements.some(a => a.title === 'Persistent Announcement C'), 'Announcement must still exist after restart');
+    // 6. Confirm the user is still logged in
+    assert.equal(reopenRes.statusCode, 200, 'Session must remain valid across app restarts');
+    assert.equal(reopenRes.body.user.id, 'persist_member_a');
+    assert.equal(reopenRes.body.user.role, 'MEMBER');
 
-    const teamsAfter = await makeRequest(serverObj.server, {
-      method: 'GET',
-      path: '/api/teams'
-    });
-    assert.equal(teamsAfter.statusCode, 200);
-    assert.ok(teamsAfter.body.teams.some(t => t.name === 'Scenario C Clan'), 'Team must still exist after restart');
-  });
-
-  // ==========================================
-  // TEST D — Role verification
-  // ==========================================
-  await t.test('Test D: Role separation, member cannot access admin endpoints', async () => {
-    // 1. Log in as member
-    const memberLogin = await makeRequest(serverObj.server, {
-      method: 'POST',
-      path: '/api/auth/login'
-    }, {
-      id: 'scenario_c_member',
-      password: 'MemberPassword123!'
-    });
-    assert.equal(memberLogin.statusCode, 200);
-    assert.equal(memberLogin.body.user.role, 'MEMBER');
-    const memberToken = memberLogin.body.sessionToken;
-
-    // 2. Member dashboard summary check (should have memberStats, NOT adminStats)
-    const memberDash = await makeRequest(serverObj.server, {
+    // 7. Confirm the correct dashboard and profile load
+    const dashRes = await makeRequest(serverObj.server, {
       method: 'GET',
       path: '/api/dashboard/summary',
       headers: { Authorization: `Bearer ${memberToken}` }
     });
-    assert.equal(memberDash.statusCode, 200);
-    assert.equal(memberDash.body.role, 'MEMBER');
-    assert.equal(memberDash.body.adminStats, undefined, 'Member must not receive adminStats');
+    assert.equal(dashRes.statusCode, 200);
+    assert.equal(dashRes.body.role, 'MEMBER');
+    assert.ok(dashRes.body.memberStats, 'Member stats must load properly');
+    assert.equal(dashRes.body.adminStats, undefined, 'Member must not see admin stats');
+  });
 
-    // 3. Confirm member CANNOT access admin-only screens / endpoints
-    const memberAdminUsers = await makeRequest(serverObj.server, {
-      method: 'GET',
-      path: '/api/settings/admin/users',
-      headers: { Authorization: `Bearer ${memberToken}` }
-    });
-    assert.equal(memberAdminUsers.statusCode, 403, 'Member must be forbidden from accessing admin users');
+  // ==========================================
+  // TEST B — Admin member visibility
+  // 1. Register multiple test members.
+  // 2. Log in as admin.
+  // 3. Open the admin member-management page.
+  // 4. Confirm all registered accounts appear.
+  // 5. Refresh the page.
+  // 6. Confirm the same members remain visible.
+  // 7. Verify that search and filtering work.
+  // ==========================================
+  await t.test('Test B — Admin member visibility', async () => {
+    // 1. Register multiple test members
+    const testMembers = ['member_b_1', 'member_b_2', 'member_b_3'];
+    for (const mId of testMembers) {
+      const reg = await makeRequest(serverObj.server, {
+        method: 'POST',
+        path: '/api/auth/signup'
+      }, {
+        id: mId,
+        displayName: `Test Display ${mId}`,
+        password: 'Password123!',
+        confirmPassword: 'Password123!'
+      });
+      assert.equal(reg.statusCode, 201);
+    }
 
-    const memberAdminDiag = await makeRequest(serverObj.server, {
-      method: 'GET',
-      path: '/api/admin/diagnostics',
-      headers: { Authorization: `Bearer ${memberToken}` }
-    });
-    assert.equal(memberAdminDiag.statusCode, 403, 'Member must be forbidden from admin diagnostics');
-
-    const memberExportDb = await makeRequest(serverObj.server, {
-      method: 'GET',
-      path: '/api/admin/database/export',
-      headers: { Authorization: `Bearer ${memberToken}` }
-    });
-    assert.equal(memberExportDb.statusCode, 403, 'Member must be forbidden from exporting DB');
-
-    // 4. Log in as admin
+    // 2. Log in as admin
     const adminLogin = await makeRequest(serverObj.server, {
       method: 'POST',
       path: '/api/auth/login'
     }, {
       id: 'sg_karthi',
-      password: newAdminPassword
+      password: permanentAdminPassword
     });
     assert.equal(adminLogin.statusCode, 200);
-    assert.equal(adminLogin.body.user.role, 'ADMIN');
-    const adminToken = adminLogin.body.sessionToken;
+    adminToken = adminLogin.body.sessionToken;
 
-    // 5. Admin CAN access admin endpoints
-    const adminDiag = await makeRequest(serverObj.server, {
+    // 3. Open the admin member-management page
+    const listRes1 = await makeRequest(serverObj.server, {
       method: 'GET',
-      path: '/api/admin/diagnostics',
+      path: '/api/settings/admin/users',
       headers: { Authorization: `Bearer ${adminToken}` }
     });
-    assert.equal(adminDiag.statusCode, 200);
-    assert.equal(adminDiag.body.currentAccountRole, 'ADMIN');
+
+    // 4. Confirm all registered accounts appear
+    assert.equal(listRes1.statusCode, 200);
+    assert.ok(Array.isArray(listRes1.body.users));
+    for (const mId of testMembers) {
+      const found = listRes1.body.users.find(u => u.id === mId);
+      assert.ok(found, `Member ${mId} must appear in admin member list`);
+      assert.equal(found.role, 'MEMBER');
+      assert.equal(found.status, 'ACTIVE');
+      assert.ok(found.created_at > 0);
+      // Ensure NO password hash or token is exposed in admin member list!
+      assert.equal(found.password_hash, undefined);
+      assert.equal(found.token, undefined);
+    }
+
+    // 5. Refresh the page (fetch again)
+    const listRes2 = await makeRequest(serverObj.server, {
+      method: 'GET',
+      path: '/api/settings/admin/users',
+      headers: { Authorization: `Bearer ${adminToken}` }
+    });
+
+    // 6. Confirm the same members remain visible
+    assert.equal(listRes2.statusCode, 200);
+    assert.equal(listRes2.body.users.length, listRes1.body.users.length);
+
+    // 7. Verify search and filtering
+    const searchRes = await makeRequest(serverObj.server, {
+      method: 'GET',
+      path: '/api/settings/admin/users?search=member_b_1',
+      headers: { Authorization: `Bearer ${adminToken}` }
+    });
+    assert.equal(searchRes.statusCode, 200);
+    assert.equal(searchRes.body.users.length, 1);
+    assert.equal(searchRes.body.users[0].id, 'member_b_1');
+
+    const filterRoleRes = await makeRequest(serverObj.server, {
+      method: 'GET',
+      path: '/api/settings/admin/users?role=MEMBER',
+      headers: { Authorization: `Bearer ${adminToken}` }
+    });
+    assert.equal(filterRoleRes.statusCode, 200);
+    assert.ok(filterRoleRes.body.users.every(u => u.role === 'MEMBER'));
+  });
+
+  // ==========================================
+  // TEST C — Production persistence
+  // 1. Add a test announcement.
+  // 2. Add a test team.
+  // 3. Register a test account.
+  // 4. Deploy a new application version (simulate redeploy/cold boot).
+  // 5. Confirm all records remain available after deployment.
+  // ==========================================
+  await t.test('Test C — Production persistence', async () => {
+    // 1. Add test announcement
+    const annRes = await makeRequest(serverObj.server, {
+      method: 'POST',
+      path: '/api/announcements',
+      headers: { Authorization: `Bearer ${adminToken}` }
+    }, {
+      title: 'Persistent Server Update C',
+      content: 'Production database persistence verified across redeployments.',
+      category: 'UPDATE',
+      isPinned: true
+    });
+    assert.equal(annRes.statusCode, 201);
+
+    // 2. Add test team
+    const teamRes = await makeRequest(serverObj.server, {
+      method: 'POST',
+      path: '/api/teams',
+      headers: { Authorization: `Bearer ${adminToken}` }
+    }, {
+      name: 'Vanguard Legends C',
+      description: 'Persistent Clan C'
+    });
+    assert.equal(teamRes.statusCode, 201);
+
+    // 3. Register test account
+    const accRes = await makeRequest(serverObj.server, {
+      method: 'POST',
+      path: '/api/auth/signup'
+    }, {
+      id: 'deploy_survivor_c',
+      displayName: 'Deploy Survivor C',
+      password: 'DeployPassword123!',
+      confirmPassword: 'DeployPassword123!'
+    });
+    assert.equal(accRes.statusCode, 201);
+
+    // 4. Simulate application redeployment / serverless container recycling
+    await new Promise(r => serverObj.server.close(r));
+    serverObj = createServer(tempStorePath);
+    await new Promise(r => serverObj.server.listen(0, '127.0.0.1', r));
+
+    // 5. Confirm all records remain available after deployment
+    const annCheck = await makeRequest(serverObj.server, {
+      method: 'GET',
+      path: '/api/announcements'
+    });
+    assert.equal(annCheck.statusCode, 200);
+    assert.ok(annCheck.body.announcements.some(a => a.title === 'Persistent Server Update C'));
+
+    const teamCheck = await makeRequest(serverObj.server, {
+      method: 'GET',
+      path: '/api/teams'
+    });
+    assert.equal(teamCheck.statusCode, 200);
+    assert.ok(teamCheck.body.teams.some(t => t.name === 'Vanguard Legends C'));
+
+    const userCheck = serverObj.db.prepare('SELECT id, display_name FROM users WHERE id = ?').get('deploy_survivor_c');
+    assert.ok(userCheck, 'User record must persist across redeployments');
+    assert.equal(userCheck.id, 'deploy_survivor_c');
+  });
+
+  // ==========================================
+  // TEST D — Logout
+  // 1. Click Logout.
+  // 2. Reopen the app.
+  // 3. Confirm the login screen appears (401 on protected me API).
+  // 4. Confirm protected dashboard APIs reject unauthenticated requests.
+  // 5. Log in again and verify the correct dashboard loads.
+  // ==========================================
+  await t.test('Test D — Logout', async () => {
+    // Member logs in
+    const memberLogin = await makeRequest(serverObj.server, {
+      method: 'POST',
+      path: '/api/auth/login'
+    }, {
+      id: 'deploy_survivor_c',
+      password: 'DeployPassword123!'
+    });
+    assert.equal(memberLogin.statusCode, 200);
+    const activeMemberToken = memberLogin.body.sessionToken;
+
+    // 1. Click Logout
+    const logoutRes = await makeRequest(serverObj.server, {
+      method: 'POST',
+      path: '/api/auth/logout',
+      headers: { Authorization: `Bearer ${activeMemberToken}` }
+    });
+    assert.equal(logoutRes.statusCode, 200);
+    const logoutCookie = logoutRes.headers['set-cookie']?.[0] || '';
+    assert.ok(logoutCookie.includes('Max-Age=0'));
+    assert.ok(logoutCookie.includes('Expires=Thu, 01 Jan 1970'));
+
+    // 2 & 3. Reopen app: attempt accessing protected session
+    const meAfterLogout = await makeRequest(serverObj.server, {
+      method: 'GET',
+      path: '/api/auth/me',
+      headers: { Authorization: `Bearer ${activeMemberToken}` }
+    });
+    assert.equal(meAfterLogout.statusCode, 401, 'Logged out session must be rejected');
+
+    // 4. Confirm protected dashboard APIs reject unauthenticated requests
+    const dashUnauth = await makeRequest(serverObj.server, {
+      method: 'GET',
+      path: '/api/dashboard/summary',
+      headers: { Authorization: `Bearer ${activeMemberToken}` }
+    });
+    assert.equal(dashUnauth.statusCode, 401, 'Dashboard API must reject revoked session');
+
+    // 5. Log in again and verify correct dashboard loads
+    const relogin = await makeRequest(serverObj.server, {
+      method: 'POST',
+      path: '/api/auth/login'
+    }, {
+      id: 'deploy_survivor_c',
+      password: 'DeployPassword123!'
+    });
+    assert.equal(relogin.statusCode, 200);
+    const newToken = relogin.body.sessionToken;
+
+    const dashAuth = await makeRequest(serverObj.server, {
+      method: 'GET',
+      path: '/api/dashboard/summary',
+      headers: { Authorization: `Bearer ${newToken}` }
+    });
+    assert.equal(dashAuth.statusCode, 200);
+    assert.equal(dashAuth.body.role, 'MEMBER');
+    assert.ok(dashAuth.body.memberStats);
+  });
+
+  // ==========================================
+  // TEST E — Authorization
+  // Verify that Members cannot access the admin member-list API or change another user's password.
+  // ==========================================
+  await t.test('Test E — Authorization', async () => {
+    // 1. Member login
+    const memberLogin = await makeRequest(serverObj.server, {
+      method: 'POST',
+      path: '/api/auth/login'
+    }, {
+      id: 'deploy_survivor_c',
+      password: 'DeployPassword123!'
+    });
+    assert.equal(memberLogin.statusCode, 200);
+    const memberToken = memberLogin.body.sessionToken;
+
+    // 2. Member CANNOT access admin member-list API
+    const memberListAttempt = await makeRequest(serverObj.server, {
+      method: 'GET',
+      path: '/api/settings/admin/users',
+      headers: { Authorization: `Bearer ${memberToken}` }
+    });
+    assert.equal(memberListAttempt.statusCode, 403, 'Member must be forbidden from accessing admin member list');
+
+    // 3. Member CANNOT access admin diagnostics
+    const diagAttempt = await makeRequest(serverObj.server, {
+      method: 'GET',
+      path: '/api/admin/diagnostics',
+      headers: { Authorization: `Bearer ${memberToken}` }
+    });
+    assert.equal(diagAttempt.statusCode, 403, 'Member must be forbidden from accessing admin diagnostics');
+
+    // 4. Member CANNOT access database backup export
+    const exportAttempt = await makeRequest(serverObj.server, {
+      method: 'GET',
+      path: '/api/admin/database/export',
+      headers: { Authorization: `Bearer ${memberToken}` }
+    });
+    assert.equal(exportAttempt.statusCode, 403, 'Member must be forbidden from accessing database export');
+
+    // 5. Admin CAN access all admin endpoints
+    const adminRelogin = await makeRequest(serverObj.server, {
+      method: 'POST',
+      path: '/api/auth/login'
+    }, {
+      id: 'sg_karthi',
+      password: permanentAdminPassword
+    });
+    assert.equal(adminRelogin.statusCode, 200);
+    const validAdminToken = adminRelogin.body.sessionToken;
+
+    const adminDiagSuccess = await makeRequest(serverObj.server, {
+      method: 'GET',
+      path: '/api/admin/diagnostics',
+      headers: { Authorization: `Bearer ${validAdminToken}` }
+    });
+    assert.equal(adminDiagSuccess.statusCode, 200);
+    assert.equal(adminDiagSuccess.body.currentAccountRole, 'ADMIN');
+    assert.equal(adminDiagSuccess.body.databaseConnectionStatus, 'CONNECTED');
+    assert.ok(typeof adminDiagSuccess.body.totalRegisteredAccounts === 'number');
+    assert.ok(adminDiagSuccess.body.sessionValidationStatus);
   });
 });

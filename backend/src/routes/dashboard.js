@@ -170,6 +170,15 @@ function setupDashboardRoutes(router, db) {
         status: req.user.status,
         createdAt: req.user.created_at
       },
+      memberStats: {
+        playtimeSeconds,
+        playtimeMinutes,
+        kills: stats?.kills || 0,
+        deaths: stats?.deaths || 0,
+        hearts: stats?.hearts || 10,
+        coins: stats?.coins || 0,
+        unreadMessagesCount: unreadMessages
+      },
       serverStatus: mcStatus,
       javaServerStatus: mcStatus,
       bedrockServerStatus: bedrockStatus,

@@ -11,5 +11,14 @@
     "node": "22.x"
   },
   "type": "commonjs",
-  "keywords": ["lifesteal", "minecraft", "authentication", "session", "leaderboard"]
+  "keywords": [
+    "lifesteal",
+    "minecraft",
+    "authentication",
+    "session",
+    "leaderboard"
+  ],
+  "dependencies": {
+    "pg": "^8.23.1"
+  }
 }
