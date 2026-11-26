@@ -77,10 +77,8 @@ class TgzBackendRepository(
         val header = authHeader() ?: throw IllegalStateException("Not authenticated")
         val resp = apiService.getMe(header)
         if (resp.user != null) {
-            val token = sessionManager.getToken() ?: ""
-            sessionManager.saveSession(
-                token = token,
-                user = StoredUser(
+            sessionManager.saveUser(
+                StoredUser(
                     id = resp.user.id,
                     displayName = resp.user.displayName,
                     role = resp.user.role,

@@ -276,7 +276,7 @@ function setupAuthRoutes(router, db) {
   // 4. CURRENT USER INFO
   router.get('/api/auth/me', (req, res) => {
     if (!req.user) {
-      return res.status(401).json({ error: 'Not authenticated.' });
+      return res.status(401).json({ success: false, error: 'Not authenticated.' });
     }
 
     // Refresh last_active_at timestamp for session
@@ -286,6 +286,7 @@ function setupAuthRoutes(router, db) {
     }
 
     return res.json({
+      success: true,
       user: {
         id: req.user.id,
         displayName: req.user.display_name,

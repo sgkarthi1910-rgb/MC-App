@@ -903,8 +903,8 @@ test('TGZ Lifesteal Complete Backend Test Suite', async (t) => {
       path: '/api/app/version'
     });
     assert.equal(initialVersion.statusCode, 200);
-    assert.equal(initialVersion.body.versionCode, 5);
-    assert.equal(initialVersion.body.versionName, '1.4');
+    assert.equal(initialVersion.body.versionCode, 6);
+    assert.equal(initialVersion.body.versionName, '1.5');
     assert.ok(initialVersion.body.apkUrl);
     assert.equal(initialVersion.body.forceUpdate, false);
 

@@ -161,9 +161,19 @@ object NetworkModule {
         )
     }
 
+    @Volatile
+    private var sessionManagerInstance: SessionManager? = null
+
     fun getSessionManager(context: Context? = null): SessionManager? {
         val ctx = context?.applicationContext ?: appContext
-        return ctx?.let { SessionManager(it) }
+        if (sessionManagerInstance == null && ctx != null) {
+            synchronized(this) {
+                if (sessionManagerInstance == null) {
+                    sessionManagerInstance = SessionManager(ctx)
+                }
+            }
+        }
+        return sessionManagerInstance
     }
 
     fun getBackendRepository(context: Context? = null): TgzBackendRepository? {

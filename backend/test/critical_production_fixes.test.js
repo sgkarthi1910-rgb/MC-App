@@ -229,8 +229,8 @@ test('CRITICAL PRODUCTION FIXES VERIFICATION SUITE', async (t) => {
         path: '/api/app/version'
       });
       assert.equal(verRes.statusCode, 200);
-      assert.equal(verRes.body.versionCode, 5);
-      assert.equal(verRes.body.versionName, '1.4');
+      assert.equal(verRes.body.versionCode, 6);
+      assert.equal(verRes.body.versionName, '1.5');
       assert.ok(verRes.body.apkUrl);
       assert.equal(verRes.body.forceUpdate, false);
       assert.equal(verRes.body.webVersion, '1.1.0');

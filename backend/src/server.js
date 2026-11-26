@@ -165,6 +165,35 @@ function createServer(dbPath) {
       return;
     }
 
+    // 1. Immediately buffer request body for POST/PUT before ANY asynchronous I/O
+    let parsedBody = null;
+    if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
+      if (req.body !== undefined && req.body !== null && typeof req.body === 'object' && Object.keys(req.body).length > 0) {
+        parsedBody = req.body;
+      } else if (typeof req.body === 'string') {
+        try { parsedBody = JSON.parse(req.body); } catch (e) { parsedBody = {}; }
+      } else if (req.readableEnded) {
+        parsedBody = {};
+      } else {
+        parsedBody = await new Promise((resolve) => {
+          let bodyData = '';
+          req.on('data', chunk => {
+            bodyData += chunk;
+            if (bodyData.length > 2 * 1024 * 1024) req.destroy();
+          });
+          req.on('end', () => {
+            try {
+              resolve(bodyData ? JSON.parse(bodyData) : {});
+            } catch (e) {
+              resolve({});
+            }
+          });
+          req.on('error', () => resolve({}));
+        });
+      }
+    }
+    req.body = parsedBody || {};
+
     const parsedUrl = new URL(req.url, 'http://localhost');
     req.pathname = parsedUrl.pathname;
     req.query = Object.fromEntries(parsedUrl.searchParams.entries());
@@ -243,40 +272,7 @@ function createServer(dbPath) {
       }
     }
 
-    // Read Body for POST/PUT (Compatible with both Node standalone and Vercel serverless)
-    if (req.method === 'POST' || req.method === 'PUT') {
-      if (req.body !== undefined && req.body !== null && typeof req.body === 'object' && Object.keys(req.body).length > 0) {
-        // Pre-parsed by Vercel serverless environment
-        dispatchRoute(router, req, res);
-      } else if (req.readableEnded) {
-        if (typeof req.body === 'string') {
-          try { req.body = JSON.parse(req.body); } catch (e) { req.body = {}; }
-        } else if (!req.body) {
-          req.body = {};
-        }
-        dispatchRoute(router, req, res);
-      } else {
-        let bodyData = '';
-        req.on('data', chunk => {
-          bodyData += chunk;
-          if (bodyData.length > 2 * 1024 * 1024) { // 2MB protection
-            req.destroy();
-          }
-        });
-
-        req.on('end', () => {
-          try {
-            req.body = bodyData ? JSON.parse(bodyData) : (req.body || {});
-          } catch (e) {
-            req.body = req.body || {};
-          }
-          dispatchRoute(router, req, res);
-        });
-      }
-    } else {
-      req.body = req.body || {};
-      dispatchRoute(router, req, res);
-    }
+    dispatchRoute(router, req, res);
   };
 
   const server = http.createServer(handleRequest);
