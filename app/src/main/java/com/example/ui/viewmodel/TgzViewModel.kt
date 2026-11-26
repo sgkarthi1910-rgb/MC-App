@@ -943,8 +943,11 @@ class TgzViewModel(
         viewModelScope.launch {
             _isSettingsLoading.value = true
             repo.updateAdminSettings(settings).onSuccess { resp ->
-                _settingsActionMessage.value = if (resp.success) "Settings saved!" else resp.error
+                _settingsActionMessage.value = if (resp.success) "✓ Update published to backend successfully!" else (resp.error ?: "Failed to save settings")
                 loadAdminSettings()
+                checkForAppUpdate()
+            }.onFailure { err ->
+                _settingsActionMessage.value = "Failed to publish: ${err.localizedMessage ?: "Network error"}"
             }
             _isSettingsLoading.value = false
         }

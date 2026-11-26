@@ -95,6 +95,7 @@ fun SettingsScreen(
     val userList by viewModel.userManagementList.collectAsStateWithLifecycle()
     val activeSessions by viewModel.activeSessions.collectAsStateWithLifecycle()
     val actionMessage by viewModel.settingsActionMessage.collectAsStateWithLifecycle()
+    val isSettingsLoading by viewModel.isSettingsLoading.collectAsStateWithLifecycle()
 
     val currentBackendUrl by viewModel.backendUrl.collectAsStateWithLifecycle()
     var selectedTab by remember { mutableStateOf(0) }
@@ -610,18 +611,38 @@ fun SettingsScreen(
                                     )
                                 )
                             },
+                            enabled = !isSettingsLoading,
                             modifier = Modifier.fillMaxWidth().height(44.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen),
                             shape = RoundedCornerShape(8.dp)
                         ) {
-                            Icon(Icons.Default.CloudUpload, contentDescription = null, tint = OnEmeraldDark, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
+                            if (isSettingsLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = OnEmeraldDark,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(Icons.Default.CloudUpload, contentDescription = null, tint = OnEmeraldDark, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "PUBLISH UPDATE TO BACKEND",
+                                    fontFamily = SilkscreenFontFamily,
+                                    fontSize = 12.sp,
+                                    color = OnEmeraldDark,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        if (actionMessage != null) {
+                            Spacer(modifier = Modifier.height(10.dp))
                             Text(
-                                text = "PUBLISH UPDATE TO BACKEND",
-                                fontFamily = SilkscreenFontFamily,
+                                text = actionMessage!!,
+                                color = if (actionMessage!!.contains("Failed")) NetherRed else EmeraldGreen,
                                 fontSize = 12.sp,
-                                color = OnEmeraldDark,
-                                fontWeight = FontWeight.Bold
+                                fontFamily = JetBrainsMonoFontFamily,
+                                fontWeight = FontWeight.SemiBold
                             )
                         }
                     }
