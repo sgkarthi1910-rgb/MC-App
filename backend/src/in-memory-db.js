@@ -67,12 +67,14 @@ function createInMemoryDatabase(storageFilePath) {
   let initialSyncPromise = null;
   let pendingPersistPromise = Promise.resolve();
   let lastCloudPullAt = 0;
+  let isPersisting = false;
 
   async function syncFromCloudKV() {
-    if (!kvUrl || !kvToken || typeof fetch !== 'function') return;
+    if (!kvUrl || !kvToken || typeof fetch !== 'function' || isPersisting) return;
     try {
       const res = await fetch(`${kvUrl}/get/tgz_store`, {
-        headers: { Authorization: `Bearer ${kvToken}` }
+        headers: { Authorization: `Bearer ${kvToken}` },
+        cache: 'no-store'
       });
       if (res.ok) {
         const json = await res.json();
@@ -112,26 +114,32 @@ function createInMemoryDatabase(storageFilePath) {
 
   function persist() {
     persistLocal();
-    // Push to cloud KV if configured and track promise for flushSync()
+    // Strictly serialize Cloud KV pushes so concurrent writes never arrive out of order
     if (kvUrl && kvToken && typeof fetch === 'function') {
-      const payload = JSON.stringify(tables);
-      pendingPersistPromise = fetch(`${kvUrl}/set/tgz_store`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${kvToken}`,
-          'Content-Type': 'text/plain; charset=utf-8'
-        },
-        body: payload
-      }).then(async (res) => {
-        if (res.ok) {
-          lastSyncTime = Date.now();
-          lastCloudPullAt = lastSyncTime;
-          lastSyncStatus = 'SYNCED_TO_CLOUD_KV';
-        } else {
-          lastSyncStatus = `CLOUD_KV_PUSH_HTTP_${res.status}`;
+      isPersisting = true;
+      pendingPersistPromise = pendingPersistPromise.then(async () => {
+        try {
+          const payload = JSON.stringify(tables);
+          const res = await fetch(`${kvUrl}/set/tgz_store`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${kvToken}`,
+              'Content-Type': 'text/plain; charset=utf-8'
+            },
+            body: payload
+          });
+          if (res.ok) {
+            lastSyncTime = Date.now();
+            lastCloudPullAt = lastSyncTime;
+            lastSyncStatus = 'SYNCED_TO_CLOUD_KV';
+          } else {
+            lastSyncStatus = `CLOUD_KV_PUSH_HTTP_${res.status}`;
+          }
+        } catch (err) {
+          lastSyncStatus = 'CLOUD_KV_PUSH_FAILED: ' + (err?.message || 'Error');
         }
-      }).catch(err => {
-        lastSyncStatus = 'CLOUD_KV_PUSH_FAILED: ' + (err?.message || 'Error');
+      }).finally(() => {
+        isPersisting = false;
       });
     }
   }
