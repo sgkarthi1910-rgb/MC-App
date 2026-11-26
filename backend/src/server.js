@@ -197,11 +197,20 @@ function createServer(dbPath) {
     if (rawToken) {
       const tokenHash = hashToken(rawToken);
       const now = Date.now();
-      const sessionRow = db.prepare(`
+      let sessionRow = db.prepare(`
         SELECT id, user_id, created_at, expires_at, last_active_at, device_info, is_revoked
         FROM sessions
         WHERE token_hash = ? AND is_revoked = 0 AND expires_at > ?
       `).get(tokenHash, now);
+
+      if (!sessionRow && typeof db.ensureSynced === 'function') {
+        await db.ensureSynced(true);
+        sessionRow = db.prepare(`
+          SELECT id, user_id, created_at, expires_at, last_active_at, device_info, is_revoked
+          FROM sessions
+          WHERE token_hash = ? AND is_revoked = 0 AND expires_at > ?
+        `).get(tokenHash, now);
+      }
 
       if (sessionRow) {
         const userRow = db.prepare(`

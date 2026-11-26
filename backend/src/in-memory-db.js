@@ -520,11 +520,11 @@ function createInMemoryDatabase(storageFilePath) {
       return lastSyncStatus;
     },
 
-    async ensureSynced() {
+    async ensureSynced(force = false) {
       if (initialSyncPromise) {
         await initialSyncPromise;
         initialSyncPromise = null;
-      } else if (kvUrl && kvToken && (Date.now() - lastCloudPullAt > 2000)) {
+      } else if (kvUrl && kvToken && (force || process.env.VERCEL || (Date.now() - lastCloudPullAt > 2000))) {
         await syncFromCloudKV();
       }
     },
