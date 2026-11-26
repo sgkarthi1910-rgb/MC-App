@@ -74,7 +74,10 @@ function getDatabase(dbPath) {
   }
 
   let db = null;
-  if (DatabaseSync) {
+  const hasCloudKv = !!(process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL);
+  const useCloudKvStore = !isExplicitMemory && (!!process.env.VERCEL || hasCloudKv);
+
+  if (DatabaseSync && !useCloudKvStore) {
     try {
       db = new DatabaseSync(resolvedPath);
       try { db.exec('PRAGMA foreign_keys = ON;'); } catch (e) {}

@@ -119,13 +119,17 @@ function createInMemoryDatabase(storageFilePath) {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${kvToken}`,
-          'Content-Type': 'application/json'
+          'Content-Type': 'text/plain; charset=utf-8'
         },
         body: payload
-      }).then(() => {
-        lastSyncTime = Date.now();
-        lastCloudPullAt = lastSyncTime;
-        lastSyncStatus = 'SYNCED_TO_CLOUD_KV';
+      }).then(async (res) => {
+        if (res.ok) {
+          lastSyncTime = Date.now();
+          lastCloudPullAt = lastSyncTime;
+          lastSyncStatus = 'SYNCED_TO_CLOUD_KV';
+        } else {
+          lastSyncStatus = `CLOUD_KV_PUSH_HTTP_${res.status}`;
+        }
       }).catch(err => {
         lastSyncStatus = 'CLOUD_KV_PUSH_FAILED: ' + (err?.message || 'Error');
       });
