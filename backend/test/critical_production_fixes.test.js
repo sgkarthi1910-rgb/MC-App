@@ -229,8 +229,8 @@ test('CRITICAL PRODUCTION FIXES VERIFICATION SUITE', async (t) => {
         path: '/api/app/version'
       });
       assert.equal(verRes.statusCode, 200);
-      assert.equal(verRes.body.versionCode, 3);
-      assert.equal(verRes.body.versionName, '1.2');
+      assert.equal(verRes.body.versionCode, 4);
+      assert.equal(verRes.body.versionName, '1.3');
       assert.ok(verRes.body.apkUrl);
       assert.equal(verRes.body.forceUpdate, false);
       assert.equal(verRes.body.webVersion, '1.1.0');
@@ -244,6 +244,86 @@ test('CRITICAL PRODUCTION FIXES VERIFICATION SUITE', async (t) => {
       assert.equal(exportRes.statusCode, 200);
       assert.ok(exportRes.body.data.users.length >= 2);
       assert.ok(exportRes.body.data.announcements.length >= 1);
+
+      // 6i. Verify strict auth & role-based dashboard flow for Admin, Moderator, and Member
+      // Unauthenticated dashboard & me requests must be rejected
+      const unauthDash = await makeRequest(restartedServerObj.server, {
+        method: 'GET',
+        path: '/api/dashboard/summary'
+      });
+      assert.equal(unauthDash.statusCode, 401);
+
+      // ID-only login (missing password) must be rejected
+      const idOnlyRes = await makeRequest(restartedServerObj.server, {
+        method: 'POST',
+        path: '/api/auth/login'
+      }, { id: 'sg_karthi' });
+      assert.equal(idOnlyRes.statusCode, 400);
+
+      // Create & promote a moderator for role testing
+      const modSignup = await makeRequest(restartedServerObj.server, {
+        method: 'POST',
+        path: '/api/auth/signup'
+      }, {
+        id: 'strict_mod_01',
+        displayName: 'Strict Mod',
+        password: 'ModSecurePass2026!',
+        confirmPassword: 'ModSecurePass2026!'
+      });
+      assert.equal(modSignup.statusCode, 201);
+
+      const promoteRes = await makeRequest(restartedServerObj.server, {
+        method: 'POST',
+        path: '/api/settings/admin/users/strict_mod_01/role',
+        headers: { Authorization: `Bearer ${newAdminToken}` }
+      }, { role: 'MODERATOR' });
+      assert.equal(promoteRes.statusCode, 200);
+
+      const roleCases = [
+        { id: 'sg_karthi', pass: 'MyNewPermanentAdminPassword2026!#', expectedRole: 'ADMIN' },
+        { id: 'strict_mod_01', pass: 'ModSecurePass2026!', expectedRole: 'MODERATOR' },
+        { id: 'persistent_member_01', pass: 'MemberSecurePass2026!', expectedRole: 'MEMBER' }
+      ];
+
+      for (const rc of roleCases) {
+        // Wrong password rejected
+        const badLogin = await makeRequest(restartedServerObj.server, {
+          method: 'POST',
+          path: '/api/auth/login'
+        }, { id: rc.id, password: 'WrongPassword999!' });
+        assert.equal(badLogin.statusCode, 401);
+
+        // Correct password succeeds and loads dashboard
+        const goodLogin = await makeRequest(restartedServerObj.server, {
+          method: 'POST',
+          path: '/api/auth/login'
+        }, { id: rc.id, password: rc.pass });
+        assert.equal(goodLogin.statusCode, 200);
+        assert.equal(goodLogin.body.user.role, rc.expectedRole);
+
+        const dash = await makeRequest(restartedServerObj.server, {
+          method: 'GET',
+          path: '/api/dashboard/summary',
+          headers: { Authorization: `Bearer ${goodLogin.body.sessionToken}` }
+        });
+        assert.equal(dash.statusCode, 200);
+        assert.equal(dash.body.role, rc.expectedRole);
+
+        // Logout invalidates session
+        const logout = await makeRequest(restartedServerObj.server, {
+          method: 'POST',
+          path: '/api/auth/logout',
+          headers: { Authorization: `Bearer ${goodLogin.body.sessionToken}` }
+        });
+        assert.equal(logout.statusCode, 200);
+
+        const afterLogoutDash = await makeRequest(restartedServerObj.server, {
+          method: 'GET',
+          path: '/api/dashboard/summary',
+          headers: { Authorization: `Bearer ${goodLogin.body.sessionToken}` }
+        });
+        assert.equal(afterLogoutDash.statusCode, 401);
+      }
     } finally {
       await new Promise(r => restartedServerObj.server.close(r));
     }

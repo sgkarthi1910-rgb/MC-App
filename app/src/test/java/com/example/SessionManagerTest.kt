@@ -30,7 +30,7 @@ class SessionManagerTest {
     }
 
     @Test
-    fun `test persistent session save and restore across instances`() {
+    fun `test in-memory session does not persist across app restarts`() {
         assertFalse(sessionManager.hasActiveSession())
         assertNull(sessionManager.getToken())
         assertNull(sessionManager.getUser())
@@ -50,28 +50,28 @@ class SessionManagerTest {
             expiresAt = System.currentTimeMillis() + 86400000L
         )
 
-        // Verify with same instance
+        // Verify within the same active app process
         assertTrue(sessionManager.hasActiveSession())
         assertEquals("test_token_abc_123", sessionManager.getToken())
         assertEquals("sg_karthi", sessionManager.getUser()?.id)
         assertEquals("ADMIN", sessionManager.getUser()?.role)
         assertTrue(sessionManager.getUser()?.mustChangePassword == true)
 
-        // Verify across newly created SessionManager instance (simulating app restart / revisit)
-        val reloadedSessionManager = SessionManager(context)
-        assertTrue(reloadedSessionManager.hasActiveSession())
-        assertEquals("test_token_abc_123", reloadedSessionManager.getToken())
-        assertEquals("sg_karthi", reloadedSessionManager.getUser()?.id)
-        assertEquals("ADMIN", reloadedSessionManager.getUser()?.role)
-
         // Test update password changed flag
-        reloadedSessionManager.updatePasswordChanged()
-        assertFalse(reloadedSessionManager.getUser()?.mustChangePassword ?: true)
+        sessionManager.updatePasswordChanged()
+        assertFalse(sessionManager.getUser()?.mustChangePassword ?: true)
 
-        // Test logout clearing session
-        reloadedSessionManager.clearSession()
+        // Verify across newly created SessionManager instance (simulating app close & reopen)
+        // Strict auth: session MUST NOT be restored automatically
+        val reloadedSessionManager = SessionManager(context)
         assertFalse(reloadedSessionManager.hasActiveSession())
         assertNull(reloadedSessionManager.getToken())
         assertNull(reloadedSessionManager.getUser())
+
+        // Test logout clearing session
+        sessionManager.clearSession()
+        assertFalse(sessionManager.hasActiveSession())
+        assertNull(sessionManager.getToken())
+        assertNull(sessionManager.getUser())
     }
 }

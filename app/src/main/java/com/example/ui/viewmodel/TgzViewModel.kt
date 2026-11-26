@@ -62,15 +62,14 @@ class TgzViewModel(
     private val _expandedFaqIds = MutableStateFlow(setOf("faq_join"))
     val expandedFaqIds: StateFlow<Set<String>> = _expandedFaqIds.asStateFlow()
 
-    // 2. AUTHENTICATION STATE
-    private val hasSessionOnLaunch = sessionManager?.hasActiveSession() ?: false
+    // 2. AUTHENTICATION STATE (Always starts unauthenticated — password required every app launch)
     private val _authState = MutableStateFlow(
         AuthUiState(
-            isLoggedIn = hasSessionOnLaunch,
-            isRestoringSession = hasSessionOnLaunch,
-            user = sessionManager?.getUser(),
-            role = sessionManager?.getUser()?.role ?: "MEMBER",
-            mustChangePassword = sessionManager?.getUser()?.mustChangePassword ?: false
+            isLoggedIn = false,
+            isRestoringSession = false,
+            user = null,
+            role = "MEMBER",
+            mustChangePassword = false
         )
     )
     val authState: StateFlow<AuthUiState> = _authState.asStateFlow()
@@ -196,6 +195,9 @@ class TgzViewModel(
     private val _isDashboardLoading = MutableStateFlow(false)
     val isDashboardLoading: StateFlow<Boolean> = _isDashboardLoading.asStateFlow()
 
+    private val _dashboardError = MutableStateFlow<String?>(null)
+    val dashboardError: StateFlow<String?> = _dashboardError.asStateFlow()
+
     // 10. MINECRAFT SERVER STATUS (JAVA & BEDROCK)
     private val _javaServerStatus = MutableStateFlow<MinecraftServerStatusDto?>(null)
     val javaServerStatus: StateFlow<MinecraftServerStatusDto?> = _javaServerStatus.asStateFlow()
@@ -242,13 +244,11 @@ class TgzViewModel(
     val appUpdateInfo: StateFlow<AppVersionResponse?> = _appUpdateInfo.asStateFlow()
 
     init {
+        sessionManager?.clearSession()
         startAutoRefreshCycle()
         fetchJavaServerStatus()
         fetchBedrockServerStatus()
         checkForAppUpdate()
-        if (hasSessionOnLaunch) {
-            restoreSessionOnStartup()
-        }
     }
 
     fun checkForAppUpdate() {
@@ -292,6 +292,7 @@ class TgzViewModel(
 
         viewModelScope.launch {
             _authState.update { it.copy(isLoading = true, errorMessage = null, successMessage = null) }
+            _dashboardError.value = null
             val result = repo.login(id, pass)
             result.onSuccess { resp ->
                 if (resp.success && resp.user != null) {
@@ -303,6 +304,18 @@ class TgzViewModel(
                         status = resp.user.status,
                         createdAt = resp.user.createdAt
                     )
+                    // Validate profile and load dashboard data before entering the app
+                    _isDashboardLoading.value = true
+                    val summaryResult = repo.getDashboardSummary()
+                    summaryResult.onSuccess { summary ->
+                        _dashboardSummary.value = summary
+                        _dashboardError.value = null
+                    }.onFailure { err ->
+                        _dashboardSummary.value = null
+                        _dashboardError.value = err.localizedMessage ?: "Failed to load dashboard data. Please retry."
+                    }
+                    _isDashboardLoading.value = false
+
                     _authState.update {
                         it.copy(
                             isLoggedIn = true,
@@ -314,8 +327,12 @@ class TgzViewModel(
                             successMessage = "Welcome, ${user.displayName}!"
                         )
                     }
-                    loadDashboardSummary()
                     loadUnreadMessagesCount()
+                    loadGroups()
+                    loadAnnouncements()
+                    if (user.role == "ADMIN") {
+                        loadAdminRegisteredMembers()
+                    }
                     onSuccess()
                 } else {
                     _authState.update {
@@ -396,14 +413,22 @@ class TgzViewModel(
     fun logout(onComplete: () -> Unit = {}) {
         viewModelScope.launch {
             backendRepository?.logout()
+            sessionManager?.clearSession()
             _authState.update {
-                AuthUiState(isLoggedIn = false, user = null, role = "MEMBER", mustChangePassword = false)
+                AuthUiState(isLoggedIn = false, isRestoringSession = false, user = null, role = "MEMBER", mustChangePassword = false)
             }
             _dashboardSummary.value = null
+            _dashboardError.value = null
+            _adminMembers.value = emptyList()
+            _adminMembersPagination.value = null
+            _groups.value = emptyList()
+            _currentGroupDetails.value = null
+            _currentGroupMessages.value = emptyList()
             _myTeam.value = null
             _inTeam.value = false
             _conversations.value = emptyList()
             _currentConversation.value = null
+            _unreadMessagesCount.value = 0
             _activeSessions.value = emptyList()
             onComplete()
         }
@@ -1089,8 +1114,12 @@ class TgzViewModel(
         val repo = backendRepository ?: return
         viewModelScope.launch {
             _isDashboardLoading.value = true
+            _dashboardError.value = null
             repo.getDashboardSummary().onSuccess { summary ->
                 _dashboardSummary.value = summary
+                _dashboardError.value = null
+            }.onFailure { err ->
+                _dashboardError.value = err.localizedMessage ?: "Failed to load dashboard data. Please retry."
             }
             _isDashboardLoading.value = false
         }

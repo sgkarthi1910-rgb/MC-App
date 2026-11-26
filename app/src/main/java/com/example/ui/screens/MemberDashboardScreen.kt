@@ -79,6 +79,7 @@ fun MemberDashboardScreen(
     val authState by viewModel.authState.collectAsStateWithLifecycle()
     val summary by viewModel.dashboardSummary.collectAsStateWithLifecycle()
     val isLoading by viewModel.isDashboardLoading.collectAsStateWithLifecycle()
+    val dashboardError by viewModel.dashboardError.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
@@ -182,6 +183,56 @@ fun MemberDashboardScreen(
                             value = summary?.leaderboardRank?.let { "#$it" } ?: if (isLoading) "..." else "-",
                             color = Color(0xFF38BDF8)
                         )
+                    }
+                }
+            }
+
+            if (summary == null && isLoading) {
+                item {
+                    ObsidianCard(borderColor = EmeraldGreen.copy(alpha = 0.4f)) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            CircularProgressIndicator(color = EmeraldGreen, modifier = Modifier.size(32.dp), strokeWidth = 3.dp)
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Text("LOADING MEMBER DASHBOARD...", fontFamily = SilkscreenFontFamily, fontSize = 11.sp, color = EmeraldGreen)
+                        }
+                    }
+                }
+            } else if (dashboardError != null || (summary == null && !isLoading)) {
+                item {
+                    ObsidianCard(borderColor = NetherRed.copy(alpha = 0.5f)) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "COULD NOT LOAD DASHBOARD DATA",
+                                fontFamily = SilkscreenFontFamily,
+                                fontSize = 12.sp,
+                                color = NetherRed
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = dashboardError ?: "Please check your connection and retry.",
+                                fontFamily = JetBrainsMonoFontFamily,
+                                fontSize = 11.sp,
+                                color = TextSecondary
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Button(
+                                onClick = { viewModel.loadDashboardSummary() },
+                                colors = ButtonDefaults.buttonColors(containerColor = NetherRed),
+                                shape = RoundedCornerShape(6.dp)
+                            ) {
+                                Text("RETRY", fontFamily = SilkscreenFontFamily, fontSize = 10.sp)
+                            }
+                        }
                     }
                 }
             }

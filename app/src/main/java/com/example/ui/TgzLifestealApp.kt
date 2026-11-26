@@ -209,6 +209,20 @@ fun TgzLifestealApp(
         }
     }
 
+    fun navigateToLoginClearingStack() {
+        navController.navigate(TgzDestination.LOGIN.route) {
+            popUpTo(0) { inclusive = true }
+            launchSingleTop = true
+        }
+    }
+
+    fun navigateToDashboardClearingLogin() {
+        navController.navigate(TgzDestination.DASHBOARD.route) {
+            popUpTo(0) { inclusive = true }
+            launchSingleTop = true
+        }
+    }
+
     fun copyServerIp() {
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
         clipboard?.setPrimaryClip(
@@ -486,7 +500,7 @@ fun TgzLifestealApp(
                             selected = false,
                             onClick = {
                                 scope.launch { drawerState.close() }
-                                viewModel.logout { navigateTo(TgzDestination.HOME.route) }
+                                viewModel.logout { navigateToLoginClearingStack() }
                             },
                             icon = { Icon(Icons.Default.ExitToApp, contentDescription = "Logout", tint = NetherRed) },
                             colors = NavigationDrawerItemDefaults.colors(
@@ -746,10 +760,10 @@ fun TgzLifestealApp(
                             }
                         }
                     } else {
-                        // Main App NavHost
+                        // Main App NavHost (Always starts on Login screen — password required every launch)
                         NavHost(
                             navController = navController,
-                            startDestination = if (authState.isLoggedIn) TgzDestination.DASHBOARD.route else TgzDestination.HOME.route,
+                            startDestination = TgzDestination.LOGIN.route,
                             modifier = Modifier.fillMaxSize()
                         ) {
                         // 1. HOME
@@ -766,21 +780,27 @@ fun TgzLifestealApp(
                             )
                         }
 
-                        // 2. ROLE-BASED DASHBOARD
+                        // 2. ROLE-BASED DASHBOARD (Strictly requires active authentication)
                         composable(TgzDestination.DASHBOARD.route) {
-                            when (authState.role) {
-                                "ADMIN" -> AdminDashboardScreen(
-                                    viewModel = viewModel,
-                                    onNavigateToRoute = { route -> navigateTo(route) }
-                                )
-                                "MODERATOR" -> ModeratorDashboardScreen(
-                                    viewModel = viewModel,
-                                    onNavigateToRoute = { route -> navigateTo(route) }
-                                )
-                                else -> MemberDashboardScreen(
-                                    viewModel = viewModel,
-                                    onNavigateToRoute = { route -> navigateTo(route) }
-                                )
+                            if (!authState.isLoggedIn || authState.user == null) {
+                                LaunchedEffect(Unit) {
+                                    navigateToLoginClearingStack()
+                                }
+                            } else {
+                                when (authState.role) {
+                                    "ADMIN" -> AdminDashboardScreen(
+                                        viewModel = viewModel,
+                                        onNavigateToRoute = { route -> navigateTo(route) }
+                                    )
+                                    "MODERATOR" -> ModeratorDashboardScreen(
+                                        viewModel = viewModel,
+                                        onNavigateToRoute = { route -> navigateTo(route) }
+                                    )
+                                    else -> MemberDashboardScreen(
+                                        viewModel = viewModel,
+                                        onNavigateToRoute = { route -> navigateTo(route) }
+                                    )
+                                }
                             }
                         }
 
@@ -790,7 +810,7 @@ fun TgzLifestealApp(
                                 viewModel = viewModel,
                                 authState = authState,
                                 onNavigateToSignup = { navigateTo(TgzDestination.SIGNUP.route) },
-                                onLoginSuccess = { navigateTo(TgzDestination.DASHBOARD.route) }
+                                onLoginSuccess = { navigateToDashboardClearingLogin() }
                             )
                         }
 
@@ -799,7 +819,7 @@ fun TgzLifestealApp(
                                 viewModel = viewModel,
                                 authState = authState,
                                 onNavigateToLogin = { navigateTo(TgzDestination.LOGIN.route) },
-                                onSignupSuccess = { navigateTo(TgzDestination.DASHBOARD.route) }
+                                onSignupSuccess = { navigateToDashboardClearingLogin() }
                             )
                         }
 
@@ -832,7 +852,7 @@ fun TgzLifestealApp(
                         composable(TgzDestination.SETTINGS.route) {
                             SettingsScreen(
                                 viewModel = viewModel,
-                                onLogoutComplete = { navigateTo(TgzDestination.HOME.route) }
+                                onLogoutComplete = { navigateToLoginClearingStack() }
                             )
                         }
 

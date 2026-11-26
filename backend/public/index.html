@@ -1773,6 +1773,7 @@
 
   <script>
     let currentUser = null;
+    let activeSessionToken = null;
     let currentAdminPage = 1;
     let currentAdminLimit = 15;
     let memberSearchTimeout = null;
@@ -1790,12 +1791,21 @@
       });
     }
 
+    function clearPersistedAuthStorage() {
+      try {
+        localStorage.removeItem('tgz_session_token');
+        localStorage.removeItem('tgz_user');
+        localStorage.removeItem('tgz_user_id');
+      } catch (e) {}
+    }
+
     // Modal controls
     function openLoginModal() {
-      const storedId = localStorage.getItem('tgz_user_id');
       const loginIdInput = document.getElementById('login-id');
-      if (storedId && loginIdInput) {
-        loginIdInput.value = storedId;
+      const loginPassInput = document.getElementById('login-pass');
+      if (loginPassInput) loginPassInput.value = '';
+      if (loginIdInput && !currentUser) {
+        loginIdInput.value = '';
       }
       document.getElementById('auth-modal').style.display = 'flex';
       switchAuthMode('login');
@@ -1806,7 +1816,7 @@
       document.getElementById('auth-success-banner').style.display = 'none';
     }
     function openChangePasswordModal() {
-      const storedId = (currentUser && currentUser.id) || localStorage.getItem('tgz_user_id') || '';
+      const storedId = (currentUser && currentUser.id) || '';
       const uidInput = document.getElementById('chg-user-id');
       if (uidInput) {
         uidInput.value = storedId;
@@ -1994,20 +2004,30 @@
         const data = await res.json();
 
         if (res.ok && data.success) {
-          currentUser = data.user;
-          if (data.sessionToken) {
-            localStorage.setItem('tgz_session_token', data.sessionToken);
+          activeSessionToken = data.sessionToken || null;
+          // Load full profile and dashboard data before entering the app
+          const headers = activeSessionToken ? { 'Authorization': `Bearer ${activeSessionToken}` } : {};
+          const [meRes, dashRes] = await Promise.all([
+            fetch('/api/auth/me', { headers, credentials: 'include' }),
+            fetch('/api/dashboard/summary', { headers, credentials: 'include' })
+          ]);
+          if (!meRes.ok || !dashRes.ok) {
+            activeSessionToken = null;
+            currentUser = null;
+            errBox.innerText = 'Login verified, but failed to load profile or dashboard data. Please retry.';
+            errBox.style.display = 'block';
+            return;
           }
-          if (data.user) {
-            localStorage.setItem('tgz_user', JSON.stringify(data.user));
-            localStorage.setItem('tgz_user_id', data.user.id);
-          }
-          succBox.innerText = 'Login successful! Welcome back, ' + data.user.displayName;
+          const meData = await meRes.json();
+          const verifiedUser = (meData && meData.user) ? meData.user : data.user;
+          currentUser = verifiedUser;
+          document.getElementById('login-pass').value = '';
+          succBox.innerText = 'Login successful! Welcome, ' + verifiedUser.displayName;
           succBox.style.display = 'block';
           setTimeout(() => {
             closeAuthModal();
-            updateUIAfterLogin(data.user);
-          }, 600);
+            updateUIAfterLogin(verifiedUser);
+          }, 400);
         } else {
           errBox.innerText = (data.error || 'Login failed') + (data.code ? ` [${data.code}]` : '');
           errBox.style.display = 'block';
@@ -2055,13 +2075,7 @@
 
         if (res.ok && data.success) {
           currentUser = data.user;
-          if (data.sessionToken) {
-            localStorage.setItem('tgz_session_token', data.sessionToken);
-          }
-          if (data.user) {
-            localStorage.setItem('tgz_user', JSON.stringify(data.user));
-            localStorage.setItem('tgz_user_id', data.user.id);
-          }
+          activeSessionToken = data.sessionToken || null;
           succBox.innerText = 'Registration successful! Welcome to TGZ Lifestyle, ' + data.user.displayName;
           succBox.style.display = 'block';
           setTimeout(() => {
@@ -2089,11 +2103,11 @@
       succBox.style.display = 'none';
 
       const uidInput = document.getElementById('chg-user-id');
-      const userId = (uidInput ? uidInput.value.trim() : '') || (currentUser && currentUser.id) || localStorage.getItem('tgz_user_id') || '';
+      const userId = (uidInput ? uidInput.value.trim() : '') || (currentUser && currentUser.id) || '';
       const currentPassword = document.getElementById('chg-current-pass').value;
       const newPassword = document.getElementById('chg-new-pass').value;
       const confirmNewPassword = document.getElementById('chg-confirm-pass').value;
-      const token = localStorage.getItem('tgz_session_token');
+      const token = activeSessionToken;
 
       const headers = { 'Content-Type': 'application/json' };
       if (token) {
@@ -2110,12 +2124,10 @@
         const data = await res.json();
         if (res.ok && data.success) {
           if (data.sessionToken) {
-            localStorage.setItem('tgz_session_token', data.sessionToken);
+            activeSessionToken = data.sessionToken;
           }
           if (data.user) {
             currentUser = data.user;
-            localStorage.setItem('tgz_user', JSON.stringify(data.user));
-            localStorage.setItem('tgz_user_id', data.user.id);
             updateUIAfterLogin(data.user);
           }
           succBox.innerText = 'Password updated successfully!';
@@ -2134,25 +2146,32 @@
 
     async function performLogout() {
       try {
-        const token = localStorage.getItem('tgz_session_token');
+        const token = activeSessionToken;
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
         await fetch('/api/auth/logout', { method: 'POST', headers, credentials: 'include' });
       } catch (e) {}
-      localStorage.removeItem('tgz_session_token');
-      localStorage.removeItem('tgz_user');
-      localStorage.removeItem('tgz_user_id');
+      activeSessionToken = null;
       currentUser = null;
+      clearPersistedAuthStorage();
+      try { sessionStorage.clear(); } catch (e) {}
       document.getElementById('user-dashboard-card').style.display = 'none';
+      document.getElementById('tab-btn-admin-members').style.display = 'none';
+      const adminTbody = document.getElementById('admin-members-tbody');
+      if (adminTbody) adminTbody.innerHTML = '';
       document.getElementById('auth-buttons-container').innerHTML = `
         <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
           <button class="btn-auth-nav" style="border-color: var(--emerald); color: var(--emerald); background: rgba(32, 229, 138, 0.12); cursor: pointer;" onclick="openChangePasswordModal()">🔑 CHANGE PASSWORD</button>
           <button class="btn-auth-nav" onclick="openLoginModal()">👤 SIGN IN</button>
         </div>
       `;
+      try {
+        history.replaceState({ authenticated: false }, '', window.location.pathname);
+      } catch (e) {}
+      openLoginModal();
     }
 
     function getAuthHeaders(extra = {}) {
-      const token = localStorage.getItem('tgz_session_token');
+      const token = activeSessionToken;
       const h = { ...extra };
       if (token) h['Authorization'] = `Bearer ${token}`;
       return h;
@@ -2166,8 +2185,6 @@
 
     function updateUIAfterLogin(user) {
       currentUser = user;
-      localStorage.setItem('tgz_user', JSON.stringify(user));
-      localStorage.setItem('tgz_user_id', user.id);
 
       document.getElementById('dash-display-name').innerText = user.displayName || user.id;
       document.getElementById('dash-user-id').innerText = user.id;
@@ -2179,7 +2196,7 @@
       const elRole = document.getElementById('diag-auth-account-role');
       if (elRole) elRole.innerText = user.role;
       const elRestore = document.getElementById('diag-auth-session-restore');
-      if (elRestore) elRestore.innerText = 'Active (Validated & Restored)';
+      if (elRestore) elRestore.innerText = 'Disabled (Password Required Every Open)';
       const elProf = document.getElementById('diag-auth-profile-status');
       if (elProf) elProf.innerText = 'Loaded (' + (user.displayName || user.id) + ')';
       const elPwd = document.getElementById('diag-auth-pwd-status');
@@ -2229,48 +2246,19 @@
       loadDiagnostics();
     }
 
-    async function checkActiveSession() {
-      try {
-        const token = localStorage.getItem('tgz_session_token');
-        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-        const res = await fetch('/api/auth/me', { headers, credentials: 'include' });
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.user) {
-            localStorage.setItem('tgz_user', JSON.stringify(data.user));
-            localStorage.setItem('tgz_user_id', data.user.id);
-            updateUIAfterLogin(data.user);
-          }
-        } else if (res.status === 401) {
-          // Explicitly expired or revoked session - clear cleanly
-          localStorage.removeItem('tgz_session_token');
-          localStorage.removeItem('tgz_user');
-          localStorage.removeItem('tgz_user_id');
-          currentUser = null;
-          document.getElementById('user-dashboard-card').style.display = 'none';
-        } else if (localStorage.getItem('tgz_user')) {
-          try {
-            const cachedUser = JSON.parse(localStorage.getItem('tgz_user'));
-            if (cachedUser && cachedUser.id) {
-              updateUIAfterLogin(cachedUser);
-            }
-          } catch (e) {}
-        }
-      } catch (e) {
-        if (localStorage.getItem('tgz_user')) {
-          try {
-            const cachedUser = JSON.parse(localStorage.getItem('tgz_user'));
-            if (cachedUser && cachedUser.id) {
-              updateUIAfterLogin(cachedUser);
-            }
-          } catch (err) {}
-        }
-      }
+    // Strict authentication: never auto-restore sessions on page open
+    function enforceFreshLoginOnOpen() {
+      activeSessionToken = null;
+      currentUser = null;
+      clearPersistedAuthStorage();
+      document.getElementById('user-dashboard-card').style.display = 'none';
+      document.getElementById('tab-btn-admin-members').style.display = 'none';
+      openLoginModal();
     }
 
     async function loadDiagnostics() {
       try {
-        const token = localStorage.getItem('tgz_session_token');
+        const token = activeSessionToken;
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
         let url = '/api/auth/diagnostics';
         if (currentUser && currentUser.role === 'ADMIN') {
@@ -2352,7 +2340,7 @@
     async function downloadDatabaseBackup() {
       if (!currentUser || currentUser.role !== 'ADMIN') return;
       try {
-        const token = localStorage.getItem('tgz_session_token');
+        const token = activeSessionToken;
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
         const res = await fetch('/api/admin/database/export', { headers, credentials: 'include' });
         if (res.ok) {
@@ -3309,11 +3297,18 @@
       return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
-    // INITIALIZATION ON LOAD
+    // INITIALIZATION ON LOAD (Strict login required on every open)
     fetchJavaStatus();
     fetchBedrockStatus();
-    checkActiveSession();
+    enforceFreshLoginOnOpen();
     checkForAppUpdates();
+
+    // Prevent browser back/forward cache from restoring a logged-out dashboard
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted || !currentUser || !activeSessionToken) {
+        enforceFreshLoginOnOpen();
+      }
+    });
 
     // Periodic live status update every 30 seconds
     setInterval(() => {

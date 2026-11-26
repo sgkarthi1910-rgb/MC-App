@@ -16,6 +16,20 @@ class SessionManager(context: Context) {
 
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
+    @Volatile
+    private var inMemoryToken: String? = null
+
+    @Volatile
+    private var inMemoryUser: StoredUser? = null
+
+    @Volatile
+    private var inMemoryExpiresAt: Long = 0L
+
+    init {
+        // Strictly remove any legacy persisted auth tokens/flags so app launch always requires login
+        clearPersistedAuthPrefs()
+    }
+
     companion object {
         private const val PREFS_NAME = "tgz_auth_session_prefs"
         private const val KEY_TOKEN = "session_token"
@@ -30,66 +44,7 @@ class SessionManager(context: Context) {
         const val DEFAULT_BACKEND_URL = "https://mc-app-ten.vercel.app/"
     }
 
-    fun saveSession(token: String, user: StoredUser, expiresAt: Long = 0L) {
-        prefs.edit()
-            .putString(KEY_TOKEN, token)
-            .putString(KEY_USER_ID, user.id)
-            .putString(KEY_DISPLAY_NAME, user.displayName)
-            .putString(KEY_ROLE, user.role)
-            .putBoolean(KEY_MUST_CHANGE_PASSWORD, user.mustChangePassword)
-            .putString(KEY_STATUS, user.status)
-            .putLong(KEY_CREATED_AT, user.createdAt)
-            .putLong(KEY_EXPIRES_AT, expiresAt)
-            .apply()
-    }
-
-    fun saveUser(user: StoredUser) {
-        prefs.edit()
-            .putString(KEY_USER_ID, user.id)
-            .putString(KEY_DISPLAY_NAME, user.displayName)
-            .putString(KEY_ROLE, user.role)
-            .putBoolean(KEY_MUST_CHANGE_PASSWORD, user.mustChangePassword)
-            .putString(KEY_STATUS, user.status)
-            .putLong(KEY_CREATED_AT, user.createdAt)
-            .apply()
-    }
-
-    fun updatePasswordChanged() {
-        prefs.edit().putBoolean(KEY_MUST_CHANGE_PASSWORD, false).apply()
-    }
-
-    fun getToken(): String? = prefs.getString(KEY_TOKEN, null)?.takeIf { it.isNotBlank() }
-
-    fun getUser(): StoredUser? {
-        val id = prefs.getString(KEY_USER_ID, null) ?: return null
-        val displayName = prefs.getString(KEY_DISPLAY_NAME, id) ?: id
-        val role = prefs.getString(KEY_ROLE, "MEMBER") ?: "MEMBER"
-        val mustChange = prefs.getBoolean(KEY_MUST_CHANGE_PASSWORD, false)
-        val status = prefs.getString(KEY_STATUS, "ACTIVE") ?: "ACTIVE"
-        val createdAt = prefs.getLong(KEY_CREATED_AT, 0L)
-        return StoredUser(
-            id = id,
-            displayName = displayName,
-            role = role,
-            mustChangePassword = mustChange,
-            status = status,
-            createdAt = createdAt
-        )
-    }
-
-    fun hasActiveSession(): Boolean {
-        val token = getToken()
-        val user = getUser()
-        val expiresAt = prefs.getLong(KEY_EXPIRES_AT, 0L)
-        if (token.isNullOrBlank() || user == null) return false
-        if (expiresAt > 0 && System.currentTimeMillis() > expiresAt) {
-            clearSession()
-            return false
-        }
-        return true
-    }
-
-    fun clearSession() {
+    private fun clearPersistedAuthPrefs() {
         prefs.edit()
             .remove(KEY_TOKEN)
             .remove(KEY_USER_ID)
@@ -100,6 +55,43 @@ class SessionManager(context: Context) {
             .remove(KEY_CREATED_AT)
             .remove(KEY_EXPIRES_AT)
             .apply()
+    }
+
+    fun saveSession(token: String, user: StoredUser, expiresAt: Long = 0L) {
+        inMemoryToken = token
+        inMemoryUser = user
+        inMemoryExpiresAt = expiresAt
+    }
+
+    fun saveUser(user: StoredUser) {
+        inMemoryUser = user
+    }
+
+    fun updatePasswordChanged() {
+        inMemoryUser = inMemoryUser?.copy(mustChangePassword = false)
+    }
+
+    fun getToken(): String? = inMemoryToken?.takeIf { it.isNotBlank() }
+
+    fun getUser(): StoredUser? = inMemoryUser
+
+    fun hasActiveSession(): Boolean {
+        val token = getToken()
+        val user = getUser()
+        val expiresAt = inMemoryExpiresAt
+        if (token.isNullOrBlank() || user == null) return false
+        if (expiresAt > 0 && System.currentTimeMillis() > expiresAt) {
+            clearSession()
+            return false
+        }
+        return true
+    }
+
+    fun clearSession() {
+        inMemoryToken = null
+        inMemoryUser = null
+        inMemoryExpiresAt = 0L
+        clearPersistedAuthPrefs()
     }
 
     fun getBackendUrl(): String {
