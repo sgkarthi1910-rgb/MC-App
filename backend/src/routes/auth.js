@@ -173,21 +173,7 @@ function setupAuthRoutes(router, db) {
       }
 
       const cleanPass = typeof password === 'string' ? password.trim() : '';
-      let isValid = await verifyPassword(cleanPass, user.password_hash);
-
-      // If admin entered configured password from env or legacy bootstrap, verify, update hash, and clear must_change_password
-      if (!isValid && isAdminUserId(cleanId)) {
-        const bootstrapEnv = process.env.ADMIN_PASSWORD || process.env.ADMIN_BOOTSTRAP_PASSWORD || 'TgzAdminInitial2026!Secure';
-        if (cleanPass === bootstrapEnv || cleanPass === 'admin123') {
-          isValid = true;
-          try {
-            const newHash = hashPasswordSync(cleanPass);
-            const forceChange = process.env.ADMIN_FORCE_PASSWORD_CHANGE === 'true';
-            db.prepare('UPDATE users SET password_hash = ?, must_change_password = ? WHERE id = ?')
-              .run(newHash, forceChange ? 1 : 0, cleanId);
-          } catch (e) {}
-        }
-      }
+      const isValid = await verifyPassword(cleanPass, user.password_hash);
 
       if (!isValid) {
         return res.status(401).json({
@@ -307,7 +293,7 @@ function setupAuthRoutes(router, db) {
 
     let user = req.user;
 
-    // Resilient serverless fallback: If session was lost across serverless containers, authenticate via userId + currentPassword
+    // Resilient fallback: If session was lost across serverless containers, authenticate via userId + currentPassword
     const cleanId = (userId || username || (typeof req.body?.id === 'string' ? req.body.id : '')).trim().toLowerCase();
     if (!user && cleanId) {
       let targetUser = db.prepare('SELECT id, display_name, password_hash, role, must_change_password, status FROM users WHERE id = ?').get(cleanId);
@@ -316,13 +302,7 @@ function setupAuthRoutes(router, db) {
         targetUser = db.prepare('SELECT id, display_name, password_hash, role, must_change_password, status FROM users WHERE id = ?').get(cleanId);
       }
       if (targetUser && currentPassword) {
-        let isPassValid = await verifyPassword(currentPassword, targetUser.password_hash);
-        if (!isPassValid && isAdminUserId(cleanId)) {
-          const bootstrapEnv = process.env.ADMIN_PASSWORD || process.env.ADMIN_BOOTSTRAP_PASSWORD || 'TgzAdminInitial2026!Secure';
-          if (currentPassword === bootstrapEnv || currentPassword === 'admin123') {
-            isPassValid = true;
-          }
-        }
+        const isPassValid = await verifyPassword(currentPassword, targetUser.password_hash);
         if (isPassValid) {
           user = targetUser;
         }
@@ -330,48 +310,45 @@ function setupAuthRoutes(router, db) {
     }
 
     if (!user) {
-      return res.status(401).json({ error: 'Authentication required. Please enter your username/ID and current or bootstrap password.' });
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required. Please enter your valid current credentials.'
+      });
     }
 
-    if (!newPassword || newPassword.length < 8) {
-      return res.status(400).json({ error: 'New password must be at least 8 characters long.' });
+    if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 8) {
+      return res.status(400).json({ success: false, error: 'New password must be at least 8 characters long.' });
     }
 
     if (newPassword !== confirmNewPassword) {
-      return res.status(400).json({ error: 'New passwords do not match.' });
+      return res.status(400).json({ success: false, error: 'New passwords do not match.' });
     }
 
-    // Verify current password
-    if (!user.must_change_password) {
-      if (!currentPassword) {
-        return res.status(400).json({ error: 'Current password is required.' });
-      }
-      let isValid = await verifyPassword(currentPassword, user.password_hash);
-      if (!isValid && isAdminUserId(user.id)) {
-        const bootstrapEnv = process.env.ADMIN_PASSWORD || process.env.ADMIN_BOOTSTRAP_PASSWORD || 'TgzAdminInitial2026!Secure';
-        if (currentPassword === bootstrapEnv || currentPassword === 'admin123') {
-          isValid = true;
-        }
-      }
-      if (!isValid) {
-        return res.status(400).json({ error: 'Current password is incorrect.' });
-      }
-    } else if (currentPassword) {
-      let isValid = await verifyPassword(currentPassword, user.password_hash);
-      if (!isValid && isAdminUserId(user.id)) {
-        const bootstrapEnv = process.env.ADMIN_PASSWORD || process.env.ADMIN_BOOTSTRAP_PASSWORD || 'TgzAdminInitial2026!Secure';
-        if (currentPassword === bootstrapEnv || currentPassword === 'admin123') {
-          isValid = true;
-        }
-      }
-      if (!isValid) {
-        return res.status(400).json({ error: 'Current password is incorrect.' });
-      }
+    if (!currentPassword) {
+      return res.status(400).json({ success: false, error: 'Current password is required.' });
+    }
+
+    const isCurrentValid = await verifyPassword(currentPassword, user.password_hash);
+    if (!isCurrentValid) {
+      return res.status(400).json({ success: false, error: 'Current password is incorrect.' });
+    }
+
+    if (newPassword === currentPassword) {
+      return res.status(400).json({ success: false, error: 'New password must be different from current password.' });
     }
 
     const newHash = await hashPassword(newPassword);
     db.prepare('UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?')
       .run(newHash, user.id);
+
+    // Invalidate other sessions for security (preserving current active session)
+    try {
+      if (req.session) {
+        db.prepare('UPDATE sessions SET is_revoked = 1 WHERE user_id = ? AND id != ?').run(user.id, req.session.id);
+      } else {
+        db.prepare('UPDATE sessions SET is_revoked = 1 WHERE user_id = ?').run(user.id);
+      }
+    } catch(e) {}
 
     // Issue fresh session so client is immediately logged in with new password
     const tokenObj = generateSessionToken();
@@ -396,12 +373,14 @@ function setupAuthRoutes(router, db) {
 
     return res.json({
       success: true,
-      message: 'Password changed successfully.',
+      message: 'Password changed successfully. Your new password is now permanently saved.',
       sessionToken: rawToken,
+      sessionId,
       user: {
         id: user.id,
         displayName: user.display_name,
-        role: user.role
+        role: user.role,
+        mustChangePassword: false
       }
     });
   });

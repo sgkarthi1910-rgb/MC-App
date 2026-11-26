@@ -1,0 +1,299 @@
+{
+  "users": [
+    {
+      "id": "sg_karthi",
+      "display_name": "Admin (sg_karthi)",
+      "password_hash": "$scrypt$N=32768,r=8,p=1$a043122982bba56b042092f00e12fb4c0149c10c43588971f382ad458c1733b8$8ea5823a8666ca0040d04ad828bb1bc1bc6c7a1994d5c3a5473ea59bc0f2f02aff50ba9fd2061da43bcbb14d187303186ae283c21ba7297eaa09dfaf02c77736",
+      "role": "ADMIN",
+      "must_change_password": 0,
+      "status": "ACTIVE",
+      "created_at": 1795581808792,
+      "last_login_at": 1795590518769,
+      "minecraft_uuid": null,
+      "minecraft_username": null,
+      "avatar": "player"
+    },
+    {
+      "id": "testing",
+      "display_name": "Tester",
+      "password_hash": "$scrypt$N=32768,r=8,p=1$b4678470a89f73e547dc75745fbbad711e59a84a1ef866defb2ae7b8d39ea5bd$cc32e82daa00ed118ce063069da55e04d3739b5fb0ee66e4497ce1dd24d7fe256d47c6dd80221a16901746a90f8e8d44a8d42afc59d3a8154d1a2ec11064c42a",
+      "role": "MEMBER",
+      "must_change_password": 0,
+      "status": "ACTIVE",
+      "created_at": 1795583791083,
+      "last_login_at": 1795586473665,
+      "minecraft_uuid": null,
+      "minecraft_username": null,
+      "avatar": "player"
+    },
+    {
+      "id": "dhanush",
+      "display_name": "Admin (dhanush)",
+      "password_hash": "$scrypt$N=32768,r=8,p=1$be1fd63a668f362fec55d5c5fe18374955b51b70d520e91ce208da26f7cd8b4d$b75fe20ecf3bbed11d8aab4a5420efe4b2d646cd1d2aa87ea499d9d266734e5aa79b0446eae2937bfd55a41b352ca71d0321726ba90565991910969998555dce",
+      "role": "ADMIN",
+      "must_change_password": 1,
+      "status": "ACTIVE",
+      "created_at": 1795607509040,
+      "last_login_at": null,
+      "minecraft_uuid": null,
+      "minecraft_username": null,
+      "avatar": "player"
+    },
+    {
+      "id": "lmtg",
+      "display_name": "Admin (lmtg)",
+      "password_hash": "$scrypt$N=32768,r=8,p=1$021ed5a686831a28efceb8ff9ff64f408892ffbc5d597b9f9dcfa35f51bbc309$2462be216cdc27f0cc864f459b75414001364be4712e1c89d8836354561dc5c6113245e7dcfd4759c2605088931d5e481e3f22fd7abfed586f086cfa8e8ed4a5",
+      "role": "ADMIN",
+      "must_change_password": 1,
+      "status": "ACTIVE",
+      "created_at": 1795607509040,
+      "last_login_at": null,
+      "minecraft_uuid": null,
+      "minecraft_username": null,
+      "avatar": "player"
+    },
+    {
+      "id": "darksight",
+      "display_name": "Admin (darksight)",
+      "password_hash": "$scrypt$N=32768,r=8,p=1$a19f673e1c1d98952ba4569f63442860cba0350d2ee135fb4760da0eeee6307c$9753750274f4d683c3ddd4815e013dfc5c840fe762e7459b30ad686f024d15aef840b7708b0d22b7e0bfb4f37047da0ca6118e33dd5c42cc508d06def0df4935",
+      "role": "ADMIN",
+      "must_change_password": 1,
+      "status": "ACTIVE",
+      "created_at": 1795607509040,
+      "last_login_at": null,
+      "minecraft_uuid": null,
+      "minecraft_username": null,
+      "avatar": "player"
+    }
+  ],
+  "sessions": [
+    {
+      "id": "sess_83fca79d0562f78f",
+      "user_id": "sg_karthi",
+      "token_hash": "30f68e7ace7dab72f15476fa131465e725805b814b610ffabcbc2ce6abee4bce",
+      "device_info": "TGZ Android App",
+      "ip_address": "127.0.0.1",
+      "created_at": 1795582093317,
+      "last_active_at": 1795582093317,
+      "expires_at": 1798174093317,
+      "is_revoked": 1
+    },
+    {
+      "id": "sess_636d26fa9aec8c91",
+      "user_id": "testing",
+      "token_hash": "382057aa14dd7c7ef454ca9da3334787d15a484de4cc3f8dbd17ef9e28797259",
+      "device_info": "TGZ Android App",
+      "ip_address": "127.0.0.1",
+      "created_at": 1795583791083,
+      "last_active_at": 1795583791083,
+      "expires_at": 1798175791083,
+      "is_revoked": 1
+    },
+    {
+      "id": "sess_82b8ab048bc42a06",
+      "user_id": "sg_karthi",
+      "token_hash": "3cd98d26e0caa3511bf0169b7f8394522fbef1356664158f4995e93a3582fc93",
+      "device_info": "TGZ Android App",
+      "ip_address": "127.0.0.1",
+      "created_at": 1795584004971,
+      "last_active_at": 1795584360149,
+      "expires_at": 1798176004971,
+      "is_revoked": 1
+    },
+    {
+      "id": "sess_c196efea61143aed",
+      "user_id": "testing",
+      "token_hash": "62de9fb6333ea8beb2f8d53961aa0495d7e865b3dd1dcd710d2b96ebf5bb9f5a",
+      "device_info": "TGZ Android App",
+      "ip_address": "127.0.0.1",
+      "created_at": 1795584707536,
+      "last_active_at": 1795584707536,
+      "expires_at": 1798176707536,
+      "is_revoked": 1
+    },
+    {
+      "id": "sess_fbdfeb9097449f75",
+      "user_id": "sg_karthi",
+      "token_hash": "3060a33ec1a7409685a33867d7b268cfdd234a6a552371203fa8536fd2d0ea92",
+      "device_info": "TGZ Android App",
+      "ip_address": "127.0.0.1",
+      "created_at": 1795584842581,
+      "last_active_at": 1795586268067,
+      "expires_at": 1798176842581,
+      "is_revoked": 1
+    },
+    {
+      "id": "sess_bd6e3665689d5f27",
+      "user_id": "testing",
+      "token_hash": "4641b7d3c3f23591f067996d925e0a386127a5abeef5a3fb7bb3db82e8e7e0f1",
+      "device_info": "TGZ Android App",
+      "ip_address": "127.0.0.1",
+      "created_at": 1795586473665,
+      "last_active_at": 1795588669660,
+      "expires_at": 1798178473665,
+      "is_revoked": 1
+    },
+    {
+      "id": "sess_387753cc55d802ab",
+      "user_id": "sg_karthi",
+      "token_hash": "ae2eef5a86f58e575073be339ef6ab0c43a3a94778c1ebf3a7e6da876db31a64",
+      "device_info": "TGZ Android App",
+      "ip_address": "127.0.0.1",
+      "created_at": 1795590518769,
+      "last_active_at": 1795594624969,
+      "expires_at": 1798182518769,
+      "is_revoked": 0
+    }
+  ],
+  "announcements": [
+    {
+      "id": "ann_welcome_01",
+      "title": "Welcome to TGZ Lifesteal SMP",
+      "content": "Welcome to the official TGZ Lifesteal community! Join our Minecraft SMP server at node2.vyroxsmp.online:10010, claim hearts, earn playtime crates, and join clans.",
+      "author_id": "sg_karthi",
+      "author_name": "Admin (sg_karthi)",
+      "category": "UPDATE",
+      "is_pinned": 1,
+      "created_at": 1795581808801,
+      "updated_at": 1795581808801
+    },
+    {
+      "id": "ann_7ee70b9cb71408e1",
+      "title": "Server Testing",
+      "content": "Hello everyone",
+      "author_id": "sg_karthi",
+      "author_name": "Admin (sg_karthi)",
+      "category": "GENERAL",
+      "is_pinned": 1,
+      "created_at": 1795586451213,
+      "updated_at": 1795586451213
+    }
+  ],
+  "announcement_reads": [],
+  "conversations": [
+    {
+      "id": "conv_451259d1f44e9136",
+      "user1_id": "sg_karthi",
+      "user2_id": "testing",
+      "updated_at": 1795583866517
+    }
+  ],
+  "messages": [
+    {
+      "id": "msg_6760ca0664ae4845",
+      "conversation_id": "conv_451259d1f44e9136",
+      "sender_id": "testing",
+      "recipient_id": "sg_karthi",
+      "content": "hi",
+      "is_read": 1,
+      "created_at": 1795583865097
+    },
+    {
+      "id": "msg_07b5a61ea2660761",
+      "conversation_id": "conv_451259d1f44e9136",
+      "sender_id": "testing",
+      "recipient_id": "sg_karthi",
+      "content": "hi",
+      "is_read": 1,
+      "created_at": 1795583866155
+    },
+    {
+      "id": "msg_6c0053600a870dca",
+      "conversation_id": "conv_451259d1f44e9136",
+      "sender_id": "testing",
+      "recipient_id": "sg_karthi",
+      "content": "hi",
+      "is_read": 1,
+      "created_at": 1795583866317
+    },
+    {
+      "id": "msg_134aa75980625cdd",
+      "conversation_id": "conv_451259d1f44e9136",
+      "sender_id": "testing",
+      "recipient_id": "sg_karthi",
+      "content": "hi",
+      "is_read": 1,
+      "created_at": 1795583866517
+    }
+  ],
+  "reward_configs": [
+    {
+      "reward_id": "common_crate",
+      "name": "Common Crate",
+      "required_playtime_minutes": null,
+      "description": "Tier 1 survival supply crate key with basic enchantments and starting supplies.",
+      "badge": "TIER 1"
+    },
+    {
+      "reward_id": "monthly_crate",
+      "name": "Monthly Crate",
+      "required_playtime_minutes": null,
+      "description": "Exclusive monthly crate key with rare seasonal cosmetics and bonus items.",
+      "badge": "MONTHLY"
+    },
+    {
+      "reward_id": "special_crate",
+      "name": "Special Crate",
+      "required_playtime_minutes": null,
+      "description": "Special event crate containing heart fragments and claim protection blocks.",
+      "badge": "SPECIAL"
+    },
+    {
+      "reward_id": "arcane_crate",
+      "name": "Arcane Crate",
+      "required_playtime_minutes": null,
+      "description": "Mystical Arcane crate key infused with powerful custom enchantments and relics.",
+      "badge": "MYTHIC"
+    },
+    {
+      "reward_id": "matrix_crate",
+      "name": "Matrix Crate",
+      "required_playtime_minutes": null,
+      "description": "Ultimate endgame Matrix crate with supreme Netherite equipment and revive tokens.",
+      "badge": "LEGENDARY"
+    }
+  ],
+  "reward_claims": [],
+  "minecraft_player_stats": [],
+  "teams": [],
+  "team_members": [],
+  "team_invitations": [],
+  "app_settings": [
+    {
+      "key": "minecraft_server_host",
+      "value": "node2.vyroxsmp.online"
+    },
+    {
+      "key": "minecraft_server_port",
+      "value": "10010"
+    },
+    {
+      "key": "discord_invite_url",
+      "value": "https://discord.gg/J5P89mxXbc"
+    },
+    {
+      "key": "session_expiration_days",
+      "value": "30"
+    },
+    {
+      "key": "minecraft_plugin_api_key",
+      "value": "tgz_plugin_sec_99a8b7c6d5e4f3a2"
+    },
+    {
+      "key": "allow_member_team_creation",
+      "value": "true"
+    },
+    {
+      "key": "motd",
+      "value": "Welcome to TGZ Lifesteal SMP!"
+    },
+    {
+      "key": "minecraft_bedrock_port",
+      "value": "10011"
+    }
+  ],
+  "groups": [],
+  "group_members": [],
+  "group_messages": [],
+  "group_message_reads": []
+}

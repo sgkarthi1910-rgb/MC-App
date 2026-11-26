@@ -10,6 +10,7 @@ const path = require('node:path');
 
 function createInMemoryDatabase(storageFilePath) {
   let tables = {
+    schema_migrations: [],
     users: [],
     sessions: [],
     announcements: [],
@@ -29,26 +30,105 @@ function createInMemoryDatabase(storageFilePath) {
     group_message_reads: []
   };
 
-  // Restore existing records from persistent store if available
-  if (storageFilePath && fs.existsSync(storageFilePath)) {
-    try {
-      const saved = JSON.parse(fs.readFileSync(storageFilePath, 'utf8'));
-      if (saved && typeof saved === 'object') {
-        Object.keys(tables).forEach(t => {
-          if (Array.isArray(saved[t])) tables[t] = saved[t];
-        });
-      }
-    } catch (e) {}
+  let lastSyncTime = Date.now();
+  let lastSyncStatus = 'INITIALIZED';
+
+  // Restore existing records from persistent store or seed file
+  const candidates = [
+    storageFilePath,
+    path.join(__dirname, '..', 'data', 'tgz_store.json'),
+    path.join(process.cwd(), 'backend', 'data', 'tgz_store.json'),
+    path.join(process.cwd(), 'data', 'tgz_store.json'),
+    path.join(__dirname, '..', '..', 'backend', 'data', 'tgz_store.json')
+  ].filter(Boolean);
+
+  let loaded = false;
+  for (const cand of candidates) {
+    if (fs.existsSync(cand)) {
+      try {
+        const saved = JSON.parse(fs.readFileSync(cand, 'utf8'));
+        if (saved && typeof saved === 'object') {
+          Object.keys(tables).forEach(t => {
+            if (Array.isArray(saved[t])) tables[t] = saved[t];
+          });
+          loaded = true;
+          lastSyncTime = Date.now();
+          lastSyncStatus = 'LOADED_FROM_DISK';
+          break;
+        }
+      } catch (e) {}
+    }
   }
 
-  function persist() {
+  // Cloud KV / Upstash sync if configured
+  const kvUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+  const kvToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+
+  async function syncFromCloudKV() {
+    if (!kvUrl || !kvToken || typeof fetch !== 'function') return;
+    try {
+      const res = await fetch(`${kvUrl}/get/tgz_store`, {
+        headers: { Authorization: `Bearer ${kvToken}` }
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const remoteData = typeof json.result === 'string' ? JSON.parse(json.result) : json.result;
+        if (remoteData && typeof remoteData === 'object') {
+          Object.keys(tables).forEach(t => {
+            if (Array.isArray(remoteData[t]) && remoteData[t].length > 0) {
+              tables[t] = remoteData[t];
+            }
+          });
+          lastSyncTime = Date.now();
+          lastSyncStatus = 'SYNCED_FROM_CLOUD_KV';
+          persistLocal();
+        }
+      }
+    } catch (e) {
+      lastSyncStatus = 'CLOUD_KV_SYNC_FAILED: ' + (e?.message || 'Error');
+    }
+  }
+
+  // Initial cloud fetch attempt
+  if (kvUrl && kvToken) {
+    syncFromCloudKV().catch(() => {});
+  }
+
+  function persistLocal() {
     if (storageFilePath) {
       try {
         const dir = path.dirname(storageFilePath);
         if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
         fs.writeFileSync(storageFilePath, JSON.stringify(tables, null, 2), 'utf8');
+        lastSyncTime = Date.now();
       } catch (e) {}
     }
+  }
+
+  function persist() {
+    persistLocal();
+    // Asynchronously push to cloud KV if configured
+    if (kvUrl && kvToken && typeof fetch === 'function') {
+      const payload = JSON.stringify(tables);
+      fetch(`${kvUrl}/set/tgz_store`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${kvToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: payload
+      }).then(() => {
+        lastSyncTime = Date.now();
+        lastSyncStatus = 'SYNCED_TO_CLOUD_KV';
+      }).catch(err => {
+        lastSyncStatus = 'CLOUD_KV_PUSH_FAILED: ' + (err?.message || 'Error');
+      });
+    }
+  }
+
+  // Save initially if we loaded from fallback into target
+  if (loaded && storageFilePath && !fs.existsSync(storageFilePath)) {
+    persistLocal();
   }
 
   function matchCondition(row, condStr, params, paramIndexRef, tables) {
@@ -275,6 +355,18 @@ function createInMemoryDatabase(storageFilePath) {
               existingIdx = list.findIndex(r => r.team_id === newRow.team_id && r.user_id === newRow.user_id);
             } else if (table === 'announcement_reads') {
               existingIdx = list.findIndex(r => r.user_id === newRow.user_id && r.announcement_id === newRow.announcement_id);
+            } else if (table === 'reward_claims') {
+              existingIdx = list.findIndex(r => r.user_id === newRow.user_id && r.reward_id === newRow.reward_id);
+            } else if (table === 'conversations') {
+              existingIdx = list.findIndex(r => (r.user1_id === newRow.user1_id && r.user2_id === newRow.user2_id) || (r.user1_id === newRow.user2_id && r.user2_id === newRow.user1_id) || r.id === newRow.id);
+            } else if (table === 'app_settings') {
+              existingIdx = list.findIndex(r => r.key === newRow.key);
+            } else if (table === 'reward_configs') {
+              existingIdx = list.findIndex(r => r.reward_id === newRow.reward_id);
+            } else if (table === 'schema_migrations') {
+              existingIdx = list.findIndex(r => r.version === newRow.version);
+            } else if (table === 'sessions') {
+              existingIdx = list.findIndex(r => r.id === newRow.id || (newRow.token_hash && r.token_hash === newRow.token_hash));
             } else {
               const primaryKeyCol = cols[0];
               existingIdx = list.findIndex(r => r[primaryKeyCol] === newRow[primaryKeyCol]);
@@ -342,6 +434,29 @@ function createInMemoryDatabase(storageFilePath) {
           return { changes: 0 };
         }
       };
+    },
+
+    getLastSyncTime() {
+      return lastSyncTime;
+    },
+
+    getLastSyncStatus() {
+      return lastSyncStatus;
+    },
+
+    dumpData() {
+      return JSON.parse(JSON.stringify(tables));
+    },
+
+    restoreData(data) {
+      if (data && typeof data === 'object') {
+        Object.keys(tables).forEach(t => {
+          if (Array.isArray(data[t])) tables[t] = data[t];
+        });
+        persist();
+        return true;
+      }
+      return false;
     }
   };
 }

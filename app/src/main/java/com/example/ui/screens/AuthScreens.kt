@@ -608,8 +608,11 @@ fun ForcedChangePasswordDialog(
     viewModel: TgzViewModel,
     authState: AuthUiState
 ) {
+    var currentPassword by remember { mutableStateOf("") }
     var newPassword by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
+    var showCurrentPassword by remember { mutableStateOf(false) }
+    var showNewPassword by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = { /* Cannot dismiss without changing */ },
@@ -631,14 +634,66 @@ fun ForcedChangePasswordDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 OutlinedTextField(
-                    value = newPassword,
-                    onValueChange = { newPassword = it },
-                    label = { Text("New Permanent Password") },
-                    visualTransformation = PasswordVisualTransformation(),
+                    value = currentPassword,
+                    onValueChange = { currentPassword = it },
+                    label = { Text("Current Bootstrap Password *") },
+                    leadingIcon = {
+                        Icon(Icons.Default.Lock, contentDescription = null, tint = EmeraldGreen)
+                    },
+                    trailingIcon = {
+                        IconButton(onClick = { showCurrentPassword = !showCurrentPassword }) {
+                            Icon(
+                                if (showCurrentPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                contentDescription = "Toggle password",
+                                tint = TextMuted
+                            )
+                        }
+                    },
+                    visualTransformation = if (showCurrentPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = EmeraldGreen,
-                        unfocusedBorderColor = ObsidianBorder
+                        unfocusedBorderColor = ObsidianBorder,
+                        focusedTextColor = TextPrimary,
+                        unfocusedTextColor = TextPrimary,
+                        focusedLabelColor = EmeraldGreen,
+                        unfocusedLabelColor = TextMuted,
+                        focusedContainerColor = DeepCharcoal,
+                        unfocusedContainerColor = DeepCharcoal
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = newPassword,
+                    onValueChange = { newPassword = it },
+                    label = { Text("New Permanent Password (min 8 chars) *") },
+                    leadingIcon = {
+                        Icon(Icons.Default.Lock, contentDescription = null, tint = EmeraldGreen)
+                    },
+                    trailingIcon = {
+                        IconButton(onClick = { showNewPassword = !showNewPassword }) {
+                            Icon(
+                                if (showNewPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                contentDescription = "Toggle password",
+                                tint = TextMuted
+                            )
+                        }
+                    },
+                    visualTransformation = if (showNewPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = EmeraldGreen,
+                        unfocusedBorderColor = ObsidianBorder,
+                        focusedTextColor = TextPrimary,
+                        unfocusedTextColor = TextPrimary,
+                        focusedLabelColor = EmeraldGreen,
+                        unfocusedLabelColor = TextMuted,
+                        focusedContainerColor = DeepCharcoal,
+                        unfocusedContainerColor = DeepCharcoal
                     )
                 )
 
@@ -647,12 +702,22 @@ fun ForcedChangePasswordDialog(
                 OutlinedTextField(
                     value = confirmPassword,
                     onValueChange = { confirmPassword = it },
-                    label = { Text("Confirm New Password") },
-                    visualTransformation = PasswordVisualTransformation(),
+                    label = { Text("Confirm New Password *") },
+                    leadingIcon = {
+                        Icon(Icons.Default.Lock, contentDescription = null, tint = EmeraldGreen)
+                    },
+                    visualTransformation = if (showNewPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = EmeraldGreen,
-                        unfocusedBorderColor = ObsidianBorder
+                        unfocusedBorderColor = ObsidianBorder,
+                        focusedTextColor = TextPrimary,
+                        unfocusedTextColor = TextPrimary,
+                        focusedLabelColor = EmeraldGreen,
+                        unfocusedLabelColor = TextMuted,
+                        focusedContainerColor = DeepCharcoal,
+                        unfocusedContainerColor = DeepCharcoal
                     )
                 )
 
@@ -661,7 +726,8 @@ fun ForcedChangePasswordDialog(
                     Text(
                         text = authState.errorMessage,
                         color = NetherRed,
-                        fontSize = 12.sp
+                        fontSize = 12.sp,
+                        fontFamily = JetBrainsMonoFontFamily
                     )
                 }
             }
@@ -669,9 +735,9 @@ fun ForcedChangePasswordDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    viewModel.changePassword(null, newPassword, confirmPassword)
+                    viewModel.changePassword(currentPassword, newPassword, confirmPassword)
                 },
-                enabled = newPassword.length >= 8 && newPassword == confirmPassword,
+                enabled = currentPassword.isNotBlank() && newPassword.length >= 8 && newPassword == confirmPassword,
                 colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen, contentColor = OnEmeraldDark)
             ) {
                 Text("SAVE NEW PASSWORD", fontFamily = SilkscreenFontFamily, fontSize = 12.sp)

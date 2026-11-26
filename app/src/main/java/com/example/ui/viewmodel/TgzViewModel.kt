@@ -419,6 +419,7 @@ class TgzViewModel(
                         it.copy(
                             isLoading = false,
                             mustChangePassword = false,
+                            user = it.user?.copy(mustChangePassword = false),
                             successMessage = "Password updated successfully!"
                         )
                     }

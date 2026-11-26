@@ -1027,6 +1027,35 @@
       font-family: 'JetBrains Mono', monospace;
       font-weight: 600;
     }
+    .update-banner {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      max-width: 440px;
+      width: calc(100% - 48px);
+      background: #12141C;
+      border: 1px solid var(--emerald);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 20px var(--emerald-glow);
+      border-radius: 12px;
+      padding: 16px;
+      z-index: 99999;
+      animation: slideInUp 0.3s ease-out;
+    }
+    @keyframes slideInUp {
+      from { transform: translateY(100%); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .diag-warning-box {
+      background: rgba(255, 170, 0, 0.12);
+      border: 1px solid var(--gold);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: #FDE68A;
+      font-size: 0.82rem;
+      margin-top: 12px;
+      line-height: 1.4;
+      display: none;
+    }
     footer {
       text-align: center;
       color: var(--text-muted);
@@ -1098,25 +1127,58 @@
 
       <!-- Tab Content: Overview -->
       <div id="tab-pane-overview">
-        <div class="section-title" style="font-size: 0.95rem;">🔒 Production System & Auth Diagnostics</div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+          <div class="section-title" style="font-size: 0.95rem; margin-bottom: 0;">🔒 Production System & Diagnostics Panel</div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn-auth-nav" style="font-size: 0.75rem; padding: 4px 10px;" onclick="loadDiagnostics()">↻ REFRESH</button>
+            <button id="btn-export-db" class="btn-auth-nav" style="font-size: 0.75rem; padding: 4px 10px; display: none;" onclick="downloadDatabaseBackup()">💾 EXPORT BACKUP</button>
+          </div>
+        </div>
+
         <div class="diag-grid">
+          <div class="diag-item">
+            <span class="diag-label">App Version:</span>
+            <span id="diag-app-version" class="diag-val-ok">v1.1.0</span>
+          </div>
+          <div class="diag-item">
+            <span class="diag-label">Latest Deployment:</span>
+            <span id="diag-deploy-version" class="diag-val-ok">v1.1.0-prod</span>
+          </div>
           <div class="diag-item">
             <span class="diag-label">Database Status:</span>
             <span id="diag-db-status" class="diag-val-ok">Connected</span>
           </div>
           <div class="diag-item">
-            <span class="diag-label">Admin Accounts:</span>
-            <span id="diag-admin-prov" class="diag-val-ok">Provisioned</span>
-          </div>
-          <div class="diag-item">
-            <span class="diag-label">Auth Storage:</span>
+            <span class="diag-label">Database Engine:</span>
             <span id="diag-storage-type" class="diag-val-ok">Persisted Store</span>
           </div>
           <div class="diag-item">
-            <span class="diag-label">Session Lifetime:</span>
-            <span class="diag-val-ok">30 Days (Rolling)</span>
+            <span class="diag-label">Migration Status:</span>
+            <span id="diag-migration-status" class="diag-val-ok">UP_TO_DATE (Schema v2.0)</span>
+          </div>
+          <div class="diag-item">
+            <span class="diag-label">Auth Service:</span>
+            <span id="diag-auth-status" class="diag-val-ok">Active</span>
+          </div>
+          <div class="diag-item">
+            <span class="diag-label">Admin Account:</span>
+            <span id="diag-admin-prov" class="diag-val-ok">Ready (sg_karthi)</span>
+          </div>
+          <div class="diag-item">
+            <span class="diag-label">Last Data Sync:</span>
+            <span id="diag-last-sync" class="diag-val-ok">Just now</span>
+          </div>
+          <div class="diag-item">
+            <span class="diag-label">Last Update Check:</span>
+            <span id="diag-last-update-check" class="diag-val-ok">Just now</span>
+          </div>
+          <div class="diag-item">
+            <span class="diag-label">Session Status:</span>
+            <span id="diag-session-status" class="diag-val-ok">Authenticated (30 Days Rolling)</span>
           </div>
         </div>
+
+        <div id="diag-warning-container" class="diag-warning-box"></div>
       </div>
 
       <!-- Tab Content: Messaging (Direct Messages & Group Chats) -->
@@ -1559,8 +1621,8 @@
           <input type="text" id="chg-user-id" class="form-input" placeholder="e.g. sg_karthi, dhanush, lmtg, darksight" required autocomplete="username">
         </div>
         <div class="form-group">
-          <label class="form-label">Current Password (or Bootstrap Password)</label>
-          <input type="password" id="chg-current-pass" class="form-input" placeholder="Current or bootstrap password" required autocomplete="current-password">
+          <label class="form-label">Current Password</label>
+          <input type="password" id="chg-current-pass" class="form-input" placeholder="Enter current password" required autocomplete="current-password">
         </div>
         <div class="form-group">
           <label class="form-label">New Password (min 8 characters)</label>
@@ -1656,6 +1718,24 @@
       <div id="dm-member-search-results" style="max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
         <div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 12px;">Type to find registered members...</div>
       </div>
+    </div>
+  </div>
+
+  <!-- AUTOMATIC APPLICATION UPDATER TOAST -->
+  <div id="tgz-updater-toast" class="update-banner" style="display: none;">
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span class="gem-logo" style="width: 18px; height: 18px;"></span>
+        <strong style="font-family: 'Silkscreen', monospace; font-size: 0.9rem; color: var(--emerald);">TGZ Update Available</strong>
+      </div>
+      <span id="update-badge" class="admin-badge" style="background: rgba(16, 185, 129, 0.2); border-color: var(--emerald); color: var(--emerald); font-size: 0.75rem;">NEW</span>
+    </div>
+    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">
+      A new version of TGZ (<span id="update-target-version" style="color: #fff; font-weight: bold;">v1.1.0</span>) is ready. Update now to get the latest improvements.
+    </p>
+    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+      <button class="btn-auth-nav" style="font-size: 0.8rem; padding: 5px 12px; background: rgba(255,255,255,0.08); border-color: var(--card-border); color: var(--text-muted);" onclick="dismissApplicationUpdate()">Later</button>
+      <button class="btn-auth-nav" style="font-size: 0.8rem; padding: 5px 14px; background: var(--emerald); color: #000; font-weight: bold; border-color: var(--emerald);" onclick="applyApplicationUpdate()">Update Now</button>
     </div>
   </div>
 
@@ -2092,6 +2172,11 @@
           if (data && data.user) {
             updateUIAfterLogin(data.user);
           }
+        } else if (res.status === 401) {
+          // Explicitly expired or revoked session
+          localStorage.removeItem('tgz_session_token');
+          localStorage.removeItem('tgz_user');
+          currentUser = null;
         } else if (localStorage.getItem('tgz_user')) {
           try {
             const cachedUser = JSON.parse(localStorage.getItem('tgz_user'));
@@ -2105,17 +2190,150 @@
 
     async function loadDiagnostics() {
       try {
-        const res = await fetch('/api/auth/diagnostics');
+        const token = localStorage.getItem('tgz_session_token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        let url = '/api/auth/diagnostics';
+        if (currentUser && currentUser.role === 'ADMIN') {
+          url = '/api/admin/diagnostics';
+          const exportBtn = document.getElementById('btn-export-db');
+          if (exportBtn) exportBtn.style.display = 'inline-flex';
+        }
+
+        const res = await fetch(url, { headers, credentials: 'include' });
         if (res.ok) {
           const d = await res.json();
-          document.getElementById('diag-db-status').innerText = d.databaseConnected ? '● Online (Connected)' : 'Disconnected';
-          document.getElementById('diag-db-status').className = d.databaseConnected ? 'diag-val-ok' : 'diag-val-err';
-          const adminLabel = (d.adminUserIds && d.adminUserIds.length) ? d.adminUserIds.join(', ') : 'Ready';
-          document.getElementById('diag-admin-prov').innerText = d.adminProvisioned ? `● Ready (${adminLabel})` : 'Not Provisioned';
-          document.getElementById('diag-admin-prov').className = d.adminProvisioned ? 'diag-val-ok' : 'diag-val-warn';
-          document.getElementById('diag-storage-type').innerText = d.databaseType || 'Persisted Store';
+          if (document.getElementById('diag-app-version')) {
+            document.getElementById('diag-app-version').innerText = d.applicationVersion ? `v${d.applicationVersion}` : 'v1.1.0';
+          }
+          if (document.getElementById('diag-deploy-version')) {
+            document.getElementById('diag-deploy-version').innerText = d.latestDeploymentVersion || 'v1.1.0-prod';
+          }
+          if (document.getElementById('diag-db-status')) {
+            const isConn = d.databaseStatus === 'CONNECTED' || d.databaseConnected;
+            document.getElementById('diag-db-status').innerText = isConn ? '● Online (Connected)' : 'Disconnected';
+            document.getElementById('diag-db-status').className = isConn ? 'diag-val-ok' : 'diag-val-err';
+          }
+          if (document.getElementById('diag-storage-type')) {
+            document.getElementById('diag-storage-type').innerText = d.databaseType || 'Persisted Store';
+          }
+          if (document.getElementById('diag-migration-status')) {
+            document.getElementById('diag-migration-status').innerText = d.databaseMigrationStatus || 'UP_TO_DATE (Schema v2.0)';
+          }
+          if (document.getElementById('diag-auth-status')) {
+            document.getElementById('diag-auth-status').innerText = d.authServiceStatus || 'Active';
+          }
+          if (document.getElementById('diag-admin-prov')) {
+            const adminLabel = (d.adminUserIds && d.adminUserIds.length) ? d.adminUserIds.join(', ') : (d.adminUniqueId || 'sg_karthi');
+            const isProv = d.adminProvisioned !== false && d.adminAccountStatus !== 'NOT_PROVISIONED';
+            document.getElementById('diag-admin-prov').innerText = isProv ? `● Ready (${adminLabel})` : 'Not Provisioned';
+            document.getElementById('diag-admin-prov').className = isProv ? 'diag-val-ok' : 'diag-val-warn';
+          }
+          if (document.getElementById('diag-last-sync')) {
+            document.getElementById('diag-last-sync').innerText = d.lastDataSync ? new Date(d.lastDataSync).toLocaleTimeString() : 'Just now';
+          }
+          if (document.getElementById('diag-last-update-check')) {
+            document.getElementById('diag-last-update-check').innerText = d.lastUpdateCheck ? new Date(d.lastUpdateCheck).toLocaleTimeString() : 'Just now';
+          }
+          if (document.getElementById('diag-session-status')) {
+            if (d.currentSessionStatus && typeof d.currentSessionStatus === 'object') {
+              document.getElementById('diag-session-status').innerText = `Active (${d.currentSessionStatus.sessionId || 'Current'})`;
+            } else {
+              document.getElementById('diag-session-status').innerText = '30 Days (Rolling)';
+            }
+          }
+
+          const warnBox = document.getElementById('diag-warning-container');
+          if (warnBox) {
+            if (d.warnings && d.warnings.length > 0) {
+              warnBox.innerHTML = `<strong>⚠️ System Notice:</strong><br>${d.warnings.map(w => `• ${w}`).join('<br>')}`;
+              warnBox.style.display = 'block';
+            } else {
+              warnBox.style.display = 'none';
+            }
+          }
         }
       } catch (e) {}
+    }
+
+    async function downloadDatabaseBackup() {
+      if (!currentUser || currentUser.role !== 'ADMIN') return;
+      try {
+        const token = localStorage.getItem('tgz_session_token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const res = await fetch('/api/admin/database/export', { headers, credentials: 'include' });
+        if (res.ok) {
+          const blob = await res.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `tgz_database_backup_${Date.now()}.json`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        } else {
+          alert('Failed to export database backup.');
+        }
+      } catch (e) {
+        alert('Error downloading backup: ' + e.message);
+      }
+    }
+
+    // AUTOMATIC APPLICATION UPDATER LOGIC
+    const CURRENT_WEB_VERSION = '1.0';
+    const CURRENT_VERSION_CODE = 1;
+    let updateBannerDismissed = false;
+
+    function isUserInteracting() {
+      const active = document.activeElement;
+      if (!active) return false;
+      const tag = active.tagName ? active.tagName.toUpperCase() : '';
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return true;
+      if (active.isContentEditable) return true;
+      return false;
+    }
+
+    async function checkForAppUpdates() {
+      if (updateBannerDismissed) return;
+      try {
+        const res = await fetch('/api/app/version?_t=' + Date.now(), {
+          headers: { 'Cache-Control': 'no-cache' }
+        });
+        if (res.ok) {
+          const info = await res.json();
+          const hasNewerVersion = (info.versionName && info.versionName !== CURRENT_WEB_VERSION && info.versionCode > CURRENT_VERSION_CODE);
+          if (hasNewerVersion) {
+            if (isUserInteracting()) {
+              setTimeout(checkForAppUpdates, 15000);
+              return;
+            }
+            const toast = document.getElementById('tgz-updater-toast');
+            const targetEl = document.getElementById('update-target-version');
+            if (toast && targetEl) {
+              targetEl.innerText = `v${info.versionName}`;
+              toast.style.display = 'block';
+            }
+          }
+        }
+      } catch (e) {}
+    }
+
+    async function applyApplicationUpdate() {
+      try {
+        if ('caches' in window) {
+          const cacheKeys = await caches.keys();
+          for (const key of cacheKeys) {
+            await caches.delete(key);
+          }
+        }
+      } catch (e) {}
+      window.location.reload(true);
+    }
+
+    function dismissApplicationUpdate() {
+      updateBannerDismissed = true;
+      const toast = document.getElementById('tgz-updater-toast');
+      if (toast) toast.style.display = 'none';
+      setTimeout(() => { updateBannerDismissed = false; }, 30 * 60 * 1000);
     }
 
     // 3. ADMIN: REGISTERED MEMBERS TABLE & CONTROLS
@@ -3003,12 +3221,22 @@
     fetchJavaStatus();
     fetchBedrockStatus();
     checkActiveSession();
+    checkForAppUpdates();
 
     // Periodic live status update every 30 seconds
     setInterval(() => {
       fetchJavaStatus();
       fetchBedrockStatus();
     }, 30000);
+
+    // Periodic application update check every 60 seconds
+    setInterval(() => {
+      checkForAppUpdates();
+    }, 60000);
+
+    window.addEventListener('focus', () => {
+      checkForAppUpdates();
+    });
   </script>
 </body>
 </html>

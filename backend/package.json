@@ -5,7 +5,7 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "test": "node --test test/backend.test.js"
+    "test": "node --test test/backend.test.js test/critical_production_fixes.test.js"
   },
   "engines": {
     "node": "22.x"

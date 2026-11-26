@@ -22,13 +22,22 @@ This backend is designed with native Node.js (zero heavy dependencies) and inclu
    In the **Environment Variables** section on Vercel, add:
    | Variable | Recommended / Default Value | Description |
    | :--- | :--- | :--- |
-   | `ADMIN_BOOTSTRAP_PASSWORD` | `TgzAdminInitial2026!Secure` | Initial password for admin accounts (`sg_karthi`, `dhanush`, `lmtg`, `darksight`) |
-   | `ADMIN_USER_IDS` | `sg_karthi,dhanush,lmtg,darksight` | Comma-separated admin unique IDs |
+   | `ADMIN_BOOTSTRAP_PASSWORD` | `TgzAdminInitial2026!Secure` | Initial password for initial admin provisioning ONLY (`sg_karthi`, `dhanush`, `lmtg`, `darksight`). Once changed, the new password hash is stored permanently and this value is never used again. |
+   | `ADMIN_USER_IDS` | `sg_karthi,dhanush,lmtg,darksight` | Comma-separated admin unique IDs (preserves `sg_karthi`) |
    | `MINECRAFT_SERVER_HOST` | `node2.vyroxsmp.online` | TGZ SMP Server IP |
    | `MINECRAFT_SERVER_PORT` | `10010` | TGZ SMP Server Port |
+   | `MINECRAFT_BEDROCK_PORT` | `10011` | TGZ SMP Bedrock Port |
    | `MINECRAFT_PLUGIN_API_KEY` | `tgz_plugin_sec_99a8b7c6d5e4f3a2` | Key for Minecraft plugin telemetry |
    | `DISCORD_INVITE_URL` | `https://discord.gg/J5P89mxXbc` | TGZ Discord link |
    | `SESSION_EXPIRATION_DAYS` | `30` | Session lifetime |
+
+   **Persistent Database Storage on Vercel (Critical for preventing data disappearing across cold starts)**:
+   Because Vercel serverless functions have ephemeral `/tmp` filesystems, configure **ONE** of the following persistent cloud stores in your Vercel Environment Variables:
+   | Option | Variables to Add | Description |
+   | :--- | :--- | :--- |
+   | **Vercel KV / Upstash (Recommended)** | `KV_REST_API_URL`<br>`KV_REST_API_TOKEN` | Connect Upstash Redis REST or Vercel KV with zero external dependencies. |
+   | **Turso Cloud SQLite** | `TURSO_DATABASE_URL`<br>`TURSO_AUTH_TOKEN` | Free distributed SQLite database in the cloud. |
+   | **PostgreSQL (Neon / Supabase)** | `DATABASE_URL` | Standard cloud PostgreSQL connection string. |
 
 5. **Click Deploy**:
    Vercel will build and assign you a live HTTPS domain, such as:

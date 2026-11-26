@@ -43,16 +43,28 @@ loadEnvSafe();
 let dbInstance = null;
 
 function getDatabase(dbPath) {
-  if (dbInstance) return dbInstance;
+  if (dbInstance && !dbPath) return dbInstance;
 
   const repoDbPath = path.join(__dirname, '..', 'data', 'tgz_lifesteal.db');
+  const repoStorePath = path.join(__dirname, '..', 'data', 'tgz_store.json');
   const vercelDbPath = path.join('/tmp', 'tgz_lifesteal.db');
+  const vercelStorePath = path.join('/tmp', 'tgz_store.json');
+
+  // Copy bundled seed database & store to /tmp on Vercel cold boot if not yet initialized
+  if (process.env.VERCEL) {
+    if (!fs.existsSync(vercelDbPath) && fs.existsSync(repoDbPath)) {
+      try { fs.copyFileSync(repoDbPath, vercelDbPath); } catch (e) {}
+    }
+    if (!fs.existsSync(vercelStorePath) && fs.existsSync(repoStorePath)) {
+      try { fs.copyFileSync(repoStorePath, vercelStorePath); } catch (e) {}
+    }
+  }
+
   const defaultDbPath = process.env.VERCEL ? vercelDbPath : repoDbPath;
-  const storeFilePath = process.env.VERCEL
-    ? path.join('/tmp', 'tgz_store.json')
-    : path.join(__dirname, '..', 'data', 'tgz_store.json');
+  const storeFilePath = process.env.VERCEL ? vercelStorePath : repoStorePath;
 
   const resolvedPath = dbPath || process.env.DATABASE_PATH || defaultDbPath;
+  const isExplicitMemory = (dbPath === ':memory:');
   
   if (resolvedPath !== ':memory:') {
     const dir = path.dirname(resolvedPath);
@@ -66,41 +78,52 @@ function getDatabase(dbPath) {
     try {
       db = new DatabaseSync(resolvedPath);
       try { db.exec('PRAGMA foreign_keys = ON;'); } catch (e) {}
-      if (!process.env.VERCEL) {
+      if (!process.env.VERCEL && resolvedPath !== ':memory:') {
         try { db.exec('PRAGMA journal_mode = WAL;'); } catch (e) {}
       }
     } catch (err) {
-      console.warn('[TGZ LIFESTEAL] File SQLite open failed, falling back to in-memory SQLite:', err?.message);
-      try {
-        db = new DatabaseSync(':memory:');
-        try { db.exec('PRAGMA foreign_keys = ON;'); } catch (e) {}
-      } catch (err2) {
+      if (isExplicitMemory) {
+        try {
+          db = new DatabaseSync(':memory:');
+          try { db.exec('PRAGMA foreign_keys = ON;'); } catch (e) {}
+        } catch (e2) {
+          db = null;
+        }
+      } else {
+        console.warn('[TGZ LIFESTEAL] SQLite open failed, using durable persistent store:', err?.message);
         db = null;
       }
     }
   }
 
   if (!db) {
-    console.warn('[TGZ LIFESTEAL] node:sqlite is not available on this platform. Running with persistent store.');
-    db = createInMemoryDatabase(storeFilePath);
+    db = createInMemoryDatabase(isExplicitMemory ? null : storeFilePath);
   }
 
   try {
     initSchema(db);
     seedInitialData(db);
   } catch (err) {
-    console.warn('[TGZ LIFESTEAL] Database initialization on storage failed, switching to persistent in-memory store:', err.message);
-    db = createInMemoryDatabase(storeFilePath);
+    console.warn('[TGZ LIFESTEAL] Database initialization fallback to durable persistent store:', err?.message);
+    db = createInMemoryDatabase(isExplicitMemory ? null : storeFilePath);
     initSchema(db);
     seedInitialData(db);
   }
 
-  dbInstance = db;
-  return dbInstance;
+  if (!dbPath) {
+    dbInstance = db;
+  }
+  return db;
 }
 
 function initSchema(db) {
   db.exec(`
+    CREATE TABLE IF NOT EXISTS schema_migrations (
+      version INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      applied_at INTEGER NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       display_name TEXT NOT NULL,
@@ -282,37 +305,38 @@ function isAdminUserId(id) {
 function seedInitialData(db) {
   // 1. Initial Admin Accounts: sg_karthi, dhanush, lmtg, darksight (Idempotent Server-Side Provisioning)
   const adminIds = getAdminUserIds();
-  const targetPassword = process.env.ADMIN_PASSWORD || process.env.ADMIN_BOOTSTRAP_PASSWORD || 'TgzAdminInitial2026!Secure';
-  const forcePasswordChange = process.env.ADMIN_FORCE_PASSWORD_CHANGE === 'true';
-  const mustChangeValue = forcePasswordChange ? 1 : 0;
+  const bootstrapPassword = process.env.ADMIN_BOOTSTRAP_PASSWORD || 'TgzAdminInitial2026!Secure';
   const now = Date.now();
+  const forceChange = process.env.ADMIN_FORCE_PASSWORD_CHANGE === 'true';
   
   for (const adminId of adminIds) {
     const existingAdmin = db.prepare('SELECT id, role, must_change_password, password_hash FROM users WHERE id = ?').get(adminId);
     if (!existingAdmin) {
-      const hash = hashPasswordSync(targetPassword);
+      const hash = hashPasswordSync(bootstrapPassword);
       db.prepare(`
         INSERT INTO users (id, display_name, password_hash, role, must_change_password, status, created_at)
         VALUES (?, ?, ?, 'ADMIN', ?, 'ACTIVE', ?)
-      `).run(adminId, `Admin (${adminId})`, hash, mustChangeValue, now);
+      `).run(adminId, `Admin (${adminId})`, hash, forceChange ? 1 : 0, now);
     } else {
       // Idempotent safeguard: Ensure role remains ADMIN
+      // CRITICAL PRODUCTION FIX: Once admin account exists, normal startup MUST NEVER reset its password!
       if (existingAdmin.role !== 'ADMIN') {
         db.prepare('UPDATE users SET role = ? WHERE id = ?').run('ADMIN', adminId);
       }
-      // Clear must_change_password to 0 by default so admins are never trapped in bootstrap change loop
-      if (!forcePasswordChange && existingAdmin.must_change_password !== 0) {
-        db.prepare('UPDATE users SET must_change_password = 0 WHERE id = ?').run(adminId);
-      }
-      // If configured password differs from database hash, sync it seamlessly
-      if (process.env.ADMIN_BOOTSTRAP_PASSWORD || process.env.ADMIN_PASSWORD) {
-        const envHash = hashPasswordSync(targetPassword);
-        if (existingAdmin.password_hash !== envHash) {
-          db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(envHash, adminId);
-        }
-      }
     }
   }
+
+  // Record migrations in schema_migrations
+  try {
+    const m1 = db.prepare('SELECT version FROM schema_migrations WHERE version = 1').get();
+    if (!m1) {
+      db.prepare('INSERT INTO schema_migrations (version, name, applied_at) VALUES (1, ?, ?)').run('initial_schema', now);
+    }
+    const m2 = db.prepare('SELECT version FROM schema_migrations WHERE version = 2').get();
+    if (!m2) {
+      db.prepare('INSERT INTO schema_migrations (version, name, applied_at) VALUES (2, ?, ?)').run('teams_and_avatars', now);
+    }
+  } catch(e) {}
 
   // 2. Initial Playtime Rewards: EXACTLY 5 Crates per requirement 7:
   // 1. Common Crate
@@ -379,10 +403,10 @@ function seedInitialData(db) {
     { key: 'minecraft_plugin_api_key', value: process.env.MINECRAFT_PLUGIN_API_KEY || 'tgz_plugin_sec_99a8b7c6d5e4f3a2' },
     { key: 'allow_member_team_creation', value: 'true' },
     { key: 'motd', value: 'Welcome to TGZ Lifestyle SMP!' },
-    { key: 'app_version_code', value: '1' },
-    { key: 'app_version_name', value: '1.0' },
-    { key: 'app_apk_url', value: 'https://github.com/sgkarthi1910-rgb/MC-App/releases/latest' },
-    { key: 'app_changelog', value: 'Welcome to TGZ Lifestyle SMP!' },
+    { key: 'app_version_code', value: process.env.APP_VERSION_CODE || '1' },
+    { key: 'app_version_name', value: process.env.APP_VERSION_NAME || '1.0' },
+    { key: 'app_apk_url', value: process.env.APP_APK_URL || 'https://github.com/sgkarthi1910-rgb/MC-App/releases/download/v1.0.0/TGZ-Lifestyle-v1.0.apk' },
+    { key: 'app_changelog', value: 'Welcome to the official TGZ Lifestyle SMP release.' },
     { key: 'app_force_update', value: 'false' },
     { key: 'app_min_supported_version_code', value: '1' }
   ];
