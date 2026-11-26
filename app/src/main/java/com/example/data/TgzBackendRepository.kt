@@ -103,18 +103,17 @@ class TgzBackendRepository(
     }
 
     suspend fun changePassword(current: String?, newPass: String, confirmPass: String): Result<GenericSuccessResponse> = runCatching {
-        val user = sessionManager.getUser()
         val resp = apiService.changePassword(
             authHeader(),
             ChangePasswordRequest(
-                userId = user?.id,
+                userId = null,
                 currentPassword = current,
                 newPassword = newPass,
                 confirmNewPassword = confirmPass
             )
         )
         if (resp.success) {
-            sessionManager.updatePasswordChanged()
+            sessionManager.clearSession()
         }
         resp
     }

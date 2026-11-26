@@ -287,102 +287,179 @@ function setupAuthRoutes(router, db) {
     });
   });
 
-  // 5. CHANGE PASSWORD
+  // 5. CHANGE PASSWORD (Authenticated users may ONLY change their own password)
   router.post('/api/auth/change-password', async (req, res) => {
-    const { userId, username, currentPassword, newPassword, confirmNewPassword } = req.body || {};
-
-    let user = req.user;
-
-    // Resilient fallback: If session was lost across serverless containers, authenticate via userId + currentPassword
-    const cleanId = (userId || username || (typeof req.body?.id === 'string' ? req.body.id : '')).trim().toLowerCase();
-    if (!user && cleanId) {
-      let targetUser = db.prepare('SELECT id, display_name, password_hash, role, must_change_password, status FROM users WHERE id = ?').get(cleanId);
-      if (!targetUser && isAdminUserId(cleanId)) {
-        provisionAdminAccount(db);
-        targetUser = db.prepare('SELECT id, display_name, password_hash, role, must_change_password, status FROM users WHERE id = ?').get(cleanId);
+    try {
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          error: 'Authentication required. Please log in to change your password.',
+          code: 'UNAUTHENTICATED'
+        });
       }
-      if (targetUser && currentPassword) {
-        const isPassValid = await verifyPassword(currentPassword, targetUser.password_hash);
-        if (isPassValid) {
-          user = targetUser;
+
+      const { userId, targetUserId, username, currentPassword, newPassword, confirmNewPassword } = req.body || {};
+
+      // Enforce strict ownership: reject attempts to target another user's account
+      const requestedTarget = (targetUserId || userId || username || (typeof req.body?.id === 'string' ? req.body.id : '')).trim().toLowerCase();
+      if (requestedTarget && requestedTarget !== req.user.id.toLowerCase()) {
+        return res.status(403).json({
+          success: false,
+          error: 'Permission denied. You can only change your own password.',
+          code: 'FORBIDDEN_PASSWORD_TARGET'
+        });
+      }
+
+      // Always derive the target user from the verified authenticated identity
+      const user = db.prepare('SELECT id, display_name, password_hash, role, must_change_password, status FROM users WHERE id = ?').get(req.user.id);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          error: 'Authenticated user record not found in database.',
+          code: 'USER_NOT_FOUND'
+        });
+      }
+
+      if (!currentPassword || typeof currentPassword !== 'string') {
+        return res.status(400).json({ success: false, error: 'Current password is required.' });
+      }
+
+      if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 8) {
+        return res.status(400).json({ success: false, error: 'New password must be at least 8 characters long.' });
+      }
+
+      if (newPassword !== confirmNewPassword) {
+        return res.status(400).json({ success: false, error: 'New passwords do not match.' });
+      }
+
+      const isCurrentValid = await verifyPassword(currentPassword.trim(), user.password_hash);
+      if (!isCurrentValid) {
+        return res.status(401).json({ success: false, error: 'Current password is incorrect.', code: 'INVALID_CURRENT_PASSWORD' });
+      }
+
+      if (newPassword === currentPassword) {
+        return res.status(400).json({ success: false, error: 'New password must be different from current password.' });
+      }
+
+      const newHash = await hashPassword(newPassword);
+      const updateResult = db.prepare('UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?')
+        .run(newHash, user.id);
+
+      if (!updateResult || updateResult.changes !== 1) {
+        return res.status(500).json({
+          success: false,
+          error: 'Database update failed. Password was not changed.',
+          code: 'DB_UPDATE_FAILED'
+        });
+      }
+
+      // Confirm the new hash is actually persisted in the database before claiming success
+      const verifiedRow = db.prepare('SELECT password_hash FROM users WHERE id = ?').get(user.id);
+      if (!verifiedRow || verifiedRow.password_hash !== newHash) {
+        return res.status(500).json({
+          success: false,
+          error: 'Database verification failed after password update.',
+          code: 'DB_VERIFICATION_FAILED'
+        });
+      }
+
+      // Invalidate all active sessions so the user must log in again with the new password
+      db.prepare('UPDATE sessions SET is_revoked = 1 WHERE user_id = ?').run(user.id);
+
+      const isHttps = req.headers['x-forwarded-proto'] === 'https' || !!process.env.VERCEL;
+      const secureFlag = isHttps ? '; Secure' : '';
+      res.setHeader('Set-Cookie', `tgz_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${secureFlag}`);
+
+      return res.json({
+        success: true,
+        requiresReLogin: true,
+        message: 'Password updated successfully. Please log in again with your new password.',
+        user: {
+          id: user.id,
+          displayName: user.display_name,
+          role: user.role,
+          mustChangePassword: false
         }
-      }
-    }
-
-    if (!user) {
-      return res.status(401).json({
+      });
+    } catch (err) {
+      console.error('Change password error:', err);
+      return res.status(500).json({
         success: false,
-        error: 'Authentication required. Please enter your valid current credentials.'
+        error: 'Database or server error while updating password. Password was not changed.',
+        code: 'INTERNAL_SERVER_ERROR'
       });
     }
+  });
 
-    if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 8) {
-      return res.status(400).json({ success: false, error: 'New password must be at least 8 characters long.' });
-    }
-
-    if (newPassword !== confirmNewPassword) {
-      return res.status(400).json({ success: false, error: 'New passwords do not match.' });
-    }
-
-    if (!currentPassword) {
-      return res.status(400).json({ success: false, error: 'Current password is required.' });
-    }
-
-    const isCurrentValid = await verifyPassword(currentPassword, user.password_hash);
-    if (!isCurrentValid) {
-      return res.status(400).json({ success: false, error: 'Current password is incorrect.' });
-    }
-
-    if (newPassword === currentPassword) {
-      return res.status(400).json({ success: false, error: 'New password must be different from current password.' });
-    }
-
-    const newHash = await hashPassword(newPassword);
-    db.prepare('UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?')
-      .run(newHash, user.id);
-
-    // Invalidate other sessions for security (preserving current active session)
+  // 5B. ADMIN-ONLY PASSWORD RESET (Separate protected endpoint with audit logging)
+  router.post('/api/admin/users/:userId/reset-password', async (req, res) => {
     try {
-      if (req.session) {
-        db.prepare('UPDATE sessions SET is_revoked = 1 WHERE user_id = ? AND id != ?').run(user.id, req.session.id);
-      } else {
-        db.prepare('UPDATE sessions SET is_revoked = 1 WHERE user_id = ?').run(user.id);
+      if (!req.user) {
+        return res.status(401).json({ success: false, error: 'Authentication required.' });
       }
-    } catch(e) {}
+      if (req.user.role !== 'ADMIN') {
+        return res.status(403).json({ success: false, error: 'Admin access required to reset another user\'s password.' });
+      }
 
-    // Issue fresh session so client is immediately logged in with new password
-    const tokenObj = generateSessionToken();
-    const rawToken = tokenObj.rawToken;
-    const tokenHash = tokenObj.tokenHash;
-    const now = Date.now();
-    const sessionId = generateId('sess');
-    const expirationDays = parseInt(process.env.SESSION_EXPIRATION_DAYS || '30', 10);
-    const expiresAt = now + (expirationDays * 24 * 60 * 60 * 1000);
-    const clientIp = req.socket?.remoteAddress || 'unknown';
+      const targetId = (req.params?.userId || '').trim().toLowerCase();
+      if (!targetId) {
+        return res.status(400).json({ success: false, error: 'Target user ID is required.' });
+      }
 
-    try {
+      const targetUser = db.prepare('SELECT id, role FROM users WHERE id = ?').get(targetId);
+      if (!targetUser) {
+        return res.status(404).json({ success: false, error: 'Target user not found.' });
+      }
+
+      const { newPassword, confirmNewPassword } = req.body || {};
+      if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 8) {
+        return res.status(400).json({ success: false, error: 'New password must be at least 8 characters long.' });
+      }
+      if (newPassword !== confirmNewPassword) {
+        return res.status(400).json({ success: false, error: 'New passwords do not match.' });
+      }
+
+      const newHash = await hashPassword(newPassword);
+      const updateResult = db.prepare('UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?')
+        .run(newHash, targetUser.id);
+
+      if (!updateResult || updateResult.changes !== 1) {
+        return res.status(500).json({ success: false, error: 'Database update failed. Password was not reset.' });
+      }
+
+      const verifiedRow = db.prepare('SELECT password_hash FROM users WHERE id = ?').get(targetUser.id);
+      if (!verifiedRow || verifiedRow.password_hash !== newHash) {
+        return res.status(500).json({ success: false, error: 'Database verification failed after password reset.' });
+      }
+
+      // Revoke target user's active sessions
+      db.prepare('UPDATE sessions SET is_revoked = 1 WHERE user_id = ?').run(targetUser.id);
+
+      // Record in audit log
+      const now = Date.now();
+      const clientIp = req.socket?.remoteAddress || 'unknown';
       db.prepare(`
-        INSERT INTO sessions (id, user_id, token_hash, device_info, ip_address, created_at, last_active_at, expires_at, is_revoked)
-        VALUES (?, ?, ?, 'TGZ Dashboard', ?, ?, ?, ?, 0)
-      `).run(sessionId, user.id, tokenHash, clientIp, now, now, expiresAt);
-    } catch (e) {}
+        INSERT INTO audit_logs (id, actor_id, actor_role, action, target_user_id, details, ip_address, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        generateId('audit'),
+        req.user.id,
+        req.user.role,
+        'ADMIN_PASSWORD_RESET',
+        targetUser.id,
+        `Admin ${req.user.id} reset password for ${targetUser.id}`,
+        clientIp,
+        now
+      );
 
-    const isHttps = req.headers['x-forwarded-proto'] === 'https' || !!process.env.VERCEL;
-    const secureFlag = isHttps ? '; Secure' : '';
-    res.setHeader('Set-Cookie', `tgz_session=${rawToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${expirationDays * 86400}${secureFlag}`);
-
-    return res.json({
-      success: true,
-      message: 'Password changed successfully. Your new password is now permanently saved.',
-      sessionToken: rawToken,
-      sessionId,
-      user: {
-        id: user.id,
-        displayName: user.display_name,
-        role: user.role,
-        mustChangePassword: false
-      }
-    });
+      return res.json({
+        success: true,
+        message: `Password reset successfully for ${targetUser.id}.`
+      });
+    } catch (err) {
+      console.error('Admin password reset error:', err);
+      return res.status(500).json({ success: false, error: 'Database or server error during password reset.' });
+    }
   });
 
   // 6. LIST ACTIVE SESSIONS

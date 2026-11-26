@@ -1648,10 +1648,6 @@
       <div id="chg-error-banner" class="alert-banner alert-danger"></div>
       <div id="chg-success-banner" class="alert-banner alert-success"></div>
       <form onsubmit="handleChangePasswordSubmit(event)">
-        <div class="form-group" id="chg-user-id-group">
-          <label class="form-label">Username / Admin ID</label>
-          <input type="text" id="chg-user-id" class="form-input" placeholder="e.g. sg_karthi, dhanush, lmtg, darksight" required autocomplete="username">
-        </div>
         <div class="form-group">
           <label class="form-label">Current Password</label>
           <input type="password" id="chg-current-pass" class="form-input" placeholder="Enter current password" required autocomplete="current-password">
@@ -1666,6 +1662,19 @@
         </div>
         <button type="submit" class="btn-submit">SET NEW PASSWORD</button>
       </form>
+    </div>
+  </div>
+
+  <!-- PASSWORD CHANGED CONFIRMATION POPUP MODAL -->
+  <div id="password-changed-confirm-modal" class="modal-overlay">
+    <div class="modal-box" style="max-width: 420px; text-align: center; border-color: var(--emerald);">
+      <div class="modal-header" style="justify-content: center; border-bottom: 1px solid var(--border-subtle); padding-bottom: 12px;">
+        <div class="modal-title" style="color: var(--emerald);">✅ PASSWORD CHANGED</div>
+      </div>
+      <p id="pwd-changed-confirm-text" style="color: var(--text-primary); font-size: 0.95rem; margin: 18px 0 22px; line-height: 1.55;">
+        Your password is successfully changed and saved in the database. Please log in again with your new password.
+      </p>
+      <button type="button" class="btn-submit" onclick="acknowledgePasswordChanged()">OK, SIGN IN</button>
     </div>
   </div>
 
@@ -1816,11 +1825,15 @@
       document.getElementById('auth-success-banner').style.display = 'none';
     }
     function openChangePasswordModal() {
-      const storedId = (currentUser && currentUser.id) || '';
-      const uidInput = document.getElementById('chg-user-id');
-      if (uidInput) {
-        uidInput.value = storedId;
+      if (!currentUser || !activeSessionToken) {
+        openLoginModal();
+        return;
       }
+      document.getElementById('chg-current-pass').value = '';
+      document.getElementById('chg-new-pass').value = '';
+      document.getElementById('chg-confirm-pass').value = '';
+      document.getElementById('chg-error-banner').style.display = 'none';
+      document.getElementById('chg-success-banner').style.display = 'none';
       document.getElementById('change-pass-modal').style.display = 'flex';
     }
     function closeChangePasswordModal() {
@@ -2095,6 +2108,11 @@
       }
     }
 
+    function acknowledgePasswordChanged() {
+      document.getElementById('password-changed-confirm-modal').style.display = 'none';
+      performLogout();
+    }
+
     async function handleChangePasswordSubmit(event) {
       event.preventDefault();
       const errBox = document.getElementById('chg-error-banner');
@@ -2102,38 +2120,41 @@
       errBox.style.display = 'none';
       succBox.style.display = 'none';
 
-      const uidInput = document.getElementById('chg-user-id');
-      const userId = (uidInput ? uidInput.value.trim() : '') || (currentUser && currentUser.id) || '';
       const currentPassword = document.getElementById('chg-current-pass').value;
       const newPassword = document.getElementById('chg-new-pass').value;
       const confirmNewPassword = document.getElementById('chg-confirm-pass').value;
       const token = activeSessionToken;
 
-      const headers = { 'Content-Type': 'application/json' };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+      if (!token) {
+        errBox.innerText = 'Authentication required. Please log in first.';
+        errBox.style.display = 'block';
+        return;
       }
+
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      };
 
       try {
         const res = await fetch('/api/auth/change-password', {
           method: 'POST',
           headers,
           credentials: 'include',
-          body: JSON.stringify({ userId, username: userId, currentPassword, newPassword, confirmNewPassword })
+          body: JSON.stringify({ currentPassword, newPassword, confirmNewPassword })
         });
         const data = await res.json();
         if (res.ok && data.success) {
-          if (data.sessionToken) {
-            activeSessionToken = data.sessionToken;
-          }
-          if (data.user) {
-            currentUser = data.user;
-            updateUIAfterLogin(data.user);
-          }
-          succBox.innerText = 'Password updated successfully!';
-          succBox.style.display = 'block';
+          document.getElementById('chg-current-pass').value = '';
+          document.getElementById('chg-new-pass').value = '';
+          document.getElementById('chg-confirm-pass').value = '';
           document.getElementById('password-change-warning').style.display = 'none';
-          setTimeout(() => closeChangePasswordModal(), 1200);
+          const confirmTextEl = document.getElementById('pwd-changed-confirm-text');
+          if (confirmTextEl) {
+            confirmTextEl.innerText = 'Your password is successfully changed and saved in the database. Please log in again with your new password.';
+          }
+          closeChangePasswordModal();
+          document.getElementById('password-changed-confirm-modal').style.display = 'flex';
         } else {
           errBox.innerText = data.error || 'Failed to update password.';
           errBox.style.display = 'block';

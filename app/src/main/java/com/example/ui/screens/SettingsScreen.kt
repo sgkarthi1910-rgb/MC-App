@@ -728,7 +728,7 @@ fun SettingsScreen(
         ChangePasswordModal(
             onDismiss = { showChangePasswordDialog = false },
             onSubmit = { current, newPass, confirmPass ->
-                viewModel.changePassword(current, newPass, confirmPass)
+                viewModel.changePassword(current, newPass, confirmPass, onReLoginRequired = onLogoutComplete)
                 showChangePasswordDialog = false
             }
         )

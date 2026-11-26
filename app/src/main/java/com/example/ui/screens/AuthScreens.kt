@@ -223,6 +223,18 @@ fun LoginScreen(
                             fontFamily = JetBrainsMonoFontFamily
                         )
                     }
+                } else if (authState.successMessage != null) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = EmeraldGreen, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = authState.successMessage,
+                            color = EmeraldGreen,
+                            fontSize = 12.sp,
+                            fontFamily = JetBrainsMonoFontFamily
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))

@@ -281,6 +281,17 @@ function initSchema(db) {
       last_read_at INTEGER NOT NULL,
       PRIMARY KEY (group_id, user_id)
     );
+
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id TEXT PRIMARY KEY,
+      actor_id TEXT NOT NULL,
+      actor_role TEXT NOT NULL,
+      action TEXT NOT NULL,
+      target_user_id TEXT,
+      details TEXT,
+      ip_address TEXT,
+      created_at INTEGER NOT NULL
+    );
   `);
 
   try { db.exec("ALTER TABLE teams ADD COLUMN logo TEXT DEFAULT 'shield'"); } catch (e) {}

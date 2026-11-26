@@ -328,4 +328,245 @@ test('CRITICAL PRODUCTION FIXES VERIFICATION SUITE', async (t) => {
       await new Promise(r => restartedServerObj.server.close(r));
     }
   });
+
+  // TEST 7: STRICT ROLE-BASED PASSWORD PERMISSIONS & IN-MEMORY-DB (VERCEL) ADAPTER VERIFICATION
+  await t.test('7. Strict role-based password permissions, HTTP 401/403 enforcement, and in-memory-db persistence', async () => {
+    const { createInMemoryDatabase } = require('../src/in-memory-db');
+    const { initSchema, seedInitialData } = require('../src/db');
+    const http = require('node:http');
+    const setupAuthRoutes = require('../src/routes/auth');
+    const { hashToken } = require('../src/crypto-utils');
+
+    const memStorePath = path.join(__dirname, 'temp_mem_security_store.json');
+    if (fs.existsSync(memStorePath)) fs.unlinkSync(memStorePath);
+
+    // Spin up a server backed explicitly by Vercel's in-memory-db adapter (isolated from repo seed file)
+    const memDb = createInMemoryDatabase(memStorePath);
+    memDb.restoreData({
+      users: [], sessions: [], announcements: [], announcement_reads: [],
+      conversations: [], messages: [], reward_configs: [], reward_claims: [],
+      minecraft_player_stats: [], teams: [], team_members: [], team_invitations: [],
+      app_settings: [], groups: [], group_members: [], group_messages: [],
+      group_message_reads: [], audit_logs: [], schema_migrations: []
+    });
+    initSchema(memDb);
+    seedInitialData(memDb);
+
+    // Build minimal router using the same auth middleware logic as server.js
+    const routes = [];
+    const router = {
+      get: (p, h) => routes.push({ method: 'GET', path: p, h }),
+      post: (p, h) => routes.push({ method: 'POST', path: p, h }),
+      put: (p, h) => routes.push({ method: 'PUT', path: p, h })
+    };
+    setupAuthRoutes(router, memDb);
+
+    const memServer = http.createServer((req, res) => {
+      res.json = function(d) { this.setHeader('Content-Type', 'application/json'); this.end(JSON.stringify(d)); };
+      res.status = function(c) { this.statusCode = c; return this; };
+      const parsed = new URL(req.url, 'http://localhost');
+      req.pathname = parsed.pathname;
+      req.query = Object.fromEntries(parsed.searchParams.entries());
+      req.user = null;
+      req.session = null;
+      const auth = req.headers['authorization'];
+      if (auth && auth.startsWith('Bearer ')) {
+        const th = hashToken(auth.slice(7).trim());
+        const s = memDb.prepare('SELECT id, user_id, expires_at, is_revoked FROM sessions WHERE token_hash = ? AND is_revoked = 0 AND expires_at > ?').get(th, Date.now());
+        if (s) {
+          const u = memDb.prepare('SELECT id, display_name, role, must_change_password, status, password_hash, created_at FROM users WHERE id = ?').get(s.user_id);
+          if (u && u.status === 'ACTIVE') {
+            req.session = s;
+            req.user = u;
+          }
+        }
+      }
+      let body = '';
+      req.on('data', c => { body += c; });
+      req.on('end', () => {
+        req.body = body ? JSON.parse(body) : {};
+        for (const r of routes) {
+          if (r.method !== req.method) continue;
+          const regex = new RegExp('^' + r.path.replace(/:([a-zA-Z0-9_]+)/g, '([^/]+)') + '$');
+          const m = req.pathname.match(regex);
+          if (m) {
+            req.params = {};
+            const names = [...r.path.matchAll(/:([a-zA-Z0-9_]+)/g)].map(x => x[1]);
+            names.forEach((n, idx) => { req.params[n] = decodeURIComponent(m[idx + 1]); });
+            return r.h(req, res);
+          }
+        }
+        res.status(404).json({ error: 'Not found' });
+      });
+    });
+
+    await new Promise(r => memServer.listen(0, '127.0.0.1', r));
+
+    try {
+      // Login admin (dhanush - non-zero row index in users!)
+      const adminLogin = await makeRequest(memServer, { method: 'POST', path: '/api/auth/login' }, {
+        id: 'dhanush',
+        password: process.env.ADMIN_BOOTSTRAP_PASSWORD || 'OriginalBootstrapPassword2026!'
+      });
+      assert.equal(adminLogin.statusCode, 200, 'Non-zero row admin login must succeed on in-memory-db');
+      const dhanushToken = adminLogin.body.sessionToken;
+
+      // Verify /api/auth/me works with token on in-memory-db (no false 401!)
+      const dhanushMe = await makeRequest(memServer, {
+        method: 'GET',
+        path: '/api/auth/me',
+        headers: { Authorization: `Bearer ${dhanushToken}` }
+      });
+      assert.equal(dhanushMe.statusCode, 200);
+      assert.equal(dhanushMe.body.user.id, 'dhanush');
+
+      // Signup two members & one moderator
+      const m1 = await makeRequest(memServer, { method: 'POST', path: '/api/auth/signup' }, {
+        id: 'mem_alpha', displayName: 'Alpha', password: 'AlphaPass2026!', confirmPassword: 'AlphaPass2026!'
+      });
+      assert.equal(m1.statusCode, 201);
+      let mem1Token = m1.body.sessionToken;
+
+      const m2 = await makeRequest(memServer, { method: 'POST', path: '/api/auth/signup' }, {
+        id: 'mem_beta', displayName: 'Beta', password: 'BetaPass2026!', confirmPassword: 'BetaPass2026!'
+      });
+      assert.equal(m2.statusCode, 201);
+
+      const modSignup = await makeRequest(memServer, { method: 'POST', path: '/api/auth/signup' }, {
+        id: 'mod_gamma', displayName: 'Gamma', password: 'GammaPass2026!', confirmPassword: 'GammaPass2026!'
+      });
+      assert.equal(modSignup.statusCode, 201);
+      memDb.prepare("UPDATE users SET role = 'MODERATOR' WHERE id = ?").run('mod_gamma');
+      let modToken = modSignup.body.sessionToken;
+
+      // Test 1: Unauthenticated password change -> HTTP 401
+      const unauthChg = await makeRequest(memServer, { method: 'POST', path: '/api/auth/change-password' }, {
+        userId: 'mem_alpha', currentPassword: 'AlphaPass2026!', newPassword: 'NewAlpha2026!', confirmNewPassword: 'NewAlpha2026!'
+      });
+      assert.equal(unauthChg.statusCode, 401);
+
+      // Test 2: Member changes another member's password -> Denied (403)
+      const memOther = await makeRequest(memServer, {
+        method: 'POST', path: '/api/auth/change-password', headers: { Authorization: `Bearer ${mem1Token}` }
+      }, {
+        userId: 'mem_beta', currentPassword: 'BetaPass2026!', newPassword: 'HackedPass2026!', confirmNewPassword: 'HackedPass2026!'
+      });
+      assert.equal(memOther.statusCode, 403);
+
+      // Test 3: Member changes admin password -> Denied (403)
+      const memAdmin = await makeRequest(memServer, {
+        method: 'POST', path: '/api/auth/change-password', headers: { Authorization: `Bearer ${mem1Token}` }
+      }, {
+        userId: 'dhanush', currentPassword: 'OriginalBootstrapPassword2026!', newPassword: 'HackedAdmin2026!', confirmNewPassword: 'HackedAdmin2026!'
+      });
+      assert.equal(memAdmin.statusCode, 403);
+
+      // Test 4: Moderator changes admin password -> Denied (403)
+      const modAdmin = await makeRequest(memServer, {
+        method: 'POST', path: '/api/auth/change-password', headers: { Authorization: `Bearer ${modToken}` }
+      }, {
+        userId: 'dhanush', currentPassword: 'OriginalBootstrapPassword2026!', newPassword: 'HackedAdmin2026!', confirmNewPassword: 'HackedAdmin2026!'
+      });
+      assert.equal(modAdmin.statusCode, 403);
+
+      // Test 5: Incorrect current password -> Rejected (401)
+      const wrongCur = await makeRequest(memServer, {
+        method: 'POST', path: '/api/auth/change-password', headers: { Authorization: `Bearer ${mem1Token}` }
+      }, {
+        currentPassword: 'WrongPassword!', newPassword: 'NewAlpha2026!', confirmNewPassword: 'NewAlpha2026!'
+      });
+      assert.equal(wrongCur.statusCode, 401);
+
+      // Test 6: Member changes own password -> Allowed & requires re-login
+      const memOwn = await makeRequest(memServer, {
+        method: 'POST', path: '/api/auth/change-password', headers: { Authorization: `Bearer ${mem1Token}` }
+      }, {
+        currentPassword: 'AlphaPass2026!', newPassword: 'NewAlphaPass2026!', confirmNewPassword: 'NewAlphaPass2026!'
+      });
+      assert.equal(memOwn.statusCode, 200);
+      assert.equal(memOwn.body.requiresReLogin, true);
+
+      // Old password rejected, new password succeeds
+      const oldPassLogin = await makeRequest(memServer, { method: 'POST', path: '/api/auth/login' }, {
+        id: 'mem_alpha', password: 'AlphaPass2026!'
+      });
+      assert.equal(oldPassLogin.statusCode, 401);
+
+      const newPassLogin = await makeRequest(memServer, { method: 'POST', path: '/api/auth/login' }, {
+        id: 'mem_alpha', password: 'NewAlphaPass2026!'
+      });
+      assert.equal(newPassLogin.statusCode, 200);
+      mem1Token = newPassLogin.body.sessionToken;
+
+      // Test 7: Moderator changes own password -> Allowed
+      const modOwn = await makeRequest(memServer, {
+        method: 'POST', path: '/api/auth/change-password', headers: { Authorization: `Bearer ${modToken}` }
+      }, {
+        currentPassword: 'GammaPass2026!', newPassword: 'NewGammaPass2026!', confirmNewPassword: 'NewGammaPass2026!'
+      });
+      assert.equal(modOwn.statusCode, 200);
+      const modReLogin = await makeRequest(memServer, { method: 'POST', path: '/api/auth/login' }, {
+        id: 'mod_gamma', password: 'NewGammaPass2026!'
+      });
+      assert.equal(modReLogin.statusCode, 200);
+
+      // Test 8: Admin changes own password -> Allowed
+      const admOwn = await makeRequest(memServer, {
+        method: 'POST', path: '/api/auth/change-password', headers: { Authorization: `Bearer ${dhanushToken}` }
+      }, {
+        currentPassword: process.env.ADMIN_BOOTSTRAP_PASSWORD || 'OriginalBootstrapPassword2026!',
+        newPassword: 'NewDhanushPass2026!',
+        confirmNewPassword: 'NewDhanushPass2026!'
+      });
+      assert.equal(admOwn.statusCode, 200);
+      const admReLogin = await makeRequest(memServer, { method: 'POST', path: '/api/auth/login' }, {
+        id: 'dhanush', password: 'NewDhanushPass2026!'
+      });
+      assert.equal(admReLogin.statusCode, 200);
+      const freshAdminToken = admReLogin.body.sessionToken;
+
+      // Test 9: Member & Moderator cannot access admin password-reset endpoint -> Denied (403)
+      const memResetAttempt = await makeRequest(memServer, {
+        method: 'POST', path: '/api/admin/users/mem_beta/reset-password', headers: { Authorization: `Bearer ${mem1Token}` }
+      }, { newPassword: 'ResetPass2026!', confirmNewPassword: 'ResetPass2026!' });
+      assert.equal(memResetAttempt.statusCode, 403);
+
+      const modResetAttempt = await makeRequest(memServer, {
+        method: 'POST', path: '/api/admin/users/mem_beta/reset-password', headers: { Authorization: `Bearer ${modReLogin.body.sessionToken}` }
+      }, { newPassword: 'ResetPass2026!', confirmNewPassword: 'ResetPass2026!' });
+      assert.equal(modResetAttempt.statusCode, 403);
+
+      // Test 10: Admin resets another user's password via separate endpoint + audit log created
+      const admReset = await makeRequest(memServer, {
+        method: 'POST', path: '/api/admin/users/mem_beta/reset-password', headers: { Authorization: `Bearer ${freshAdminToken}` }
+      }, { newPassword: 'AdminResetBeta2026!', confirmNewPassword: 'AdminResetBeta2026!' });
+      assert.equal(admReset.statusCode, 200);
+      assert.equal(memDb.prepare('SELECT COUNT(*) AS cnt FROM audit_logs WHERE target_user_id = ?').get('mem_beta').cnt, 1);
+
+      const betaLogin = await makeRequest(memServer, { method: 'POST', path: '/api/auth/login' }, {
+        id: 'mem_beta', password: 'AdminResetBeta2026!'
+      });
+      assert.equal(betaLogin.statusCode, 200);
+
+      // Test 11: Database update failure produces HTTP 500 and no false success message
+      const origPrepare = memDb.prepare.bind(memDb);
+      memDb.prepare = (sql) => {
+        if (sql.includes('UPDATE users SET password_hash')) {
+          return { run: () => ({ changes: 0 }) };
+        }
+        return origPrepare(sql);
+      };
+      const failUpdate = await makeRequest(memServer, {
+        method: 'POST', path: '/api/auth/change-password', headers: { Authorization: `Bearer ${mem1Token}` }
+      }, {
+        currentPassword: 'NewAlphaPass2026!', newPassword: 'AnotherPass2026!', confirmNewPassword: 'AnotherPass2026!'
+      });
+      memDb.prepare = origPrepare;
+      assert.equal(failUpdate.statusCode, 500);
+      assert.equal(failUpdate.body.success, false);
+    } finally {
+      await new Promise(r => memServer.close(r));
+      if (fs.existsSync(memStorePath)) fs.unlinkSync(memStorePath);
+    }
+  });
 });

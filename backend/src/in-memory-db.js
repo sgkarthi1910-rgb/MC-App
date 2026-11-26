@@ -27,7 +27,8 @@ function createInMemoryDatabase(storageFilePath) {
     groups: [],
     group_members: [],
     group_messages: [],
-    group_message_reads: []
+    group_message_reads: [],
+    audit_logs: []
   };
 
   let lastSyncTime = Date.now();
@@ -256,32 +257,65 @@ function createInMemoryDatabase(storageFilePath) {
           const paramIndexRef = { i: 0 };
 
           // 1. SELECT COUNT(*)
-          const countMatch = raw.match(/^SELECT\s+COUNT\(\*\)(?:\s+AS\s+([a-zA-Z0-9_]+))?\s+FROM\s+([a-zA-Z0-9_]+)(?:\s+WHERE\s+(.+?))?(?:\s+ORDER\s+|\s+LIMIT\s+|$)/i);
+          const countMatch = raw.match(/^SELECT\s+COUNT\(\*\)(?:\s+AS\s+([a-zA-Z0-9_]+))?\s+FROM\s+([a-zA-Z0-9_]+)(?:\s+[a-zA-Z0-9_]+)?(?:\s+WHERE\s+(.+?))?(?:\s+ORDER\s+|\s+LIMIT\s+|$)/i);
           if (countMatch) {
             const asName = countMatch[1] || 'cnt';
             const table = countMatch[2];
             const whereStr = countMatch[3];
             const list = tables[table] || [];
             const filtered = whereStr
-              ? list.filter(r => matchCondition(r, whereStr, params, paramIndexRef, tables))
+              ? list.filter(r => matchCondition(r, whereStr, params, { i: 0 }, tables))
               : list;
             return [{ [asName]: filtered.length }];
           }
 
-          // 2. Standard SELECT from table
-          const selectMatch = raw.match(/^SELECT\s+(.+?)\s+FROM\s+([a-zA-Z0-9_]+)(?:\s+[a-zA-Z0-9_]+)?(?:\s+JOIN\s+.+?)?(?:\s+WHERE\s+(.+?))?(?:\s+ORDER\s+BY\s+(.+?))?(?:\s+LIMIT\s+([0-9]+))?$/i);
+          // 2. Standard SELECT from table (with optional JOIN support)
+          const selectMatch = raw.match(/^SELECT\s+(.+?)\s+FROM\s+([a-zA-Z0-9_]+)(?:\s+(?:AS\s+)?(?!WHERE\b|ORDER\b|LIMIT\b|JOIN\b|INNER\b|LEFT\b)([a-zA-Z0-9_]+))?(?:\s+((?:(?:INNER|LEFT)\s+)?JOIN\s+(?:(?!WHERE\b|ORDER\b|LIMIT\b).)+?))?(?:\s+WHERE\s+(.+?))?(?:\s+ORDER\s+BY\s+(.+?))?(?:\s+LIMIT\s+([0-9]+))?$/i);
           if (selectMatch) {
             const colsStr = selectMatch[1];
             const table = selectMatch[2];
-            const whereStr = selectMatch[3];
-            const orderStr = selectMatch[4];
-            const limitVal = selectMatch[5] ? parseInt(selectMatch[5], 10) : undefined;
+            const baseAlias = selectMatch[3] || table;
+            const joinClause = selectMatch[4];
+            const whereStr = selectMatch[5];
+            const orderStr = selectMatch[6];
+            const limitVal = selectMatch[7] ? parseInt(selectMatch[7], 10) : undefined;
 
-            let list = (tables[table] || []).slice();
+            let list = (tables[table] || []).map(r => ({ ...r }));
 
-            // Apply WHERE
+            // Apply JOINs if present
+            if (joinClause) {
+              const joinRegex = /(LEFT\s+|INNER\s+)?JOIN\s+([a-zA-Z0-9_]+)(?:\s+(?:AS\s+)?(?!ON\b)([a-zA-Z0-9_]+))?\s+ON\s+([a-zA-Z0-9_.]+)\s*=\s*([a-zA-Z0-9_.]+)/gi;
+              let jm;
+              while ((jm = joinRegex.exec(joinClause)) !== null) {
+                const isLeft = (jm[1] || '').toUpperCase().includes('LEFT');
+                const joinTable = jm[2];
+                const joinAlias = jm[3] || joinTable;
+                const leftExpr = jm[4];
+                const rightExpr = jm[5];
+                const [leftPrefix, leftCol] = leftExpr.includes('.') ? leftExpr.split('.') : [baseAlias, leftExpr];
+                const [rightPrefix, rightCol] = rightExpr.includes('.') ? rightExpr.split('.') : [joinAlias, rightExpr];
+                const joinRows = tables[joinTable] || [];
+
+                const nextList = [];
+                for (const row of list) {
+                  const baseVal = leftPrefix === joinAlias ? row[rightCol] : row[leftCol];
+                  const targetCol = leftPrefix === joinAlias ? leftCol : rightCol;
+                  const matches = joinRows.filter(jr => jr[targetCol] === baseVal);
+                  if (matches.length > 0) {
+                    for (const m of matches) {
+                      nextList.push({ ...m, ...row });
+                    }
+                  } else if (isLeft) {
+                    nextList.push({ ...row });
+                  }
+                }
+                list = nextList;
+              }
+            }
+
+            // Apply WHERE (reset param index per row!)
             if (whereStr) {
-              list = list.filter(r => matchCondition(r, whereStr, params, paramIndexRef, tables));
+              list = list.filter(r => matchCondition(r, whereStr, params, { i: 0 }, tables));
             }
 
             // Apply ORDER BY
@@ -340,11 +374,38 @@ function createInMemoryDatabase(storageFilePath) {
           if (insertMatch) {
             const table = insertMatch[1];
             const cols = insertMatch[2].split(',').map(s => s.trim());
+            const valExprs = [];
+            let cur = '';
+            let inQuote = false;
+            for (const ch of insertMatch[3]) {
+              if (ch === "'" ) inQuote = !inQuote;
+              if (ch === ',' && !inQuote) {
+                valExprs.push(cur.trim());
+                cur = '';
+              } else {
+                cur += ch;
+              }
+            }
+            if (cur.trim()) valExprs.push(cur.trim());
+
             const list = tables[table] = tables[table] || [];
 
             const newRow = {};
-            cols.forEach(c => {
-              newRow[c] = params[paramIndexRef.i++];
+            cols.forEach((c, idx) => {
+              const expr = valExprs[idx] ?? '?';
+              if (expr === '?') {
+                newRow[c] = params[paramIndexRef.i++];
+              } else if (expr.startsWith("'") && expr.endsWith("'")) {
+                newRow[c] = expr.slice(1, -1);
+              } else if (/^-?\d+$/.test(expr)) {
+                newRow[c] = parseInt(expr, 10);
+              } else if (/^-?\d+\.\d+$/.test(expr)) {
+                newRow[c] = parseFloat(expr);
+              } else if (expr.toLowerCase() === 'null') {
+                newRow[c] = null;
+              } else {
+                newRow[c] = expr;
+              }
             });
 
             // Upsert / Unique Check
@@ -408,9 +469,10 @@ function createInMemoryDatabase(storageFilePath) {
               }
             });
 
+            const whereStartIdx = paramIndexRef.i;
             let changes = 0;
             list.forEach(r => {
-              if (matchCondition(r, whereStr, params, paramIndexRef, tables)) {
+              if (matchCondition(r, whereStr, params, { i: whereStartIdx }, tables)) {
                 Object.assign(r, updates);
                 changes++;
               }
@@ -434,7 +496,7 @@ function createInMemoryDatabase(storageFilePath) {
             }
 
             const initialLen = tables[table].length;
-            tables[table] = tables[table].filter(r => !matchCondition(r, whereStr, params, paramIndexRef, tables));
+            tables[table] = tables[table].filter(r => !matchCondition(r, whereStr, params, { i: 0 }, tables));
             const changes = initialLen - tables[table].length;
             if (changes > 0) persist();
             return { changes };

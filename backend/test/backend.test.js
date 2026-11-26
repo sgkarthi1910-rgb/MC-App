@@ -105,6 +105,26 @@ test('TGZ Lifesteal Complete Backend Test Suite', async (t) => {
 
     assert.equal(changeRes.statusCode, 200);
     assert.equal(changeRes.body.success, true);
+    assert.equal(changeRes.body.requiresReLogin, true);
+
+    // Old session must be invalidated after password change
+    const oldMeRes = await makeRequest(server, {
+      method: 'GET',
+      path: '/api/auth/me',
+      headers: { Authorization: `Bearer ${adminToken}` }
+    });
+    assert.equal(oldMeRes.statusCode, 401);
+
+    // Log in again with the new password
+    const reLoginRes = await makeRequest(server, {
+      method: 'POST',
+      path: '/api/auth/login'
+    }, {
+      id: 'sg_karthi',
+      password: 'PermanentAdminPassword2026!'
+    });
+    assert.equal(reLoginRes.statusCode, 200);
+    adminToken = reLoginRes.body.sessionToken;
 
     // Verify mustChangePassword is now false
     const meRes = await makeRequest(server, {
@@ -940,12 +960,12 @@ test('TGZ Lifesteal Complete Backend Test Suite', async (t) => {
     testServer.server.close();
   });
 
-  // 16. Resilient password change without session (serverless cold-start fallback)
-  await t.test('16. Resilient password change with userId and bootstrap/current password without active session', async () => {
+  // 16. Unauthenticated password change is rejected with HTTP 401
+  await t.test('16. Unauthenticated password change returns HTTP 401 and does not modify password', async () => {
     const testServer = createServer(':memory:');
     await new Promise(resolve => testServer.server.listen(0, '127.0.0.1', resolve));
 
-    // Unauthenticated request without session or cookie
+    // Unauthenticated request without session or cookie must fail with 401
     const changeRes = await makeRequest(testServer.server, {
       method: 'POST',
       path: '/api/auth/change-password'
@@ -956,18 +976,16 @@ test('TGZ Lifesteal Complete Backend Test Suite', async (t) => {
       confirmNewPassword: 'BrandNewSecurePass2026!'
     });
 
-    assert.equal(changeRes.statusCode, 200);
-    assert.equal(changeRes.body.success, true);
-    assert.equal(changeRes.body.user.id, 'darksight');
-    assert.ok(changeRes.body.sessionToken);
+    assert.equal(changeRes.statusCode, 401);
+    assert.equal(changeRes.body.success, false);
 
-    // Verify login with new password succeeds
+    // Original password must still work
     const loginRes = await makeRequest(testServer.server, {
       method: 'POST',
       path: '/api/auth/login'
     }, {
       id: 'darksight',
-      password: 'BrandNewSecurePass2026!'
+      password: 'TestBootstrapAdmin2026!'
     });
     assert.equal(loginRes.statusCode, 200);
     assert.equal(loginRes.body.user.id, 'darksight');

@@ -194,33 +194,39 @@ function createServer(dbPath) {
       const tokenHash = hashToken(rawToken);
       const now = Date.now();
       const sessionRow = db.prepare(`
-        SELECT s.id, s.user_id, s.created_at, s.expires_at, s.last_active_at, s.device_info, s.is_revoked,
-               u.display_name, u.role, u.must_change_password, u.status, u.created_at AS user_created_at,
-               u.password_hash, u.minecraft_uuid, u.minecraft_username
-        FROM sessions s
-        JOIN users u ON s.user_id = u.id
-        WHERE s.token_hash = ? AND s.is_revoked = 0 AND s.expires_at > ?
+        SELECT id, user_id, created_at, expires_at, last_active_at, device_info, is_revoked
+        FROM sessions
+        WHERE token_hash = ? AND is_revoked = 0 AND expires_at > ?
       `).get(tokenHash, now);
 
-      if (sessionRow && sessionRow.status === 'ACTIVE') {
-        req.session = {
-          id: sessionRow.id,
-          userId: sessionRow.user_id,
-          createdAt: sessionRow.created_at,
-          expiresAt: sessionRow.expires_at,
-          deviceInfo: sessionRow.device_info
-        };
-        req.user = {
-          id: sessionRow.user_id,
-          display_name: sessionRow.display_name,
-          role: sessionRow.role,
-          must_change_password: sessionRow.must_change_password,
-          status: sessionRow.status,
-          password_hash: sessionRow.password_hash,
-          created_at: sessionRow.user_created_at,
-          minecraft_uuid: sessionRow.minecraft_uuid,
-          minecraft_username: sessionRow.minecraft_username
-        };
+      if (sessionRow) {
+        const userRow = db.prepare(`
+          SELECT id, display_name, role, must_change_password, status, created_at,
+                 password_hash, minecraft_uuid, minecraft_username
+          FROM users
+          WHERE id = ?
+        `).get(sessionRow.user_id);
+
+        if (userRow && userRow.status === 'ACTIVE') {
+          req.session = {
+            id: sessionRow.id,
+            userId: sessionRow.user_id,
+            createdAt: sessionRow.created_at,
+            expiresAt: sessionRow.expires_at,
+            deviceInfo: sessionRow.device_info
+          };
+          req.user = {
+            id: userRow.id,
+            display_name: userRow.display_name,
+            role: userRow.role,
+            must_change_password: userRow.must_change_password,
+            status: userRow.status,
+            password_hash: userRow.password_hash,
+            created_at: userRow.created_at,
+            minecraft_uuid: userRow.minecraft_uuid,
+            minecraft_username: userRow.minecraft_username
+          };
+        }
       }
     }
 

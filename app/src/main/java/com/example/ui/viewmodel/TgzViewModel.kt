@@ -434,21 +434,30 @@ class TgzViewModel(
         }
     }
 
-    fun changePassword(current: String?, newPass: String, confirmPass: String) {
+    fun changePassword(current: String?, newPass: String, confirmPass: String, onReLoginRequired: () -> Unit = {}) {
         val repo = backendRepository ?: return
         viewModelScope.launch {
             _authState.update { it.copy(isLoading = true, errorMessage = null, successMessage = null) }
             val result = repo.changePassword(current, newPass, confirmPass)
             result.onSuccess { resp ->
                 if (resp.success) {
+                    sessionManager?.clearSession()
+                    _dashboardSummary.value = null
+                    _dashboardError.value = null
+                    _activeSessions.value = emptyList()
                     _authState.update {
-                        it.copy(
-                            isLoading = false,
+                        AuthUiState(
+                            isLoggedIn = false,
+                            isRestoringSession = false,
+                            user = null,
+                            role = "MEMBER",
                             mustChangePassword = false,
-                            user = it.user?.copy(mustChangePassword = false),
-                            successMessage = "Password updated successfully!"
+                            isLoading = false,
+                            errorMessage = null,
+                            successMessage = "Password updated! Please log in with your new password."
                         )
                     }
+                    onReLoginRequired()
                 } else {
                     _authState.update {
                         it.copy(
