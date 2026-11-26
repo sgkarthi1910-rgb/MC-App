@@ -30,7 +30,7 @@ class SessionManagerTest {
     }
 
     @Test
-    fun `test in-memory session does not persist across app restarts`() {
+    fun `test session persists across app restarts until explicit logout`() {
         assertFalse(sessionManager.hasActiveSession())
         assertNull(sessionManager.getToken())
         assertNull(sessionManager.getUser())
@@ -62,16 +62,17 @@ class SessionManagerTest {
         assertFalse(sessionManager.getUser()?.mustChangePassword ?: true)
 
         // Verify across newly created SessionManager instance (simulating app close & reopen)
-        // Strict auth: session MUST NOT be restored automatically
+        // Persistent auth: session MUST be restored automatically
         val reloadedSessionManager = SessionManager(context)
+        assertTrue(reloadedSessionManager.hasActiveSession())
+        assertEquals("test_token_abc_123", reloadedSessionManager.getToken())
+        assertEquals("sg_karthi", reloadedSessionManager.getUser()?.id)
+        assertEquals("ADMIN", reloadedSessionManager.getUser()?.role)
+
+        // Test logout clearing session
+        reloadedSessionManager.clearSession()
         assertFalse(reloadedSessionManager.hasActiveSession())
         assertNull(reloadedSessionManager.getToken())
         assertNull(reloadedSessionManager.getUser())
-
-        // Test logout clearing session
-        sessionManager.clearSession()
-        assertFalse(sessionManager.hasActiveSession())
-        assertNull(sessionManager.getToken())
-        assertNull(sessionManager.getUser())
     }
 }

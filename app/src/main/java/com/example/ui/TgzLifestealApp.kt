@@ -760,10 +760,10 @@ fun TgzLifestealApp(
                             }
                         }
                     } else {
-                        // Main App NavHost (Always starts on Login screen — password required every launch)
+                        // Main App NavHost
                         NavHost(
                             navController = navController,
-                            startDestination = TgzDestination.LOGIN.route,
+                            startDestination = if (authState.isLoggedIn) TgzDestination.DASHBOARD.route else TgzDestination.HOME.route,
                             modifier = Modifier.fillMaxSize()
                         ) {
                         // 1. HOME

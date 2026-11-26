@@ -250,10 +250,23 @@ function setupAuthRoutes(router, db) {
   });
 
   // 3. LOGOUT: Explicitly terminate active session
-  router.post('/api/auth/logout', (req, res) => {
+  router.post('/api/auth/logout', async (req, res) => {
     if (req.session) {
       db.prepare('UPDATE sessions SET is_revoked = 1 WHERE id = ?').run(req.session.id);
+    } else {
+      let rawToken = null;
+      const authHeader = req.headers['authorization'];
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        rawToken = authHeader.substring(7).trim();
+      } else if (req.cookies && req.cookies['tgz_session']) {
+        rawToken = req.cookies['tgz_session'];
+      }
+      if (rawToken) {
+        const tokenHash = hashToken(rawToken);
+        db.prepare('UPDATE sessions SET is_revoked = 1 WHERE token_hash = ?').run(tokenHash);
+      }
     }
+    if (typeof db.flushSync === 'function') await db.flushSync();
     const isHttps = req.headers['x-forwarded-proto'] === 'https' || !!process.env.VERCEL;
     const secureFlag = isHttps ? '; Secure' : '';
     res.setHeader('Set-Cookie', `tgz_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${secureFlag}`);

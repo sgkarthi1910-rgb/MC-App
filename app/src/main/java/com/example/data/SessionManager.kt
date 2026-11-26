@@ -26,8 +26,7 @@ class SessionManager(context: Context) {
     private var inMemoryExpiresAt: Long = 0L
 
     init {
-        // Strictly remove any legacy persisted auth tokens/flags so app launch always requires login
-        clearPersistedAuthPrefs()
+        // Keep persisted auth session across app launches
     }
 
     companion object {
@@ -61,24 +60,64 @@ class SessionManager(context: Context) {
         inMemoryToken = token
         inMemoryUser = user
         inMemoryExpiresAt = expiresAt
+        prefs.edit()
+            .putString(KEY_TOKEN, token)
+            .putString(KEY_USER_ID, user.id)
+            .putString(KEY_DISPLAY_NAME, user.displayName)
+            .putString(KEY_ROLE, user.role)
+            .putBoolean(KEY_MUST_CHANGE_PASSWORD, user.mustChangePassword)
+            .putString(KEY_STATUS, user.status)
+            .putLong(KEY_CREATED_AT, user.createdAt)
+            .putLong(KEY_EXPIRES_AT, expiresAt)
+            .apply()
     }
 
     fun saveUser(user: StoredUser) {
         inMemoryUser = user
+        prefs.edit()
+            .putString(KEY_USER_ID, user.id)
+            .putString(KEY_DISPLAY_NAME, user.displayName)
+            .putString(KEY_ROLE, user.role)
+            .putBoolean(KEY_MUST_CHANGE_PASSWORD, user.mustChangePassword)
+            .putString(KEY_STATUS, user.status)
+            .putLong(KEY_CREATED_AT, user.createdAt)
+            .apply()
     }
 
     fun updatePasswordChanged() {
         inMemoryUser = inMemoryUser?.copy(mustChangePassword = false)
+        prefs.edit().putBoolean(KEY_MUST_CHANGE_PASSWORD, false).apply()
     }
 
-    fun getToken(): String? = inMemoryToken?.takeIf { it.isNotBlank() }
+    fun getToken(): String? {
+        return inMemoryToken?.takeIf { it.isNotBlank() }
+            ?: prefs.getString(KEY_TOKEN, null)?.takeIf { it.isNotBlank() }
+    }
 
-    fun getUser(): StoredUser? = inMemoryUser
+    fun getUser(): StoredUser? {
+        inMemoryUser?.let { return it }
+        val id = prefs.getString(KEY_USER_ID, null) ?: return null
+        val displayName = prefs.getString(KEY_DISPLAY_NAME, id) ?: id
+        val role = prefs.getString(KEY_ROLE, "MEMBER") ?: "MEMBER"
+        val mustChange = prefs.getBoolean(KEY_MUST_CHANGE_PASSWORD, false)
+        val status = prefs.getString(KEY_STATUS, "ACTIVE") ?: "ACTIVE"
+        val createdAt = prefs.getLong(KEY_CREATED_AT, 0L)
+        val user = StoredUser(
+            id = id,
+            displayName = displayName,
+            role = role,
+            mustChangePassword = mustChange,
+            status = status,
+            createdAt = createdAt
+        )
+        inMemoryUser = user
+        return user
+    }
 
     fun hasActiveSession(): Boolean {
         val token = getToken()
         val user = getUser()
-        val expiresAt = inMemoryExpiresAt
+        val expiresAt = if (inMemoryExpiresAt > 0) inMemoryExpiresAt else prefs.getLong(KEY_EXPIRES_AT, 0L)
         if (token.isNullOrBlank() || user == null) return false
         if (expiresAt > 0 && System.currentTimeMillis() > expiresAt) {
             clearSession()

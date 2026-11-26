@@ -2217,7 +2217,7 @@
       const elRole = document.getElementById('diag-auth-account-role');
       if (elRole) elRole.innerText = user.role;
       const elRestore = document.getElementById('diag-auth-session-restore');
-      if (elRestore) elRestore.innerText = 'Disabled (Password Required Every Open)';
+      if (elRestore) elRestore.innerText = 'Active (Validated & Restored)';
       const elProf = document.getElementById('diag-auth-profile-status');
       if (elProf) elProf.innerText = 'Loaded (' + (user.displayName || user.id) + ')';
       const elPwd = document.getElementById('diag-auth-pwd-status');
@@ -2267,14 +2267,54 @@
       loadDiagnostics();
     }
 
-    // Strict authentication: never auto-restore sessions on page open
-    function enforceFreshLoginOnOpen() {
-      activeSessionToken = null;
-      currentUser = null;
-      clearPersistedAuthStorage();
-      document.getElementById('user-dashboard-card').style.display = 'none';
-      document.getElementById('tab-btn-admin-members').style.display = 'none';
-      openLoginModal();
+    let isRestoringSession = false;
+
+    // Persistent login session restoration
+    async function restoreActiveSession() {
+      if (isRestoringSession) return;
+      isRestoringSession = true;
+
+      try {
+        const res = await fetch('/api/auth/me', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.user) {
+            // Load dashboard summary before declaring authenticated UI
+            const dashRes = await fetch('/api/dashboard/summary', { credentials: 'include' });
+            if (dashRes.ok) {
+              const errEl = document.getElementById('dash-load-error-alert');
+              if (errEl) errEl.remove();
+              updateUIAfterLogin(data.user);
+            } else {
+              currentUser = data.user;
+              updateUIAfterLogin(data.user);
+              const overviewPane = document.getElementById('tab-pane-overview');
+              if (overviewPane && !document.getElementById('dash-load-error-alert')) {
+                overviewPane.insertAdjacentHTML('afterbegin', `
+                  <div id="dash-load-error-alert" style="background: rgba(239, 68, 68, 0.15); border: 1px solid var(--red); color: var(--red); padding: 12px; border-radius: 8px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+                    <span>⚠️ Failed to load live dashboard telemetry.</span>
+                    <button class="btn-auth-nav" style="font-size: 0.75rem; padding: 4px 8px; background: var(--red); color: #fff;" onclick="restoreActiveSession()">Retry</button>
+                  </div>
+                `);
+              }
+            }
+          }
+        } else if (res.status === 401) {
+          currentUser = null;
+          activeSessionToken = null;
+          document.getElementById('user-dashboard-card').style.display = 'none';
+          document.getElementById('tab-btn-admin-members').style.display = 'none';
+          document.getElementById('auth-buttons-container').innerHTML = `
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+              <button class="btn-auth-nav" style="border-color: var(--emerald); color: var(--emerald); background: rgba(32, 229, 138, 0.12); cursor: pointer;" onclick="openChangePasswordModal()">🔑 CHANGE PASSWORD</button>
+              <button class="btn-auth-nav" onclick="openLoginModal()">👤 SIGN IN</button>
+            </div>
+          `;
+        }
+      } catch (e) {
+      } finally {
+        isRestoringSession = false;
+      }
     }
 
     async function loadDiagnostics() {
@@ -3318,16 +3358,16 @@
       return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
-    // INITIALIZATION ON LOAD (Strict login required on every open)
+    // INITIALIZATION ON LOAD (Persistent Login)
     fetchJavaStatus();
     fetchBedrockStatus();
-    enforceFreshLoginOnOpen();
+    restoreActiveSession();
     checkForAppUpdates();
 
-    // Prevent browser back/forward cache from restoring a logged-out dashboard
+    // Prevent browser back cache after logout
     window.addEventListener('pageshow', (event) => {
-      if (event.persisted || !currentUser || !activeSessionToken) {
-        enforceFreshLoginOnOpen();
+      if (event.persisted) {
+        restoreActiveSession();
       }
     });
 

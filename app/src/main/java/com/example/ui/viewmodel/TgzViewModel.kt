@@ -62,14 +62,15 @@ class TgzViewModel(
     private val _expandedFaqIds = MutableStateFlow(setOf("faq_join"))
     val expandedFaqIds: StateFlow<Set<String>> = _expandedFaqIds.asStateFlow()
 
-    // 2. AUTHENTICATION STATE (Always starts unauthenticated — password required every app launch)
+    // 2. AUTHENTICATION STATE
+    private val hasSessionOnLaunch = sessionManager?.hasActiveSession() ?: false
     private val _authState = MutableStateFlow(
         AuthUiState(
-            isLoggedIn = false,
-            isRestoringSession = false,
-            user = null,
-            role = "MEMBER",
-            mustChangePassword = false
+            isLoggedIn = hasSessionOnLaunch,
+            isRestoringSession = hasSessionOnLaunch,
+            user = sessionManager?.getUser(),
+            role = sessionManager?.getUser()?.role ?: "MEMBER",
+            mustChangePassword = sessionManager?.getUser()?.mustChangePassword ?: false
         )
     )
     val authState: StateFlow<AuthUiState> = _authState.asStateFlow()
@@ -244,11 +245,13 @@ class TgzViewModel(
     val appUpdateInfo: StateFlow<AppVersionResponse?> = _appUpdateInfo.asStateFlow()
 
     init {
-        sessionManager?.clearSession()
         startAutoRefreshCycle()
         fetchJavaServerStatus()
         fetchBedrockServerStatus()
         checkForAppUpdate()
+        if (hasSessionOnLaunch) {
+            restoreSessionOnStartup()
+        }
     }
 
     fun checkForAppUpdate() {
@@ -283,6 +286,128 @@ class TgzViewModel(
     }
 
     // ----------------- AUTHENTICATION ACTIONS -----------------
+
+    fun restoreSessionOnStartup() {
+        val repo = backendRepository ?: run {
+            _authState.update { it.copy(isRestoringSession = false) }
+            return
+        }
+
+        viewModelScope.launch {
+            _isDashboardLoading.value = true
+            _dashboardError.value = null
+            _authState.update { it.copy(isRestoringSession = true) }
+
+            repo.refreshCurrentUser().onSuccess { resp ->
+                if (resp.user != null) {
+                    val user = StoredUser(
+                        id = resp.user.id,
+                        displayName = resp.user.displayName,
+                        role = resp.user.role,
+                        mustChangePassword = resp.user.mustChangePassword,
+                        status = resp.user.status,
+                        createdAt = resp.user.createdAt
+                    )
+                    sessionManager?.saveUser(user)
+
+                    // Load dashboard data before finalizing authenticated state
+                    val summaryResult = repo.getDashboardSummary()
+                    summaryResult.onSuccess { summary ->
+                        _dashboardSummary.value = summary
+                        _dashboardError.value = null
+                        _isDashboardLoading.value = false
+
+                        _authState.update {
+                            it.copy(
+                                isLoggedIn = true,
+                                isRestoringSession = false,
+                                sessionRestoredSuccessfully = true,
+                                user = user,
+                                role = user.role,
+                                mustChangePassword = user.mustChangePassword,
+                                errorMessage = null
+                            )
+                        }
+                        loadUnreadMessagesCount()
+                        loadGroups()
+                        loadAnnouncements()
+                        if (user.role == "ADMIN") {
+                            loadAdminRegisteredMembers()
+                        }
+                    }.onFailure { err ->
+                        _isDashboardLoading.value = false
+                        _dashboardError.value = err.localizedMessage ?: "Failed to load dashboard data. Please retry."
+                        _authState.update {
+                            it.copy(
+                                isLoggedIn = true,
+                                isRestoringSession = false,
+                                sessionRestoredSuccessfully = false,
+                                user = user,
+                                role = user.role,
+                                mustChangePassword = user.mustChangePassword
+                            )
+                        }
+                    }
+                } else {
+                    sessionManager?.clearSession()
+                    _isDashboardLoading.value = false
+                    _authState.update {
+                        AuthUiState(
+                            isLoggedIn = false,
+                            isRestoringSession = false,
+                            sessionRestoredSuccessfully = false,
+                            user = null,
+                            role = "MEMBER",
+                            mustChangePassword = false
+                        )
+                    }
+                }
+            }.onFailure { err ->
+                _isDashboardLoading.value = false
+                val msg = err.localizedMessage ?: err.message ?: ""
+                if (msg.contains("401") || msg.contains("Unauthorized") || msg.contains("revoked") || msg.contains("expired")) {
+                    sessionManager?.clearSession()
+                    _authState.update {
+                        AuthUiState(
+                            isLoggedIn = false,
+                            isRestoringSession = false,
+                            sessionRestoredSuccessfully = false,
+                            user = null,
+                            role = "MEMBER",
+                            mustChangePassword = false
+                        )
+                    }
+                } else {
+                    val cachedUser = sessionManager?.getUser()
+                    if (cachedUser != null) {
+                        _dashboardError.value = "Offline or server unreachable: $msg"
+                        _authState.update {
+                            it.copy(
+                                isLoggedIn = true,
+                                isRestoringSession = false,
+                                sessionRestoredSuccessfully = false,
+                                user = cachedUser,
+                                role = cachedUser.role,
+                                mustChangePassword = cachedUser.mustChangePassword
+                            )
+                        }
+                    } else {
+                        sessionManager?.clearSession()
+                        _authState.update {
+                            AuthUiState(
+                                isLoggedIn = false,
+                                isRestoringSession = false,
+                                sessionRestoredSuccessfully = false,
+                                user = null,
+                                role = "MEMBER",
+                                mustChangePassword = false
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     fun login(id: String, pass: String, onSuccess: () -> Unit = {}) {
         val repo = backendRepository ?: run {
@@ -479,101 +604,6 @@ class TgzViewModel(
 
     fun clearAuthMessage() {
         _authState.update { it.copy(errorMessage = null, successMessage = null) }
-    }
-
-    fun restoreSessionOnStartup() {
-        viewModelScope.launch {
-            _isDashboardLoading.value = true
-            val repo = backendRepository
-            if (repo == null) {
-                _authState.update { it.copy(isRestoringSession = false) }
-                _isDashboardLoading.value = false
-                return@launch
-            }
-
-            repo.refreshCurrentUser().onSuccess { resp ->
-                if (resp.user != null) {
-                    val user = StoredUser(
-                        id = resp.user.id,
-                        displayName = resp.user.displayName,
-                        role = resp.user.role,
-                        mustChangePassword = resp.user.mustChangePassword,
-                        status = resp.user.status,
-                        createdAt = resp.user.createdAt
-                    )
-                    sessionManager?.saveUser(user)
-                    _authState.update {
-                        it.copy(
-                            isLoggedIn = true,
-                            isRestoringSession = false,
-                            sessionRestoredSuccessfully = true,
-                            user = user,
-                            role = user.role,
-                            mustChangePassword = user.mustChangePassword,
-                            errorMessage = null
-                        )
-                    }
-                    loadDashboardSummary()
-                    loadUnreadMessagesCount()
-                    loadGroups()
-                    loadAnnouncements()
-                    if (user.role == "ADMIN") {
-                        loadAdminRegisteredMembers()
-                    }
-                } else {
-                    sessionManager?.clearSession()
-                    _authState.update {
-                        it.copy(
-                            isLoggedIn = false,
-                            isRestoringSession = false,
-                            sessionRestoredSuccessfully = false,
-                            user = null,
-                            role = "MEMBER",
-                            mustChangePassword = false
-                        )
-                    }
-                    _isDashboardLoading.value = false
-                }
-            }.onFailure { err ->
-                val msg = err.message ?: ""
-                if (msg.contains("401") || msg.contains("Unauthorized") || msg.contains("revoked")) {
-                    sessionManager?.clearSession()
-                    _authState.update {
-                        it.copy(
-                            isLoggedIn = false,
-                            isRestoringSession = false,
-                            sessionRestoredSuccessfully = false,
-                            user = null,
-                            role = "MEMBER",
-                            mustChangePassword = false
-                        )
-                    }
-                    _isDashboardLoading.value = false
-                } else {
-                    val cachedUser = sessionManager?.getUser()
-                    if (cachedUser != null) {
-                        _authState.update {
-                            it.copy(
-                                isLoggedIn = true,
-                                isRestoringSession = false,
-                                sessionRestoredSuccessfully = true,
-                                user = cachedUser,
-                                role = cachedUser.role,
-                                mustChangePassword = cachedUser.mustChangePassword
-                            )
-                        }
-                        loadDashboardSummary()
-                        loadAnnouncements()
-                        if (cachedUser.role == "ADMIN") {
-                            loadAdminRegisteredMembers()
-                        }
-                    } else {
-                        _authState.update { it.copy(isRestoringSession = false) }
-                        _isDashboardLoading.value = false
-                    }
-                }
-            }
-        }
     }
 
     private fun refreshSessionUser() {
